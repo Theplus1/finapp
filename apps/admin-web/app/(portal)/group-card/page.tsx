@@ -20,7 +20,7 @@ import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { CardGroup } from "@/lib/api/endpoints/card-group";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 
-export default function Group() {
+export default function GroupCard() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const [pagination, setPagination] = useState({
     page: 1,
@@ -30,7 +30,7 @@ export default function Group() {
   useEffect(() => {
     setBreadcrumbs([
       { label: "Dashboard", href: "/dashboard" },
-      { label: "Group", href: "/group" },
+      { label: "Group card", href: "/group-card" },
     ]);
   }, [setBreadcrumbs]);
 
@@ -77,7 +77,7 @@ export default function Group() {
   return (
     <PageLayout>
       <PageHeader>
-        <PageTitle>Group</PageTitle>
+        <PageTitle>Group card</PageTitle>
       </PageHeader>
 
       <Section>

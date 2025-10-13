@@ -34,12 +34,12 @@ const FilterGroup = ({ onGroupChange }: Props) => {
         {isLoadingGroupInfos ? (
           <Spinner />
         ) : (
-          <SelectValue placeholder="Select a group" />
+          <SelectValue placeholder="Select a group card" />
         )}
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
-          <SelectLabel>Select a group</SelectLabel>
+          <SelectLabel>Select a group card</SelectLabel>
           <SelectItem key="all" value="all">
             All
           </SelectItem>

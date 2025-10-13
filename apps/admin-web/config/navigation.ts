@@ -1,17 +1,13 @@
 import {
   AudioWaveform,
   Command,
-  Frame,
   GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
   SquareTerminal,
   IdCard,
   Group,
   User,
 } from "lucide-react";
-import { NavSection, Project, Team } from "@/types";
+import { NavSection, Team } from "@/types";
 
 export const teams: Team[] = [
   {
@@ -55,13 +51,13 @@ export const navMain: NavSection[] = [
     ],
   },
   {
-    title: "Group",
+    title: "Group card",
     url: "#",
     icon: Group,
     items: [
       {
-        title: "Group",
-        url: "/group",
+        title: "Group card",
+        url: "/group-card",
       },
     ],
   },
