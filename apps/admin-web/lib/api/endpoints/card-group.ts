@@ -32,7 +32,7 @@ export interface CardGroup {
 export interface CardGroupsListResponse {
   items: CardGroup[];
   metadata: {
-    nextCursor: string | null;
+    nextCursor?: string;
     count: number;
   };
 }

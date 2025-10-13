@@ -4,29 +4,35 @@ import { useEffect, useMemo, useState } from "react";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { formatDollarByCent, formatNumberAsPercentage } from "@/app/utils/func";
 import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableBody,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
-import { Spinner } from "@/components/ui/spinner";
+  formatDollarByCent,
+  formatNumberAsPercentage,
+  renderNoTable,
+} from "@/app/utils/func";
 
 import { PageLayout } from "@/components/layouts/page-layout";
 import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { SectionContent } from "@/components/layouts/section";
 import { Section } from "@/components/layouts/section";
 import type { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
+import { CellContext, ColumnDef } from "@tanstack/react-table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DataTable } from "@/components/ui/data-table";
+import { CursorPagination } from "@/components/ui/cursor-pagination";
 
+const initCursorMap = {
+  1: "",
+};
+const maskDataTable = Array.from({ length: 20 }, () => {
+  return {};
+}) as VirtualAccount[];
 export default function VirtualAccount() {
   const { setBreadcrumbs } = useBreadcrumbs();
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 15,
-  });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(0);
+  const [cursorMap, setCursorMap] =
+    useState<Record<number, string>>(initCursorMap);
+  const [nextCursor, setNextCursor] = useState<string>();
 
   useEffect(() => {
     setBreadcrumbs([
@@ -37,21 +43,102 @@ export default function VirtualAccount() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["virtual-accounts"],
-    queryFn: () => api.virtualAccounts.getVirtualAccounts(),
+    queryFn: async () => {
+      const res = await api.virtualAccounts.getVirtualAccounts();
+      const { nextCursor, count } = res.data.metadata;
+      setNextCursor(nextCursor as string);
+      if (!pageSize) {
+        setPageSize(count);
+      }
+      setCursorMap((prev) => ({
+        ...prev,
+        [page + 1]: nextCursor as string,
+      }));
+      return res.data;
+    },
   });
 
-  const dataVirtualAccount: VirtualAccount[] = useMemo(
-    () => data?.data?.items ?? [],
-    [data]
-  );
+  const dataVirtualAccount: VirtualAccount[] = useMemo(() => {
+    if (isLoading) return maskDataTable;
+    return data?.items ?? [];
+  }, [isLoading, data]);
 
   const paginatedData = useMemo(() => {
-    const start = (pagination.page - 1) * pagination.pageSize;
-    const end = start + pagination.pageSize;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
     return dataVirtualAccount.slice(start, end);
-  }, [dataVirtualAccount, pagination.page, pagination.pageSize]);
+  }, [dataVirtualAccount, page, pageSize]);
 
-  if (isLoading) return <Spinner />;
+  const columns = [
+    {
+      header: "No",
+      cell: ({ row }: CellContext<VirtualAccount, number>) => {
+        return isLoading ? (
+          <Skeleton />
+        ) : (
+          renderNoTable(
+            {
+              page,
+              pageSize,
+            },
+            row.index
+          )
+        );
+      },
+    },
+    {
+      header: "Name",
+      cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        return isLoading ? <Skeleton /> : row.original.virtualAccount.name;
+      },
+    },
+    {
+      header: "Take Rate",
+      cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        const takeRate =
+          row.original.commissionRule?.commissionDetails?.takeRate;
+        const takeRateLabel =
+          typeof takeRate === "number"
+            ? formatNumberAsPercentage(takeRate * 100)
+            : "";
+        return isLoading ? <Skeleton /> : takeRateLabel;
+      },
+    },
+    {
+      header: "Balance",
+      cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        const balance = row.original.balance?.amountCents;
+        return isLoading ? <Skeleton /> : formatDollarByCent(balance);
+      },
+    },
+    {
+      header: "Spend (30d)",
+      cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        const spend = row.original.spend?.amountCents;
+        return isLoading ? <Skeleton /> : formatDollarByCent(spend);
+      },
+    },
+    {
+      header: "Routing / Account",
+      cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        const routingNumber = row.original.virtualAccount?.routingNumber;
+        const accountNumber = row.original.virtualAccount?.accountNumber;
+        return isLoading ? (
+          <Skeleton />
+        ) : (
+          <>
+            <div>
+              <span className="font-medium">Routing:</span> {routingNumber}
+            </div>
+            <div>
+              <span className="font-medium">Account:</span> {accountNumber}
+            </div>
+          </>
+        );
+      },
+    },
+  ] as ColumnDef<VirtualAccount>[];
+
   return (
     <PageLayout>
       <PageHeader>
@@ -59,53 +146,25 @@ export default function VirtualAccount() {
       </PageHeader>
 
       <Section>
-        <SectionContent className="bg-muted/50 p-6 rounded-xl overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Take Rate</TableHead>
-                <TableHead>Balance</TableHead>
-                <TableHead>Spend (30d)</TableHead>
-                <TableHead>Routing / Account</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedData.map((item, i) => {
-                const takeRate =
-                  item.commissionRule?.commissionDetails?.takeRate;
-                const takeRateLabel =
-                  typeof takeRate === "number"
-                    ? formatNumberAsPercentage(takeRate * 100)
-                    : "";
-                return (
-                  <TableRow
-                    key={i}
-                    className="border-b hover:bg-muted/30 transition-colors"
-                  >
-                    <TableCell>{item.virtualAccount.name}</TableCell>
-                    <TableCell>{takeRateLabel}</TableCell>
-                    <TableCell>
-                      {formatDollarByCent(item.balance.amountCents)}
-                    </TableCell>
-                    <TableCell>
-                      {formatDollarByCent(item.spend.amountCents)}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <span className="font-medium">Routing:</span>{" "}
-                        {item.virtualAccount.routingNumber}
-                      </div>
-                      <div>
-                        <span className="font-medium">Account:</span>{" "}
-                        {item.virtualAccount.accountNumber}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+        <SectionContent>
+          <DataTable
+            columns={columns}
+            data={dataVirtualAccount}
+            maxHeight={"70vh"}
+          />
+          <CursorPagination
+            page={page}
+            cursorMap={cursorMap}
+            hasNextPage={!!nextCursor}
+            disableNext={isLoading}
+            onPageChange={(cursor, newPage) => {
+              setPage(newPage);
+              setCursorMap((prev) => ({
+                ...prev,
+                [newPage]: cursor,
+              }));
+            }}
+          />
         </SectionContent>
       </Section>
     </PageLayout>

@@ -30,7 +30,7 @@ export interface VirtualAccount {
 export interface VirtualAccountsListResponse {
   items: VirtualAccount[];
   metadata: {
-    nextCursor: string | null;
+    nextCursor?: string;
     count: number;
   };
 }
