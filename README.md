@@ -56,6 +56,24 @@ npm run test:server  # Run unit tests
 npm run test:e2e     # Run e2e tests
 ```
 
+## Environment Variables
+
+Each app has its own `.env` file:
+- `apps/web/.env.local` - Web app environment variables
+- `apps/admin-web/.env.local` - Admin web environment variables
+- `apps/server/.env` - Server environment variables
+- `apps/docs/.env.local` - Docs environment variables
+
+Copy `.env.example` files to create your local environment files.
+
+## Deployment
+
+Automated deployment workflows are configured for:
+- **Server** - Deploys to VPS using Docker
+- **Admin Web** - Deploys to VPS using PM2
+
+See [.github/workflows/README.md](.github/workflows/README.md) for deployment setup instructions.
+
 ## Tech Stack
 
 - **Framework**: Next.js 15, NestJS 10

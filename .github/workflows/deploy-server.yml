@@ -1,19 +1,35 @@
-name: Deploy to VPS
+name: Deploy Server to VPS
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'apps/server/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-server.yml'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
-  deploy:
-    name: Deploy Application
+  deploy-server:
+    name: Deploy Server Application
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build server
+        run: npm run build --filter=server
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -25,9 +41,9 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Create .env file
+      - name: Create .env file for server
         run: |
-          cat > .env << EOF
+          cat > apps/server/.env << EOF
           BOT_TOKEN=${{ secrets.BOT_TOKEN }}
           MODE=${{ vars.MODE }}
           WEBHOOK_URL=${{ vars.WEBHOOK_URL }}
@@ -40,47 +56,56 @@ jobs:
           SLASH_WEBHOOK_SECRET=${{ secrets.SLASH_WEBHOOK_SECRET }}
           EOF
 
-      - name: Sync files to VPS
+      - name: Sync server files to VPS
         run: |
           rsync -avz --delete \
             --exclude '.git' \
             --exclude 'node_modules' \
             --exclude 'logs' \
+            --exclude '.next' \
+            --exclude 'coverage' \
             -e "ssh -o StrictHostKeyChecking=no" \
-            ./ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.APP_DIR }}/
+            apps/server/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.SERVER_APP_DIR }}/
 
-      - name: Deploy to VPS
+      - name: Sync shared packages to VPS
+        run: |
+          rsync -avz \
+            --exclude 'node_modules' \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            package.json package-lock.json ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.SERVER_APP_DIR }}/
+
+      - name: Deploy server to VPS
         env:
           VPS_HOST: ${{ vars.VPS_HOST }}
           VPS_USER: ${{ vars.VPS_USER }}
-          APP_DIR: ${{ vars.APP_DIR }}
+          SERVER_APP_DIR: ${{ vars.SERVER_APP_DIR }}
         run: |
           ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
             set -e
             
-            echo "🚀 Starting deployment..."
+            echo "🚀 Starting server deployment..."
             
-            # Navigate to app directory
-            cd ${{ vars.APP_DIR }}
+            # Navigate to server directory
+            cd ${{ vars.SERVER_APP_DIR }}
             
             # Stop existing containers
-            echo "🛑 Stopping existing containers..."
-            docker-compose -f docker-compose.prod.yml down
+            echo "🛑 Stopping existing server containers..."
+            docker-compose -f docker-compose.prod.yml down || true
             
             # Remove old images to free space
             echo "🗑️  Cleaning up old images..."
             docker image prune -f
             
             # Build and start containers
-            echo "🏗️  Building and starting containers..."
+            echo "🏗️  Building and starting server containers..."
             docker-compose -f docker-compose.prod.yml up -d --build
             
             # Wait for container to be healthy
-            echo "⏳ Waiting for application to start..."
+            echo "⏳ Waiting for server to start..."
             sleep 10
             
             # Check container status
-            echo "✅ Deployment complete! Container status:"
+            echo "✅ Server deployment complete! Container status:"
             docker-compose -f docker-compose.prod.yml ps
             
             # Show recent logs
@@ -88,21 +113,21 @@ jobs:
             docker-compose -f docker-compose.prod.yml logs --tail=20
           ENDSSH
 
-      - name: Verify Deployment
+      - name: Verify Server Deployment
         env:
           VPS_HOST: ${{ vars.VPS_HOST }}
           VPS_USER: ${{ vars.VPS_USER }}
-          APP_DIR: ${{ vars.APP_DIR }}
+          SERVER_APP_DIR: ${{ vars.SERVER_APP_DIR }}
         run: |
           ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
-            cd ${{ vars.APP_DIR }}
+            cd ${{ vars.SERVER_APP_DIR }}
             
             # Check if container is running
             if [ $(docker-compose -f docker-compose.prod.yml ps -q | wc -l) -gt 0 ]; then
-              echo "✅ Container is running"
+              echo "✅ Server container is running"
               exit 0
             else
-              echo "❌ Container is not running"
+              echo "❌ Server container is not running"
               exit 1
             fi
           ENDSSH
@@ -110,11 +135,11 @@ jobs:
       - name: Notify on Success
         if: success()
         run: |
-          echo "✅ Deployment successful!"
-          echo "Application is now running on VPS"
+          echo "✅ Server deployment successful!"
+          echo "Server is now running on VPS"
 
       - name: Notify on Failure
         if: failure()
         run: |
-          echo "❌ Deployment failed!"
+          echo "❌ Server deployment failed!"
           echo "Check the logs above for details"
