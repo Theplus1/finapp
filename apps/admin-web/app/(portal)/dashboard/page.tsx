@@ -29,6 +29,8 @@ import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 const initFilter = {
   "filter:cardId": "",
   "filter:virtualAccountId": "",
+  "filter:from_date": "",
+  "filter:to_date": "",
   cursor: "",
 };
 
@@ -142,9 +144,8 @@ export default function Dashboard() {
             if (cachedVirtualAccountInfo) {
               return { data: cachedVirtualAccountInfo };
             }
-            const { data } = await api.virtualAccounts.getVirtualAccountById(
-              id
-            );
+            const { data } =
+              await api.virtualAccounts.getVirtualAccountById(id);
             queryClient.setQueryData(["virtual-account-infos", id], data);
             return { data };
           })
@@ -175,7 +176,7 @@ export default function Dashboard() {
           return isLoading || isLoadingCardInfos ? (
             <Skeleton />
           ) : (
-            cardInfo?.name ?? "Unknown"
+            (cardInfo?.name ?? "Unknown")
           );
         },
       },
@@ -189,7 +190,7 @@ export default function Dashboard() {
           return isLoading || isLoadingVirtualAccountInfos ? (
             <Skeleton />
           ) : (
-            virtualAccountInfo?.virtualAccount?.name ?? "Unknown"
+            (virtualAccountInfo?.virtualAccount?.name ?? "Unknown")
           );
         },
       },
@@ -221,7 +222,7 @@ export default function Dashboard() {
           return isLoading ? (
             <Skeleton />
           ) : (
-            row.original.merchantData?.name ?? ""
+            (row.original.merchantData?.name ?? "")
           );
         },
       },
@@ -231,7 +232,7 @@ export default function Dashboard() {
           return isLoading ? (
             <Skeleton />
           ) : (
-            row.original.merchantData?.location?.country ?? ""
+            (row.original.merchantData?.location?.country ?? "")
           );
         },
       },
@@ -257,14 +258,15 @@ export default function Dashboard() {
     ]
   ) as ColumnDef<Transition>[];
 
-  const handleChangeFilter = (field: string, value: string) => {
+  const handleChangeFilter = (field: string, value: string | undefined) => {
     setPage(1);
     setCursorMap(initCursorMap);
-    setCurrentFilter({
-      ...currentFilter,
+    setPageSize(0);
+    setCurrentFilter((prev) => ({
+      ...prev,
       [field]: value,
       cursor: "",
-    });
+    }));
   };
 
   return (
@@ -284,6 +286,12 @@ export default function Dashboard() {
             }
             onVirtualAccountChange={(virtualAccountId) =>
               handleChangeFilter("filter:virtualAccountId", virtualAccountId)
+            }
+            onDateFromChange={(date) =>
+              handleChangeFilter("filter:from_date", date)
+            }
+            onDateToChange={(date) =>
+              handleChangeFilter("filter:to_date", date)
             }
           />
           <DataTable

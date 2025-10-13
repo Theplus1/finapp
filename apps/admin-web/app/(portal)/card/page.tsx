@@ -214,11 +214,12 @@ export default function Card() {
   const handleChangeFilter = (field: string, value: string) => {
     setPage(1);
     setCursorMap(initCursorMap);
-    setCurrentFilter({
-      ...currentFilter,
+    setPageSize(0);
+    setCurrentFilter((prev) => ({
+      ...prev,
       [field]: value,
       cursor: "",
-    });
+    }));
   };
 
   return (
