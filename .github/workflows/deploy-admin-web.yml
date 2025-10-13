@@ -36,7 +36,7 @@ jobs:
           EOF
 
       - name: Build admin-web
-        run: npm run build --filter=admin-web
+        run: npm run build:admin
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
