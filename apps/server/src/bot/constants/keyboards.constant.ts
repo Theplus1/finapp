@@ -1,4 +1,5 @@
 import { Markup } from 'telegraf';
+import { Actions } from './actions.constant';
 
 export const Keyboards = {
   // Main keyboards
@@ -11,9 +12,47 @@ export const Keyboards = {
   mainMenu: () =>
     Markup.inlineKeyboard([
       [Markup.button.callback('💳 Cards', 'cards')],
-      [Markup.button.callback('🧾 Transactions', 'transactions')],
+      [Markup.button.callback('🧾 Transactions', Actions.menu.transaction)],
       [Markup.button.callback('ℹ️ About', 'about')],
       [Markup.button.callback('💬 Feedback', 'start_feedback')],
+    ]),
+  backToMenu: () =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback('« Back to Menu', Actions.menu.main)],
+    ]),
+
+  // Transactions keyboards
+  transactionMenu: () =>
+    Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          'Transaction Details',
+          Actions.transaction.detail,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          'Notifications',
+          Actions.menu.transactionNotification,
+        ),
+      ],
+      [Markup.button.callback('« Back to Menu', Actions.menu.main)],
+    ]),
+  transactionNotificationMenu: (isSubscribed: boolean) =>
+    Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          isSubscribed ? '❌ Unsubscribe' : '✅ Subscribe',
+          isSubscribed
+            ? Actions.transaction.unsubscribeNotification
+            : Actions.transaction.subscribeNotification,
+        ),
+      ],
+      [Markup.button.callback('« Back to Menu', Actions.menu.transaction)],
+    ]),
+  backToTransactions: () =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback('« Back', Actions.menu.transaction)],
     ]),
 
   transactionsMenu: (isSubscribed: boolean) =>
@@ -45,10 +84,6 @@ export const Keyboards = {
 
   backToNotifications: () =>
     Markup.inlineKeyboard([[Markup.button.callback('« Back', 'notifications')]]),
-  backToTransactions: () =>
-    Markup.inlineKeyboard([[Markup.button.callback('« Back', 'transactions')]]),
-
-  backToMenu: () => Markup.inlineKeyboard([[Markup.button.callback('« Back to Menu', 'menu')]]),
 
   // Feedback keyboards
   feedbackRating: () => Markup.keyboard([['1', '2', '3', '4', '5'], ['/cancel']]).resize(),

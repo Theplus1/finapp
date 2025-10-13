@@ -80,14 +80,26 @@ export class MenuHandler {
   }
 
   @ValidateUser({ answerCallback: true })
-  async handleTransactionsAction(ctx: BotContext) {
-    const userData = ctx.userData!;
-
+  async handleTransactionAction(ctx: BotContext) {
     await ctx.answerCbQuery();
     await ctx.reply(Messages.transactionsMenu, {
       parse_mode: 'Markdown',
-      ...Keyboards.transactionsMenu(userData.isSubscribed),
+      ...Keyboards.transactionMenu(),
     });
+  }
+
+  @ValidateUser({ answerCallback: true })
+  async handleTransactionNotificationAction(ctx: BotContext) {
+    const userData = ctx.userData!;
+
+    await ctx.answerCbQuery();
+    await ctx.reply(
+      Messages.transactionNotificationMenu(userData.isSubscribed),
+      {
+        parse_mode: 'Markdown',
+        ...Keyboards.transactionNotificationMenu(userData.isSubscribed),
+      },
+    );
   }
 
   async handleAboutAction(ctx: Context) {

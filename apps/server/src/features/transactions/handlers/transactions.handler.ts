@@ -6,7 +6,9 @@ import { Messages } from '../../../bot/constants/messages.constant';
 import { Keyboards } from '../../../bot/constants/keyboards.constant';
 import { BotContext } from '../../../bot/interfaces/bot-context.interface';
 import { ValidateUser } from '../../../shared/decorators/validate-user.decorator';
-import type { TransactionDto } from 'src/slash';
+import { TransactionDto, TransactionStatus } from 'src/slash';
+import { SessionSteps } from 'src/bot/constants/session-steps.constant';
+import { formatCurrency } from 'src/shared/utils/formatCurrency.util';
 
 @Injectable()
 export class TransactionsHandler {
@@ -18,6 +20,7 @@ export class TransactionsHandler {
     private readonly configService: ConfigService,
   ) {}
 
+  // MENU
   @ValidateUser({ answerCallback: true })
   async handleSubscribeTransactionsAction(ctx: BotContext) {
     await ctx.answerCbQuery('Subscribing...');
@@ -38,58 +41,75 @@ export class TransactionsHandler {
     });
   }
 
+  @ValidateUser({ requireAccount: true, answerCallback: true })
+  async handleTransactionDetailAction(ctx: BotContext) {
+    if (!ctx.session) return;
+    ctx.session.step = SessionSteps.AWAITING_TRANSACTION_ID;
+    await ctx.answerCbQuery();
+    await ctx.reply(Messages.transactionInfoPrompt, {
+      parse_mode: 'Markdown',
+    });
+  }
+
+  // INPUT
   @ValidateUser({ requireAccount: true })
-  async handleListTransactions(ctx: BotContext, cursor?: string) {
+  async handleTransactionInput(ctx: BotContext, transactionId: string) {
+    if (!ctx.session) return;
+
     const userData = ctx.userData!;
+    const trimmed = (transactionId || '').trim();
+    if (!trimmed) {
+      await ctx.reply(Messages.noTransactionsFound);
+      return;
+    }
 
+    await ctx.sendChatAction('typing');
     try {
-      const response = await this.slashService.listTransactions({ cursor });
-
-      if (!response.data || response.data.length === 0) {
-        if (cursor) {
-          await ctx.answerCbQuery('No more transactions found');
-        } else {
-          await ctx.reply(Messages.noTransactionsFound);
-        }
+      const transactionDetail = await this.slashService.getTransaction(trimmed);
+      if (
+        !transactionDetail ||
+        transactionDetail.virtualAccountId !== userData.virtualAccountId
+      ) {
+        await ctx.reply(Messages.noTransactionsFound);
         return;
       }
 
-      const transactionsList = this.formatTransactionsList(response.data);
-
-      await ctx.reply(transactionsList, {
+      const detail = this.formatTransactionDetail(transactionDetail);
+      await ctx.reply(detail, {
         parse_mode: 'Markdown',
         ...Keyboards.backToTransactions(),
       });
     } catch (error) {
-      this.logger.error(
-        `Error fetching transactions for user ${ctx.from?.id}:`,
-        error,
-      );
+      this.logger.error(`Error fetching transaction ${trimmed}:`, error);
       await ctx.reply(Messages.errorFetchingTransactions);
     }
   }
 
-  private formatTransactionsList(transactions: TransactionDto[]): string {
-    let message = `💳 *Your Transactions*\n\n`;
+  private formatTransactionDetail(transactionDTO: TransactionDto): string {
+    const statusEmoji = this.getTransactionStatusEmoji(transactionDTO.status);
+    const created = new Date(transactionDTO.date).toLocaleString();
+    const description = transactionDTO.description || 'N/A';
 
-    transactions.forEach((transaction, index) => {
-      const statusEmoji = this.getStatusEmoji(transaction.status);
-      message += `${index + 1}. *${transaction.merchantName}* \n`;
-      message += `   Status: ${statusEmoji} ${transaction.status}\n\n`;
-    });
-
+    let message = `*Transaction Detail*\n\n`;
+    message += `Amount: ${formatCurrency(transactionDTO.amountCents || 0, transactionDTO.originalCurrency.code)}\n`;
+    message += `Status: ${statusEmoji} ${transactionDTO.status}\n`;
+    message += `Description: ${description}\n`;
+    message += `Country: ${transactionDTO.merchantData.location.country}\n`;
+    message += `Created: ${created}\n`;
     return message;
   }
-  private getStatusEmoji(status: string): string {
+
+  private getTransactionStatusEmoji(
+    status: TransactionStatus | string,
+  ): string {
     switch (status) {
-      case 'active':
+      case TransactionStatus.COMPLETED:
         return '✅';
-      case 'paused':
+      case TransactionStatus.PENDING:
         return '⏸️';
-      case 'inactive':
-        return '⏹️';
-      case 'closed':
-        return '🔒';
+      case TransactionStatus.FAILED:
+      case TransactionStatus.DECLINED:
+        return '❌';
       default:
         return '❓';
     }

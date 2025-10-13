@@ -1,8 +1,11 @@
+import type { MerchantDTO } from './merchant.dto';
+
 export enum TransactionStatus {
   PENDING = 'pending',
   COMPLETED = 'completed',
   FAILED = 'failed',
   DECLINED = 'declined',
+  POSTED = 'posted',
 }
 
 export enum TransactionType {
@@ -12,12 +15,23 @@ export enum TransactionType {
   REFUND = 'refund',
 }
 
+export interface OriginalCurrency {
+  amountCents: number;
+  code: string;
+  conversionRate: number;
+}
+
 export interface TransactionDto {
   id: string;
   accountId: string;
   cardId?: string;
-  amount: number;
-  currency: string;
+  virtualAccountId?: string;
+  amountCents: number;
+  originalCurrency: OriginalCurrency;
+  date: string;
+  accountSubtype: string;
+  merchantDescription: string;
+  merchantData: MerchantDTO;
   status: TransactionStatus;
   type: TransactionType;
   description?: string;
