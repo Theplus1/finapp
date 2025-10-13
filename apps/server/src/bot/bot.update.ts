@@ -1,0 +1,255 @@
+import { Update, Ctx, Start, Help, Command, On, Action } from 'nestjs-telegraf';
+import { Context, Markup } from 'telegraf';
+import { Logger } from '@nestjs/common';
+import { BotContext } from './interfaces/bot-context.interface';
+import { MenuHandler } from '../features/menu/handlers/menu.handler';
+import { SubscriptionHandler } from '../features/subscription/handlers/subscription.handler';
+import { OnboardingHandler } from '../features/onboarding/handlers/onboarding.handler';
+import { Messages } from './constants/messages.constant';
+import { Keyboards } from './constants/keyboards.constant';
+import { SessionSteps } from './constants/session-steps.constant';
+import { CardsHandler } from 'src/features/cards/handlers/cards.handler';
+import { TransactionsHandler } from 'src/features/transactions/handlers/transactions.handler';
+
+@Update()
+export class BotUpdate {
+  private readonly logger = new Logger(BotUpdate.name);
+
+  constructor(
+    private readonly menuHandler: MenuHandler,
+    private readonly subscriptionHandler: SubscriptionHandler,
+    private readonly onboardingHandler: OnboardingHandler,
+    private readonly cardHandler: CardsHandler,
+    private readonly transactionsHandler: TransactionsHandler,
+  ) {}
+
+  @Start()
+  async start(@Ctx() ctx: BotContext) {
+    await ctx.sendChatAction('typing');
+    return this.menuHandler.handleStart(ctx);
+  }
+
+  @Help()
+  async help(@Ctx() ctx: Context) {
+    await ctx.sendChatAction('typing');
+    return this.menuHandler.handleHelp(ctx);
+  }
+
+  @Command('menu')
+  async menu(@Ctx() ctx: Context) {
+    await ctx.sendChatAction('typing');
+    return this.menuHandler.handleMenu(ctx);
+  }
+
+  @Command('subscribe')
+  async subscribe(@Ctx() ctx: Context) {
+    await ctx.sendChatAction('typing');
+    return this.subscriptionHandler.handleSubscribe(ctx);
+  }
+
+  @Command('unsubscribe')
+  async unsubscribe(@Ctx() ctx: Context) {
+    await ctx.sendChatAction('typing');
+    return this.subscriptionHandler.handleUnsubscribe(ctx);
+  }
+
+  @Command('status')
+  async status(@Ctx() ctx: Context) {
+    await ctx.sendChatAction('typing');
+    return this.subscriptionHandler.handleStatus(ctx);
+  }
+
+  // TODO: Move to FeedbackHandler
+  @Command('feedback')
+  async startFeedback(@Ctx() ctx: BotContext) {
+    await ctx.sendChatAction('typing');
+    ctx.session = { step: SessionSteps.AWAITING_FEEDBACK, data: {} };
+    await ctx.reply(Messages.feedbackStart, { parse_mode: 'Markdown' });
+  }
+
+  @Action('menu')
+  async onMenuAction(@Ctx() ctx: BotContext) {
+    await ctx.sendChatAction('typing');
+    return this.menuHandler.handleMenuAction(ctx);
+  }
+
+  @Action('notifications')
+  async onNotificationsAction(@Ctx() ctx: BotContext) {
+    await ctx.answerCbQuery();
+    return this.subscriptionHandler.handleNotificationSettings(ctx);
+  }
+
+  @Action('cards')
+  async onCardsAction(@Ctx() ctx: BotContext) {
+    await ctx.answerCbQuery();
+    await ctx.sendChatAction('typing');
+    return this.cardHandler.handleListCards(ctx);
+  }
+
+  @Action('cards_first')
+  async onCardsFirstPageAction(@Ctx() ctx: BotContext) {
+    await ctx.answerCbQuery();
+    await ctx.sendChatAction('typing');
+    return this.cardHandler.handleListCards(ctx);
+  }
+
+  @Action('cards_next')
+  async onCardsNextAction(@Ctx() ctx: BotContext) {
+    const cursor = ctx.session?.data?.nextCursor as string | undefined;
+    
+    if (!cursor) {
+      await ctx.answerCbQuery('Unable to load next page');
+      return;
+    }
+    
+    await ctx.sendChatAction('typing');
+    return this.cardHandler.handleListCards(ctx, cursor);
+  }
+
+  @Action(/^card_(?!s_)(.+)$/)
+  async onCardDetailAction(@Ctx() ctx: BotContext) {
+    await ctx.answerCbQuery();
+    const callbackQuery = ctx.callbackQuery;
+    if (!callbackQuery || !('data' in callbackQuery)) return;
+    
+    const match = callbackQuery.data.match(/^card_(.+)$/);
+    if (!match) return;
+
+    await ctx.sendChatAction('typing');
+    const cardId = match[1];
+    return this.cardHandler.handleCardDetail(ctx, cardId);
+  }
+
+  // ==================== Transaction Actions ====================
+  @Action('transactions')
+  async onTransactionsAction(@Ctx() ctx: BotContext) {
+    return this.menuHandler.handleTransactionsAction(ctx);
+  }
+
+  @Action('transaction.action.subscribe')
+  async onSubscribeTransactionsAction(@Ctx() ctx: BotContext) {
+    return this.transactionsHandler.handleSubscribeTransactionsAction(ctx);
+  }
+
+  @Action('transaction.action.unsubscribe')
+  async onUnsubscribeTransactionsAction(@Ctx() ctx: BotContext) {
+    return this.transactionsHandler.handleUnsubscribeTransactionsAction(ctx);
+  }
+
+  @Action('subscribe')
+  async onSubscribeAction(@Ctx() ctx: BotContext) {
+    return this.subscriptionHandler.handleSubscribeAction(ctx);
+  }
+
+  @Action('unsubscribe')
+  async onUnsubscribeAction(@Ctx() ctx: BotContext) {
+    return this.subscriptionHandler.handleUnsubscribeAction(ctx);
+  }
+
+  @Action('about')
+  async onAboutAction(@Ctx() ctx: BotContext) {
+    return this.menuHandler.handleAboutAction(ctx);
+  }
+
+  @Action('start_feedback')
+  async onStartFeedbackAction(@Ctx() ctx: BotContext) {
+    await ctx.answerCbQuery();
+    await this.startFeedback(ctx);
+  }
+
+
+  // TODO: Move to FeedbackHandler
+  @On('text')
+  async onText(@Ctx() ctx: BotContext) {
+    if (!this.isValidTextMessage(ctx)) return;
+
+    // Type guard ensures these are defined
+    const text = (ctx.message as any).text.trim();
+
+    if (this.isCancelCommand(text)) {
+      return this.handleCancelCommand(ctx);
+    }
+
+    switch (ctx.session.step) {
+      case SessionSteps.AWAITING_ACCOUNT_NUMBER:
+        await this.handleAccountNumberInput(ctx, text);
+        break;
+      case SessionSteps.AWAITING_FEEDBACK:
+        await this.handleFeedbackInput(ctx, text);
+        break;
+      case SessionSteps.AWAITING_RATING:
+        await this.handleRatingInput(ctx, text);
+        break;
+    }
+  }
+
+  private isValidTextMessage(ctx: BotContext): ctx is BotContext & { message: { text: string }; session: NonNullable<BotContext['session']> } {
+    return !!ctx.session?.step && !!ctx.message && 'text' in ctx.message && !!ctx.message.text;
+  }
+
+  private isCancelCommand(text: string): boolean {
+    return text === '/cancel';
+  }
+
+  private async handleCancelCommand(ctx: BotContext): Promise<void> {
+    ctx.session = undefined;
+    await ctx.reply(Messages.feedbackCancelled, Keyboards.removeKeyboard());
+  }
+
+  private async handleFeedbackInput(ctx: BotContext, text: string): Promise<void> {
+    if (!ctx.session) return;
+    
+    ctx.session.data = { feedback: text };
+    ctx.session.step = SessionSteps.AWAITING_RATING;
+    await ctx.reply(Messages.feedbackRating, {
+      parse_mode: 'Markdown',
+      ...Keyboards.feedbackRating(),
+    });
+  }
+
+  private async handleRatingInput(ctx: BotContext, text: string): Promise<void> {
+    if (!ctx.session) return;
+
+    const rating = parseInt(text, 10);
+
+    if (!this.isValidRating(rating)) {
+      await ctx.reply(Messages.feedbackInvalidRating);
+      return;
+    }
+
+    const feedback = ctx.session.data?.feedback as string;
+    ctx.session = undefined;
+
+    this.logger.log(`Feedback received: ${feedback}, Rating: ${rating}`);
+
+    await ctx.reply(Messages.feedbackThankYou(feedback, rating), {
+      parse_mode: 'Markdown',
+      ...Keyboards.removeKeyboard(),
+    });
+  }
+
+  private isValidRating(rating: number): boolean {
+    return !isNaN(rating) && rating >= 1 && rating <= 5;
+  }
+
+  private async handleAccountNumberInput(ctx: BotContext, vitualAccountId: string): Promise<void> {
+    const user = ctx.from;
+    if (!user) return;
+
+    const trimmedVitualAccountId = vitualAccountId.trim();
+
+    if (!this.isValidAccountNumber(trimmedVitualAccountId)) {
+      await ctx.reply(Messages.accountNumberInvalid, { parse_mode: 'Markdown' });
+      return;
+    }
+
+    // TODO: Add more validation logic here if needed
+    // For example: check if account number exists in your system
+
+    await this.onboardingHandler.linkAccountToUser(ctx, user.id, trimmedVitualAccountId);
+  }
+
+  private isValidAccountNumber(accountNumber: string): boolean {
+    return accountNumber.length > 0;
+  }
+}

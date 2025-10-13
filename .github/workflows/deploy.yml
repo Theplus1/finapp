@@ -1,0 +1,120 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+          MODE=${{ vars.MODE }}
+          WEBHOOK_URL=${{ vars.WEBHOOK_URL }}
+          PORT=${{ vars.PORT }}
+          MONGO_URI=${{ secrets.MONGO_URI }}
+          NOTIFICATION_CRON=${{ vars.NOTIFICATION_CRON }}
+          SLASH_API_KEY=${{ secrets.SLASH_API_KEY }}
+          SLASH_BASE_URL=${{ vars.SLASH_BASE_URL }}
+          SLASH_TIMEOUT=${{ vars.SLASH_TIMEOUT }}
+          SLASH_WEBHOOK_SECRET=${{ secrets.SLASH_WEBHOOK_SECRET }}
+          EOF
+
+      - name: Sync files to VPS
+        run: |
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude 'logs' \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            ./ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.APP_DIR }}/
+
+      - name: Deploy to VPS
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          APP_DIR: ${{ vars.APP_DIR }}
+        run: |
+          ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
+            set -e
+            
+            echo "🚀 Starting deployment..."
+            
+            # Navigate to app directory
+            cd ${{ vars.APP_DIR }}
+            
+            # Stop existing containers
+            echo "🛑 Stopping existing containers..."
+            docker-compose -f docker-compose.prod.yml down
+            
+            # Remove old images to free space
+            echo "🗑️  Cleaning up old images..."
+            docker image prune -f
+            
+            # Build and start containers
+            echo "🏗️  Building and starting containers..."
+            docker-compose -f docker-compose.prod.yml up -d --build
+            
+            # Wait for container to be healthy
+            echo "⏳ Waiting for application to start..."
+            sleep 10
+            
+            # Check container status
+            echo "✅ Deployment complete! Container status:"
+            docker-compose -f docker-compose.prod.yml ps
+            
+            # Show recent logs
+            echo "📋 Recent logs:"
+            docker-compose -f docker-compose.prod.yml logs --tail=20
+          ENDSSH
+
+      - name: Verify Deployment
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          APP_DIR: ${{ vars.APP_DIR }}
+        run: |
+          ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
+            cd ${{ vars.APP_DIR }}
+            
+            # Check if container is running
+            if [ $(docker-compose -f docker-compose.prod.yml ps -q | wc -l) -gt 0 ]; then
+              echo "✅ Container is running"
+              exit 0
+            else
+              echo "❌ Container is not running"
+              exit 1
+            fi
+          ENDSSH
+
+      - name: Notify on Success
+        if: success()
+        run: |
+          echo "✅ Deployment successful!"
+          echo "Application is now running on VPS"
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Check the logs above for details"

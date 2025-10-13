@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: telegram-bot-mongodb
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_DATABASE: telegram-bot
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - telegram-bot-network
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telegram-bot-app
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - BOT_TOKEN=${BOT_TOKEN}
+      - MODE=${MODE:-polling}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - PORT=3000
+      - MONGO_URI=mongodb://mongodb:27017/telegram-bot
+      - NOTIFICATION_CRON=${NOTIFICATION_CRON:-0 9 * * *}
+    depends_on:
+      - mongodb
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - telegram-bot-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  telegram-bot-network:
+    driver: bridge
