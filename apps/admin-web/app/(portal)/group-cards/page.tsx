@@ -66,18 +66,19 @@ export default function GroupCard() {
     return [virtualAccountIds];
   }, [dataCardGroup]);
 
-  const { data: virtualAccountInfos } = useQuery({
-    queryKey: ["virtual-account-infos", uniqueVirtualAccountIds],
-    queryFn: async () => {
-      const results = await Promise.all(
-        uniqueVirtualAccountIds.map((id) =>
-          api.virtualAccounts.getVirtualAccountById(id)
-        )
-      );
-      return results.map((r) => r.data);
-    },
-    enabled: !!uniqueVirtualAccountIds.length,
-  });
+  const { data: virtualAccountInfos, isLoading: isLoadingVirtualAccount } =
+    useQuery({
+      queryKey: ["virtual-account-infos", uniqueVirtualAccountIds],
+      queryFn: async () => {
+        const results = await Promise.all(
+          uniqueVirtualAccountIds.map((id) =>
+            api.virtualAccounts.getVirtualAccountById(id)
+          )
+        );
+        return results.map((r) => r.data);
+      },
+      enabled: !!uniqueVirtualAccountIds.length,
+    });
 
   const columns = [
     {
@@ -109,7 +110,7 @@ export default function GroupCard() {
           (virtualAccount) =>
             virtualAccount.virtualAccount?.id === row.original.virtualAccountId
         );
-        return isLoading ? (
+        return isLoading || isLoadingVirtualAccount ? (
           <Skeleton />
         ) : (
           (virtualAccountInfo?.virtualAccount?.name ??

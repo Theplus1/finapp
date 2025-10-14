@@ -21,6 +21,13 @@ import { DataTable } from "@/components/ui/data-table";
 import { CursorPagination } from "@/components/ui/cursor-pagination";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { CopyIcon } from "@/components/ui/copy-button";
+const fakeIdTelegram = "fakeID";
 const initCursorMap = {
   1: "",
 };
@@ -127,6 +134,44 @@ export default function VirtualAccount() {
             </div>
             <div>
               <span className="font-medium">Account:</span> {accountNumber}
+            </div>
+          </>
+        );
+      },
+    },
+    {
+      id: "telegram",
+      header: (
+        <div className="flex items-center gap-2">
+          Telegram
+          <Tooltip>
+            <TooltipTrigger>
+              <CopyIcon text={fakeIdTelegram} showText={false} />
+            </TooltipTrigger>
+            <TooltipContent
+              style={{
+                width: "200px",
+              }}
+            >
+              Your telegram group will receive notifications from bot with this
+              ID: {fakeIdTelegram}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      ),
+      cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        const telegram = (
+          row.original.virtualAccount as unknown as VirtualAccount & {
+            telegram: string;
+          }
+        )?.telegram;
+        return isLoading ? (
+          <Skeleton />
+        ) : (
+          <>
+            <div>
+              <span className="font-medium">Telegram:</span>{" "}
+              {telegram || "Not set yet"}
             </div>
           </>
         );
