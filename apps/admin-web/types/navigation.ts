@@ -22,12 +22,6 @@ export interface NavSection {
   }[]
 }
 
-export interface Project {
-  name: string
-  url: string
-  icon: LucideIcon
-}
-
 export interface Team {
   name: string
   logo: LucideIcon

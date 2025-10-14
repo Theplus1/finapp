@@ -29,7 +29,7 @@ const maskDataTable = Array.from({ length: 20 }, () => {
 const initCursorMap = {
   1: "",
 };
-export default function Card() {
+export default function Cards() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(0);
@@ -41,7 +41,7 @@ export default function Card() {
   useEffect(() => {
     setBreadcrumbs([
       { label: "Dashboard", href: "/dashboard" },
-      { label: "Card", href: "/card" },
+      { label: "Cards", href: "/card" },
     ]);
   }, [setBreadcrumbs]);
 
@@ -168,7 +168,7 @@ export default function Card() {
       },
     },
     {
-      header: "Virtual Account",
+      header: "Virtual accounts",
       cell: ({
         row,
       }: CellContext<Card & { virtualAccountName: string }, string>) => {
@@ -214,17 +214,18 @@ export default function Card() {
   const handleChangeFilter = (field: string, value: string) => {
     setPage(1);
     setCursorMap(initCursorMap);
-    setCurrentFilter({
-      ...currentFilter,
+    setPageSize(0);
+    setCurrentFilter((prev) => ({
+      ...prev,
       [field]: value,
       cursor: "",
-    });
+    }));
   };
 
   return (
     <PageLayout>
       <PageHeader>
-        <PageTitle>Card</PageTitle>
+        <PageTitle>Cards</PageTitle>
       </PageHeader>
 
       <Section>
