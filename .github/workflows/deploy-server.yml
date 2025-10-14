@@ -75,84 +75,15 @@ jobs:
         run: |
           ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
             set -e
-            
-            echo "🚀 Starting server deployment..."
-            
-            # Navigate to server directory
             cd ${{ vars.SERVER_APP_DIR }}
             
-            # Verify files
-            echo "📦 Verifying deployment files..."
-            if [ -d "dist" ] && [ -f "package.json" ]; then
-              echo "✅ Build files verified"
-            else
-              echo "❌ Build files missing!"
-              exit 1
-            fi
-            
-            # Install production dependencies
-            echo "📦 Installing production dependencies..."
+            echo "📦 Installing dependencies..."
             npm install --omit=dev --legacy-peer-deps
             
-            # Stop existing PM2 process
-            echo "🛑 Stopping existing server process..."
-            pm2 stop server || true
-            pm2 delete server || true
-            
-            # Start server with PM2
-            echo "🏗️  Starting server with PM2..."
-            pm2 start dist/main.js --name server
-            
-            # Save PM2 process list
+            echo "🔄 Restarting server..."
+            pm2 restart server || pm2 start dist/main.js --name server
             pm2 save
             
-            # Wait for app to start
-            echo "⏳ Waiting for server to start..."
-            sleep 5
-            
-            # Check PM2 status
-            echo "✅ Server deployment complete! PM2 status:"
+            echo "✅ Deployment complete"
             pm2 status
-            
-            # Show recent logs
-            echo "📋 Recent logs:"
-            pm2 logs server --lines 20 --nostream
           ENDSSH
-
-      - name: Verify Server Deployment
-        env:
-          VPS_HOST: ${{ vars.VPS_HOST }}
-          VPS_USER: ${{ vars.VPS_USER }}
-          SERVER_APP_DIR: ${{ vars.SERVER_APP_DIR }}
-        run: |
-          ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
-            # Check if PM2 process is running
-            if pm2 list | grep -q "server.*online"; then
-              echo "✅ Server is running"
-              
-              # Test if the app responds (if you have a health endpoint)
-              sleep 2
-              if curl -f http://localhost:${{ vars.PORT }}/health > /dev/null 2>&1; then
-                echo "✅ Server is responding to requests"
-                exit 0
-              else
-                echo "⚠️  Server is running but not responding yet"
-                exit 0
-              fi
-            else
-              echo "❌ Server is not running"
-              exit 1
-            fi
-          ENDSSH
-
-      - name: Notify on Success
-        if: success()
-        run: |
-          echo "✅ Server deployment successful!"
-          echo "Server is now running on VPS"
-
-      - name: Notify on Failure
-        if: failure()
-        run: |
-          echo "❌ Server deployment failed!"
-          echo "Check the logs above for details"

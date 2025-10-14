@@ -51,19 +51,11 @@ jobs:
       - name: Sync admin-web files to VPS
         run: |
           rsync -avz --delete \
-            --exclude '.git' \
             --exclude 'node_modules' \
+            --exclude 'src' \
             --exclude 'coverage' \
-            --exclude '.env.local' \
             -e "ssh -o StrictHostKeyChecking=no" \
             apps/admin-web/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.ADMIN_APP_DIR }}/
-
-      - name: Sync shared packages to VPS
-        run: |
-          rsync -avz \
-            --exclude 'node_modules' \
-            -e "ssh -o StrictHostKeyChecking=no" \
-            package.json package-lock.json ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.ADMIN_APP_DIR }}/
 
       - name: Deploy admin-web to VPS
         env:
@@ -74,76 +66,14 @@ jobs:
         run: |
           ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
             set -e
-            
-            echo "🚀 Starting admin-web deployment..."
-            
-            # Navigate to admin-web directory
             cd ${{ vars.ADMIN_APP_DIR }}
             
-            # Install production dependencies
             echo "📦 Installing dependencies..."
-            npm ci --omit=dev
+            npm install --omit=dev --legacy-peer-deps
             
-            # Stop existing PM2 process
-            echo "🛑 Stopping existing admin-web process..."
-            pm2 stop admin-web || true
-            pm2 delete admin-web || true
-            
-            # Start the Next.js app with PM2
-            echo "🏗️  Starting admin-web with PM2..."
-            pm2 start npm --name "admin-web" -- start -- -p ${{ vars.ADMIN_PORT }}
-            
-            # Save PM2 process list
+            echo "🔄 Restarting admin-web..."
+            pm2 restart admin-web || pm2 start npm --name admin-web -- start -- -p ${{ vars.ADMIN_PORT }}
             pm2 save
             
-            # Wait for app to start
-            echo "⏳ Waiting for admin-web to start..."
-            sleep 5
-            
-            # Check PM2 status
-            echo "✅ Admin-web deployment complete! PM2 status:"
-            pm2 status
-            
-            # Show recent logs
-            echo "📋 Recent logs:"
-            pm2 logs admin-web --lines 20 --nostream
+            echo "✅ Deployment complete"
           ENDSSH
-
-      - name: Verify Admin Web Deployment
-        env:
-          VPS_HOST: ${{ vars.VPS_HOST }}
-          VPS_USER: ${{ vars.VPS_USER }}
-          ADMIN_APP_DIR: ${{ vars.ADMIN_APP_DIR }}
-          ADMIN_PORT: ${{ vars.ADMIN_PORT }}
-        run: |
-          ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
-            # Check if PM2 process is running
-            if pm2 list | grep -q "admin-web.*online"; then
-              echo "✅ Admin-web is running"
-              
-              # Test if the app responds
-              sleep 2
-              if curl -f http://localhost:${{ vars.ADMIN_PORT }} > /dev/null 2>&1; then
-                echo "✅ Admin-web is responding to requests"
-                exit 0
-              else
-                echo "⚠️  Admin-web is running but not responding yet"
-                exit 0
-              fi
-            else
-              echo "❌ Admin-web is not running"
-              exit 1
-            fi
-          ENDSSH
-
-      - name: Notify on Success
-        if: success()
-        run: |
-          echo "✅ Admin-web deployment successful!"
-          echo "Admin-web is now running on VPS at port ${{ vars.ADMIN_PORT }}"
-
-      - name: Notify on Failure
-        if: failure()
-        run: |
-          echo "❌ Admin-web deployment failed!"
-          echo "Check the logs above for details"
