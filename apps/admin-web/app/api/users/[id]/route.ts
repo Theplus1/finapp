@@ -107,12 +107,11 @@ export async function PUT(
  *
  * Delete user
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE() {
+  // request: NextRequest
+  // { params }: { params: Promise<{ id: string }> }
   try {
-    const { id } = await params;
+    // const { id } = await params;
 
     // TODO: Implement actual database deletion
     // await db.user.delete({ where: { id } })

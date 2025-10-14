@@ -19,6 +19,7 @@ import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { CursorPagination } from "@/components/ui/cursor-pagination";
+import { EMPTY_LABEL } from "@/app/utils/constants";
 
 const initCursorMap = {
   1: "",
@@ -63,12 +64,6 @@ export default function VirtualAccount() {
     return data?.items ?? [];
   }, [isLoading, data]);
 
-  const paginatedData = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    const end = start + pageSize;
-    return dataVirtualAccount.slice(start, end);
-  }, [dataVirtualAccount, page, pageSize]);
-
   const columns = [
     {
       header: "No",
@@ -100,7 +95,7 @@ export default function VirtualAccount() {
         const takeRateLabel =
           typeof takeRate === "number"
             ? formatNumberAsPercentage(takeRate * 100)
-            : "";
+            : EMPTY_LABEL;
         return isLoading ? <Skeleton /> : takeRateLabel;
       },
     },

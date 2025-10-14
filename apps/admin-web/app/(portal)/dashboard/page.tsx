@@ -5,7 +5,7 @@ import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
-  formatDatetimeMMDDYYYY,
+  formatUtcMMDDYYYYHHMM,
   formatDollarByCent,
   renderNoTable,
 } from "@/app/utils/func";
@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/lib/api/endpoints/card";
 import FilterTransaction from "./components/filter";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
+import { EMPTY_LABEL } from "@/app/utils/constants";
 
 const initFilter = {
   "filter:cardId": "",
@@ -178,7 +179,7 @@ export default function Dashboard() {
           ) : cardInfo?.name ? (
             `${cardInfo.name} ${cardInfo.last4}`
           ) : (
-            "Unknown"
+            EMPTY_LABEL
           );
         },
       },
@@ -187,12 +188,13 @@ export default function Dashboard() {
         cell: ({ row }: CellContext<Transition, string>) => {
           const virtualAccountInfo = virtualAccountInfos?.find(
             (virtualAccount) =>
-              virtualAccount.virtualAccount.id === row.original.virtualAccountId
+              virtualAccount.virtualAccount?.id ===
+              row.original.virtualAccountId
           );
           return isLoading || isLoadingVirtualAccountInfos ? (
             <Skeleton />
           ) : (
-            (virtualAccountInfo?.virtualAccount?.name ?? "Unknown")
+            (virtualAccountInfo?.virtualAccount?.name ?? EMPTY_LABEL)
           );
         },
       },
@@ -202,7 +204,15 @@ export default function Dashboard() {
           return isLoading ? (
             <Skeleton />
           ) : (
-            formatDollarByCent(row.original.amountCents)
+            <span
+              className={
+                row.original.amountCents >= 0
+                  ? "text-green-700"
+                  : "text-red-500"
+              }
+            >
+              {formatDollarByCent(row.original.amountCents)}
+            </span>
           );
         },
       },
@@ -224,7 +234,7 @@ export default function Dashboard() {
           return isLoading ? (
             <Skeleton />
           ) : (
-            (row.original.merchantData?.name ?? "")
+            (row.original.merchantData?.name ?? EMPTY_LABEL)
           );
         },
       },
@@ -234,7 +244,7 @@ export default function Dashboard() {
           return isLoading ? (
             <Skeleton />
           ) : (
-            (row.original.merchantData?.location?.country ?? "")
+            (row.original.merchantData?.location?.country ?? EMPTY_LABEL)
           );
         },
       },
@@ -244,7 +254,7 @@ export default function Dashboard() {
           return isLoading ? (
             <Skeleton />
           ) : (
-            formatDatetimeMMDDYYYY(row.original.date)
+            formatUtcMMDDYYYYHHMM(row.original.date)
           );
         },
       },

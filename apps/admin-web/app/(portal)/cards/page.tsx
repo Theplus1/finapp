@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { formatDatetimeMMDDYYYY, renderNoTable } from "@/app/utils/func";
+import { formatUtcMMDDYYYY, renderNoTable } from "@/app/utils/func";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CursorPagination } from "@/components/ui/cursor-pagination";
 import { PageHeader, PageTitle } from "@/components/layouts/page-header";
@@ -15,6 +15,7 @@ import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 import { DataTable } from "@/components/ui/data-table";
 import FilterCard from "./components/filter";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
+import { EMPTY_LABEL } from "@/app/utils/constants";
 
 const initFilter = {
   "filter:cardGroupId": "",
@@ -41,7 +42,7 @@ export default function Cards() {
   useEffect(() => {
     setBreadcrumbs([
       { label: "Dashboard", href: "/dashboard" },
-      { label: "Cards", href: "/card" },
+      { label: "Cards", href: "/cards" },
     ]);
   }, [setBreadcrumbs]);
 
@@ -117,11 +118,11 @@ export default function Cards() {
     return dataCard.map((card) => {
       const groupName = card.cardGroupId
         ? groupInfos?.find((g) => g.id === card.cardGroupId)?.name
-        : "Unknown";
+        : EMPTY_LABEL;
       const virtualAccountName =
         (virtualAccountInfos as VirtualAccount[])?.find(
           (v) => v.virtualAccount?.id === card.virtualAccountId
-        )?.virtualAccount?.name ?? "Unknown";
+        )?.virtualAccount?.name ?? EMPTY_LABEL;
       return {
         ...card,
         groupName,
@@ -195,7 +196,7 @@ export default function Cards() {
         return isLoading ? (
           <Skeleton />
         ) : (
-          formatDatetimeMMDDYYYY(row.original.createdAt)
+          formatUtcMMDDYYYY(row.original.createdAt)
         );
       },
     },

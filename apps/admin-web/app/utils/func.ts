@@ -23,12 +23,26 @@ export const formatCurrency = (number: number) => {
   );
 };
 
-export const formatDatetimeMMDDYYYY = (datetime: string) => {
-  return new Date(datetime).toLocaleString("en-US", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+export const formatUtcMMDDYYYY = (datetime: string) => {
+  const date = new Date(datetime);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${month}/${day}/${year}`;
+};
+
+export const formatUtcMMDDYYYYHHMM = (datetime: string | Date): string => {
+  const date = new Date(datetime);
+
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+  const formatted = `${month}/${day}/${year} ${hours}:${minutes}`;
+
+  return formatted;
 };
 
 export const formatDollarByCent = (number: number) => {
