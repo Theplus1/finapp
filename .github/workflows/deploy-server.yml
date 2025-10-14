@@ -28,9 +28,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build server
-        run: npm run build:server
-
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -56,23 +53,19 @@ jobs:
           SLASH_WEBHOOK_SECRET=${{ secrets.SLASH_WEBHOOK_SECRET }}
           EOF
 
+      - name: Build server
+        run: npm run build:server
+
       - name: Sync server files to VPS
         run: |
           rsync -avz --delete \
-            --exclude '.git' \
             --exclude 'node_modules' \
-            --exclude 'logs' \
-            --exclude '.next' \
+            --exclude 'src' \
+            --exclude 'test' \
+            --exclude '.turbo' \
             --exclude 'coverage' \
             -e "ssh -o StrictHostKeyChecking=no" \
             apps/server/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.SERVER_APP_DIR }}/
-
-      - name: Sync shared packages to VPS
-        run: |
-          rsync -avz \
-            --exclude 'node_modules' \
-            -e "ssh -o StrictHostKeyChecking=no" \
-            package.json package-lock.json ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.SERVER_APP_DIR }}/
 
       - name: Deploy server to VPS
         env:
@@ -88,29 +81,42 @@ jobs:
             # Navigate to server directory
             cd ${{ vars.SERVER_APP_DIR }}
             
-            # Stop existing containers
-            echo "🛑 Stopping existing server containers..."
-            docker-compose -f docker-compose.prod.yml down || true
+            # Verify files
+            echo "📦 Verifying deployment files..."
+            if [ -d "dist" ] && [ -f "package.json" ]; then
+              echo "✅ Build files verified"
+            else
+              echo "❌ Build files missing!"
+              exit 1
+            fi
             
-            # Remove old images to free space
-            echo "🗑️  Cleaning up old images..."
-            docker image prune -f
+            # Install production dependencies
+            echo "📦 Installing production dependencies..."
+            npm ci --omit=dev
             
-            # Build and start containers
-            echo "🏗️  Building and starting server containers..."
-            docker-compose -f docker-compose.prod.yml up -d --build
+            # Stop existing PM2 process
+            echo "🛑 Stopping existing server process..."
+            pm2 stop server || true
+            pm2 delete server || true
             
-            # Wait for container to be healthy
+            # Start server with PM2
+            echo "🏗️  Starting server with PM2..."
+            pm2 start dist/main.js --name server
+            
+            # Save PM2 process list
+            pm2 save
+            
+            # Wait for app to start
             echo "⏳ Waiting for server to start..."
-            sleep 10
+            sleep 5
             
-            # Check container status
-            echo "✅ Server deployment complete! Container status:"
-            docker-compose -f docker-compose.prod.yml ps
+            # Check PM2 status
+            echo "✅ Server deployment complete! PM2 status:"
+            pm2 status
             
             # Show recent logs
             echo "📋 Recent logs:"
-            docker-compose -f docker-compose.prod.yml logs --tail=20
+            pm2 logs server --lines 20 --nostream
           ENDSSH
 
       - name: Verify Server Deployment
@@ -120,14 +126,21 @@ jobs:
           SERVER_APP_DIR: ${{ vars.SERVER_APP_DIR }}
         run: |
           ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
-            cd ${{ vars.SERVER_APP_DIR }}
-            
-            # Check if container is running
-            if [ $(docker-compose -f docker-compose.prod.yml ps -q | wc -l) -gt 0 ]; then
-              echo "✅ Server container is running"
-              exit 0
+            # Check if PM2 process is running
+            if pm2 list | grep -q "server.*online"; then
+              echo "✅ Server is running"
+              
+              # Test if the app responds (if you have a health endpoint)
+              sleep 2
+              if curl -f http://localhost:${{ vars.PORT }}/health > /dev/null 2>&1; then
+                echo "✅ Server is responding to requests"
+                exit 0
+              else
+                echo "⚠️  Server is running but not responding yet"
+                exit 0
+              fi
             else
-              echo "❌ Server container is not running"
+              echo "❌ Server is not running"
               exit 1
             fi
           ENDSSH
