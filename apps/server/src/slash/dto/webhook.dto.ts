@@ -1,3 +1,5 @@
+import type { MerchantDTO } from "./merchant.dto";
+
 export enum WebhookEventType {
   CARD_CREATED = 'card.created',
   CARD_UPDATED = 'card.updated',
@@ -35,10 +37,11 @@ export interface WebhookEventDto {
 
 export interface TransactionDataDTO {
   id: string;
-  date?: string;
+  date: string;
   amountCents?: number;
   status?: string;
   detailedStatus?: string;
+  merchantData: MerchantDTO;
   description?: string;
   merchantDescription?: string;
   accountId?: string;

@@ -1,3 +1,6 @@
+import { formatCurrency } from "src/shared/utils/formatCurrency.util";
+import type { TransactionDataDTO } from "src/slash";
+
 export const Messages = {
   // Welcome & Help
   welcome: (name: string) =>
@@ -31,7 +34,6 @@ export const Messages = {
 
   // Menu
   mainMenu: '📋 *Main Menu*\n\nChoose an option:',
-  transactionsMenu: '📋 *Transactions Menu*\n\nChoose an option:',
 
   // Subscription
   subscribed:
@@ -51,12 +53,6 @@ export const Messages = {
     '✅ *Subscribed!*\n\n' + 'You will now receive daily notifications at 9:00 AM.',
   unsubscribeSuccess:
     '❌ *Unsubscribed*\n\n' + 'You will no longer receive daily notifications.',
-  subscribeTransactionsSuccess:
-    '✅ *Subscribed!*\n\n' +
-    'You will now receive notifications every time a transaction is changed.',
-  unsubscribeTransactionsSuccess:
-    '❌ *Unsubscribed*\n\n' +
-    'You will no longer receive notifications every time a transaction is changed.',
 
   // About
   about:
@@ -98,24 +94,36 @@ export const Messages = {
   errorFetchingCards: '❌ Error fetching cards. Please try again later.',
 
   // Transactions
+  transactionsMenu: '📋 *Transactions Menu*\n\nChoose an option:',
+  transactionNotificationMenu: (isSubscribed: boolean) =>
+    `🔔 *Transaction Notifications*\n\n` +
+    `Status: ${isSubscribed ? '✅ Subscribed' : '❌ Unsubscribed'}\n\n` +
+    `${isSubscribed ? 'Notifications when a transaction is changed.' : 'No notifications when a transaction is changed.'}`,
+  subscribeTransactionsSuccess:
+    '✅ *Subscribed!*\n\n' +
+    'You will now receive notifications when a transaction is changed.',
+  unsubscribeTransactionsSuccess:
+    '❌ *Unsubscribed*\n\n' +
+    'You will no longer receive notifications when a transaction is changed.',
+
   noTransactionsFound: '📭 No transactions found for your account.',
+  transactionInfoPrompt: 'Please send the transaction ID you want to look up.\n\n(Send /cancel to cancel)',
   errorFetchingTransactions: '❌ Error fetching transactions. Please try again later.',
-  transactionCreated: (
-    amount: number | undefined,
-    currency: string | undefined,
-    transactionId: string | undefined,
-  ) =>
+
+  transactionCreated: (transaction: TransactionDataDTO) =>
     `✅ *Transaction Created!*\n` +
-    `Amount: ${amount || 'N/A'} ${currency || 'N/A'}\n` +
-    `Transaction ID: ${transactionId || 'N/A'}\n\n` +
-    `You can view your transaction history in the app.`,
-  transactionUpdated: (
-    amount: number | undefined,
-    currency: string | undefined,
-    transactionId: string | undefined,
-  ) =>
+    `Amount: ${formatCurrency(transaction.amountCents || 0, transaction.originalCurrency?.code)}\n` +
+    `Status: ${transaction.status || 'N/A'}\n` +
+    `Description: ${transaction.description || 'N/A'}\n` +
+    `Country: ${transaction.merchantData.location.country}\n` +
+    `Created: ${new Date(transaction.date).toLocaleString()}\n` +
+    `Transaction ID: ${transaction.id || 'N/A'}`,
+  transactionUpdated: (transaction: TransactionDataDTO) =>
     `✅ *Transaction Updated!*\n` +
-    `Amount: ${amount || 'N/A'} ${currency || 'N/A'}\n` +
-    `Transaction ID: ${transactionId || 'N/A'}\n\n` +
-    `You can view your transaction history in the app.`,
+    `Amount: ${formatCurrency(transaction.amountCents || 0, transaction.originalCurrency?.code)}\n` +
+    `Status: ${transaction.status || 'N/A'}\n` +
+    `Description: ${transaction.description || 'N/A'}\n` +
+    `Country: ${transaction.merchantData.location.country}\n` +
+    `Created: ${new Date(transaction.date).toLocaleString()}\n` +
+    `Transaction ID: ${transaction.id || 'N/A'}`,
 };

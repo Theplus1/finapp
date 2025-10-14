@@ -235,11 +235,7 @@ export class SlashWebhookController {
     if (user.isSubscribed) {
       await this.botService.sendMessage(
         user.telegramId,
-        Messages.transactionCreated(
-          data.amountCents,
-          data.originalCurrency?.code,
-          data.id,
-        ),
+        Messages.transactionCreated(data),
       );
     }
   }
@@ -263,11 +259,7 @@ export class SlashWebhookController {
     if (user.isSubscribed) {
       await this.botService.sendMessage(
         user.telegramId,
-        Messages.transactionUpdated(
-          data.amountCents,
-          data.originalCurrency?.code,
-          data.id,
-        ),
+        Messages.transactionUpdated(data),
       );
     }
   }

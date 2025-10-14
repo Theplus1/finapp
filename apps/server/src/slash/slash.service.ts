@@ -241,7 +241,7 @@ export class SlashService {
   async getTransaction(transactionId: string): Promise<TransactionDto> {
     return this.request<TransactionDto>({
       method: 'GET',
-      url: `/transactions/${transactionId}`,
+      url: `/transaction/${transactionId}`,
     });
   }
 

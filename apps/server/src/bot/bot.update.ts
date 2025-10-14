@@ -10,6 +10,7 @@ import { Keyboards } from './constants/keyboards.constant';
 import { SessionSteps } from './constants/session-steps.constant';
 import { CardsHandler } from 'src/features/cards/handlers/cards.handler';
 import { TransactionsHandler } from 'src/features/transactions/handlers/transactions.handler';
+import { Actions } from './constants/actions.constant';
 
 @Update()
 export class BotUpdate {
@@ -121,19 +122,28 @@ export class BotUpdate {
   }
 
   // ==================== Transaction Actions ====================
-  @Action('transactions')
-  async onTransactionsAction(@Ctx() ctx: BotContext) {
-    return this.menuHandler.handleTransactionsAction(ctx);
+  @Action(Actions.menu.transaction)
+  async onTransactionAction(@Ctx() ctx: BotContext) {
+    return this.menuHandler.handleTransactionAction(ctx);
+  }
+  @Action(Actions.menu.transactionNotification)
+  async onTransactionNotificationAction(@Ctx() ctx: BotContext) {
+    return this.menuHandler.handleTransactionNotificationAction(ctx);
   }
 
-  @Action('transaction.action.subscribe')
+  @Action(Actions.transaction.subscribeNotification)
   async onSubscribeTransactionsAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleSubscribeTransactionsAction(ctx);
   }
 
-  @Action('transaction.action.unsubscribe')
+  @Action(Actions.transaction.unsubscribeNotification)
   async onUnsubscribeTransactionsAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleUnsubscribeTransactionsAction(ctx);
+  }
+
+  @Action(Actions.transaction.detail)
+  async onTransactionDetailAction(@Ctx() ctx: BotContext) {
+    return this.transactionsHandler.handleTransactionDetailAction(ctx);
   }
 
   @Action('subscribe')
@@ -179,6 +189,9 @@ export class BotUpdate {
         break;
       case SessionSteps.AWAITING_RATING:
         await this.handleRatingInput(ctx, text);
+        break;
+      case SessionSteps.AWAITING_TRANSACTION_ID:
+        await this.transactionsHandler.handleTransactionInput(ctx, text);
         break;
     }
   }
