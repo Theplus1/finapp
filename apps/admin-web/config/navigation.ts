@@ -40,35 +40,35 @@ export const navMain: NavSection[] = [
     ],
   },
   {
-    title: "Card",
+    title: "Cards",
     url: "#",
     icon: IdCard,
     items: [
       {
-        title: "Card",
-        url: "/card",
+        title: "Cards",
+        url: "/cards",
       },
     ],
   },
   {
-    title: "Group card",
+    title: "Group cards",
     url: "#",
     icon: Group,
     items: [
       {
-        title: "Group card",
-        url: "/group-card",
+        title: "Group cards",
+        url: "/group-cards",
       },
     ],
   },
   {
-    title: "Virtual Account",
+    title: "Virtual accounts",
     url: "#",
     icon: User,
     items: [
       {
-        title: "Virtual Account",
-        url: "/virtual-account",
+        title: "Virtual accounts",
+        url: "/virtual-accounts",
       },
     ],
   },

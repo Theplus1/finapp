@@ -37,7 +37,7 @@ export default function VirtualAccount() {
   useEffect(() => {
     setBreadcrumbs([
       { label: "Dashboard", href: "/dashboard" },
-      { label: "Virtual Account", href: "/virtual-account" },
+      { label: "Virtual accounts", href: "/virtual-account" },
     ]);
   }, [setBreadcrumbs]);
 
@@ -142,7 +142,7 @@ export default function VirtualAccount() {
   return (
     <PageLayout>
       <PageHeader>
-        <PageTitle>Virtual Account</PageTitle>
+        <PageTitle>Virtual accounts</PageTitle>
       </PageHeader>
 
       <Section>

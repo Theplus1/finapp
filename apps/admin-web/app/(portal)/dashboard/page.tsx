@@ -175,8 +175,10 @@ export default function Dashboard() {
           );
           return isLoading || isLoadingCardInfos ? (
             <Skeleton />
+          ) : cardInfo?.name ? (
+            `${cardInfo.name} ${cardInfo.last4}`
           ) : (
-            (cardInfo?.name ?? "Unknown")
+            "Unknown"
           );
         },
       },
@@ -277,7 +279,7 @@ export default function Dashboard() {
 
       <Section>
         <SectionHeader>
-          <SectionTitle>Transaction</SectionTitle>
+          <SectionTitle>Transactions</SectionTitle>
         </SectionHeader>
         <SectionContent>
           <FilterTransaction

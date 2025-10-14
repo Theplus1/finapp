@@ -1,19 +1,23 @@
+"use client";
+
+import { ChevronDownIcon } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ChevronDownIcon } from "lucide-react";
 import { useState } from "react";
 
 type Props = {
-  label: string;
-  onChange: (date: Date | undefined) => void;
+  label?: string;
+  onChange: (date?: Date) => void;
+  showClear?: boolean;
 };
-const DatePickerItem = ({ label, onChange }: Props) => {
+
+export function DatePicker({ label, onChange, showClear = true }: Props) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(undefined);
   const handleChange = (date: Date | undefined) => {
@@ -21,46 +25,46 @@ const DatePickerItem = ({ label, onChange }: Props) => {
     setOpen(false);
     onChange(date);
   };
+
   return (
     <>
-      <Label htmlFor="date" className="px-1">
-        {label}
-      </Label>
+      {label && (
+        <Label htmlFor="date" className="px-1">
+          {label}
+        </Label>
+      )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            id="date"
-            className="w-48 justify-between font-normal"
+            data-empty={!date}
+            className="data-[empty=true]:text-muted-foreground w-48 justify-between font-normal"
           >
             {date ? date.toLocaleDateString() : "Select date"}
             <ChevronDownIcon />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+        <PopoverContent className="w-auto p-0">
           <Calendar
-            key={"dateTo"}
             mode="single"
             selected={date}
-            captionLayout="dropdown"
             onSelect={(date) => {
               handleChange(date);
             }}
           />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              handleChange(undefined);
-            }}
-            className="mt-2"
-          >
-            Clear
-          </Button>
+          <>
+            {showClear && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleChange(undefined)}
+              >
+                Clear
+              </Button>
+            )}
+          </>
         </PopoverContent>
       </Popover>
     </>
   );
-};
-
-export default DatePickerItem;
+}

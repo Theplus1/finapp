@@ -1,5 +1,5 @@
 "use client";
-import DatePickerItem from "./date-picker-item";
+import { DatePicker } from "@/components/ui/date-picker";
 
 type Props = {
   onDateFromChange: (date: string | undefined) => void;
@@ -21,11 +21,8 @@ export function FilterDate({ onDateFromChange, onDateToChange }: Props) {
 
   return (
     <div className="flex gap-3">
-      <DatePickerItem
-        label="From"
-        onChange={(date) => handleChangeFrom(date)}
-      />
-      <DatePickerItem label="To" onChange={(date) => handleChangeTo(date)} />
+      <DatePicker onChange={(date) => handleChangeFrom(date)} label="From" />
+      <DatePicker onChange={(date) => handleChangeTo(date)} label="To" />
     </div>
   );
 }

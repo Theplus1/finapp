@@ -30,7 +30,7 @@ export default function GroupCard() {
   useEffect(() => {
     setBreadcrumbs([
       { label: "Dashboard", href: "/dashboard" },
-      { label: "Group card", href: "/group-card" },
+      { label: "Group cards", href: "/group-card" },
     ]);
   }, [setBreadcrumbs]);
 
@@ -103,7 +103,7 @@ export default function GroupCard() {
       },
     },
     {
-      header: "Virtual Account",
+      header: "Virtual accounts",
       cell: ({ row }: CellContext<CardGroup, string>) => {
         const virtualAccountInfo = virtualAccountInfos?.find(
           (virtualAccount) =>
@@ -148,7 +148,7 @@ export default function GroupCard() {
   return (
     <PageLayout>
       <PageHeader>
-        <PageTitle>Group card</PageTitle>
+        <PageTitle>Group cards</PageTitle>
       </PageHeader>
 
       <Section>
