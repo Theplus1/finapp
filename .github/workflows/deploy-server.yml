@@ -92,7 +92,7 @@ jobs:
             
             # Install production dependencies
             echo "📦 Installing production dependencies..."
-            npm ci --omit=dev
+            npm install --omit=dev --legacy-peer-deps
             
             # Stop existing PM2 process
             echo "🛑 Stopping existing server process..."
