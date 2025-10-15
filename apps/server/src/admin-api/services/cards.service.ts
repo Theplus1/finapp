@@ -20,6 +20,11 @@ export interface CardStats {
   singleUse: number;
 }
 
+export interface CardFilters {
+  virtualAccountId?: string;
+  status?: string;
+  cardGroupId?: string;
+}
 @Injectable()
 export class CardsService {
   private readonly logger = new Logger(CardsService.name);
@@ -35,30 +40,24 @@ export class CardsService {
    */
   async findAll(query: CardQueryDto) {
     this.logger.log(`Finding cards with query: ${JSON.stringify(query)}`);
+    const filters = this.buildFilter(query);
 
     const page = query.page || 1;
     const limit = query.limit || 20;
     const skip = (page - 1) * limit;
-    
-    // Get all cards matching filter (repository doesn't support direct filtering)
-    const allCards = await this.virtualAccountRepo.findAll();
-    const filteredCards: CardDocument[] = [];
-    
-    // Manual filtering and pagination
-    for (const va of allCards) {
-      const cards = await this.cardRepo.findByVirtualAccountId(va.slashId, {
-        status: query.status,
-        cardGroupId: query.cardGroupId,
-        skip,
-        limit,
-      });
-      filteredCards.push(...cards);
-    }
-    
-    const data = filteredCards.slice(0, limit);
-    const total = filteredCards.length;
 
-    return createPaginatedResponse(data, page, limit, total, 'Cards retrieved successfully');
+    const [data, total] = await Promise.all([
+      this.cardRepo.find({ ...filters, limit, skip }),
+      this.cardRepo.count(filters),
+    ]);
+
+    return createPaginatedResponse(
+      data,
+      page,
+      limit,
+      total,
+      'Cards retrieved successfully',
+    );
   }
 
   /**
@@ -66,7 +65,7 @@ export class CardsService {
    */
   async findById(id: string): Promise<CardDocument> {
     const card = await this.cardRepo.findBySlashId(id);
-    
+
     if (!card) {
       throw new NotFoundException(`Card ${id} not found`);
     }
@@ -79,11 +78,13 @@ export class CardsService {
    */
   async findByIdWithDetails(id: string): Promise<EnrichedCard> {
     const card = await this.findById(id);
-    
+
     // Fetch related virtual account
     let virtualAccount = null;
     if (card.virtualAccountId) {
-      virtualAccount = await this.virtualAccountRepo.findBySlashId(card.virtualAccountId);
+      virtualAccount = await this.virtualAccountRepo.findBySlashId(
+        card.virtualAccountId,
+      );
     }
 
     const cardData = card.toObject();
@@ -153,7 +154,7 @@ export class CardsService {
     // Get all virtual accounts and aggregate card stats
     const allVAs = await this.virtualAccountRepo.findAll();
     const allCards: CardDocument[] = [];
-    
+
     for (const va of allVAs) {
       const cards = await this.cardRepo.findByVirtualAccountId(va.slashId, {
         status: filters.status,
@@ -178,5 +179,21 @@ export class CardsService {
 
     return stats;
   }
+  private buildFilter(query: Partial<CardQueryDto>): CardFilters {
+    const filter: CardFilters = {};
 
+    if (query.virtualAccountId) {
+      filter.virtualAccountId = query.virtualAccountId;
+    }
+
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    if (query.cardGroupId) {
+      filter.cardGroupId = query.cardGroupId;
+    }
+
+    return filter;
+  }
 }
