@@ -22,7 +22,9 @@ export interface AuthResponse {
     name: string;
     email: string;
   };
-  token: string;
+  data: {
+    accessToken: string;
+  };
 }
 
 export interface User {
@@ -37,7 +39,7 @@ export const authApi = {
    * Login user
    */
   login: async (credentials: {
-    email: string;
+    username: string;
     password: string;
   }): Promise<ApiResponse<AuthResponse>> => {
     return apiClient.post<AuthResponse>("/auth/login", credentials);

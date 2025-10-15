@@ -181,8 +181,12 @@ class HttpClient {
         body: body ? JSON.stringify(body) : undefined,
         ...restConfig,
       });
-
-      return await this.handleResponse<T>(response);
+      
+      const result: ApiResponse<T> = await this.handleResponse<T>(response);
+      if ((result.data as { message: string }).message === "Unauthorized") {
+        window.location.href = "/login";
+      }
+      return result;
     } catch (error) {
       if (error instanceof Error) {
         throw {

@@ -50,17 +50,17 @@ export const navMain: NavSection[] = [
       },
     ],
   },
-  {
-    title: "Group cards",
-    url: "#",
-    icon: Group,
-    items: [
-      {
-        title: "Group cards",
-        url: "/group-cards",
-      },
-    ],
-  },
+  // {
+  //   title: "Group cards",
+  //   url: "#",
+  //   icon: Group,
+  //   items: [
+  //     {
+  //       title: "Group cards",
+  //       url: "/group-cards",
+  //     },
+  //   ],
+  // },
   {
     title: "Virtual accounts",
     url: "#",

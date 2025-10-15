@@ -16,27 +16,24 @@ import { DataTable } from "@/components/ui/data-table";
 import FilterCard from "./components/filter";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { EMPTY_LABEL } from "@/app/utils/constants";
+import { ClientPagination } from "@/components/ui/client-pagination";
 
 const initFilter = {
-  "filter:cardGroupId": "",
-  "filter:virtualAccountId": "",
-  "filter:status": "",
-  cursor: "",
+  cardGroupId: "",
+  virtualAccountId: "",
+  status: "",
 };
 
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as Card[];
-const initCursorMap = {
-  1: "",
-};
 export default function Cards() {
   const { setBreadcrumbs } = useBreadcrumbs();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(0);
-  const [cursorMap, setCursorMap] =
-    useState<Record<number, string>>(initCursorMap);
-  const [nextCursor, setNextCursor] = useState<string>();
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 20,
+    total: 0,
+  });
   const [currentFilter, setCurrentFilter] = useState(initFilter);
 
   useEffect(() => {
@@ -46,36 +43,33 @@ export default function Cards() {
     ]);
   }, [setBreadcrumbs]);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["cards", page, currentFilter],
+  const { data: cardInfors, isLoading } = useQuery({
+    queryKey: ["cards", pagination.page, currentFilter],
     queryFn: async () => {
-      const currentCursor = cursorMap[page] ?? "";
       const res = await api.cards.getCards({
         ...currentFilter,
-        cursor: currentCursor,
+        page: pagination.page,
+        limit: pagination.pageSize,
       });
-      const { nextCursor, count } = res.data.metadata;
-      setNextCursor(nextCursor);
-      if (!pageSize) {
-        setPageSize(count);
+      if (pagination.total === 0) {
+        setPagination((prev) => ({
+          ...prev,
+          total: res.data.pagination.total,
+        }));
       }
-      setCursorMap((prev) => ({
-        ...prev,
-        [page + 1]: nextCursor as string,
-      }));
       return res.data;
     },
     refetchOnMount: "always",
     gcTime: 0,
   });
 
-  const dataCard: Card[] = useMemo(() => data?.items ?? [], [data]);
+  const dataCard: Card[] = useMemo(() => cardInfors?.data ?? [], [cardInfors]);
 
   const [uniqueCardGroupIds, uniqueVirtualAccountIds]: string[][] =
     useMemo(() => {
       const cardGroupIds = dataCard.reduce((acc, item) => {
-        if (!acc.includes(item.cardGroupId)) {
-          acc.push(item.cardGroupId);
+        if (!acc.includes(item.cardGroupName)) {
+          acc.push(item.cardGroupName);
         }
         return acc;
       }, [] as string[]);
@@ -88,16 +82,16 @@ export default function Cards() {
       return [cardGroupIds, virtualAccountIds];
     }, [dataCard]);
 
-  const { data: groupInfos, isLoading: isLoadingGroupInfos } = useQuery({
-    queryKey: ["group-infos", uniqueCardGroupIds],
-    queryFn: async () => {
-      const results = await Promise.all(
-        uniqueCardGroupIds.map((id) => api.cardGroups.getCardGroupById(id))
-      );
-      return results.map((r) => r.data);
-    },
-    enabled: !!uniqueCardGroupIds.length,
-  });
+  // const { data: groupInfos, isLoading: isLoadingGroupInfos } = useQuery({
+  //   queryKey: ["group-infos", uniqueCardGroupIds],
+  //   queryFn: async () => {
+  //     const results = await Promise.all(
+  //       uniqueCardGroupIds.map((id) => api.cardGroups.getCardGroupById(id))
+  //     );
+  //     return results.map((r) => r.data);
+  //   },
+  //   enabled: !!uniqueCardGroupIds.length,
+  // });
 
   const { data: virtualAccountInfos, isLoading: isLoadingVirtualAccountInfos } =
     useQuery({
@@ -116,20 +110,20 @@ export default function Cards() {
   const dataCardGrouped = useMemo(() => {
     if (isLoading) return maskDataTable;
     return dataCard.map((card) => {
-      const groupName = card.cardGroupId
-        ? groupInfos?.find((g) => g.id === card.cardGroupId)?.name
-        : EMPTY_LABEL;
+      // const groupName = card.cardGroupId
+      //   ? groupInfos?.find((g) => g.id === card.cardGroupId)?.name
+      //   : EMPTY_LABEL;
       const virtualAccountName =
         (virtualAccountInfos as VirtualAccount[])?.find(
-          (v) => v.virtualAccount?.id === card.virtualAccountId
-        )?.virtualAccount?.name ?? EMPTY_LABEL;
+          (v) => v.slashId === card.virtualAccountId
+        )?.name ?? EMPTY_LABEL;
       return {
         ...card,
-        groupName,
+        groupName: EMPTY_LABEL,
         virtualAccountName,
       };
     });
-  }, [dataCard, groupInfos, virtualAccountInfos, isLoading]);
+  }, [dataCard, virtualAccountInfos, isLoading]);
 
   const columns = [
     {
@@ -140,8 +134,8 @@ export default function Cards() {
         ) : (
           renderNoTable(
             {
-              page,
-              pageSize,
+              page: pagination.page,
+              pageSize: pagination.pageSize,
             },
             row.index
           )
@@ -161,11 +155,7 @@ export default function Cards() {
     {
       header: "Group",
       cell: ({ row }: CellContext<Card & { groupName: string }, string>) => {
-        return isLoading || isLoadingGroupInfos ? (
-          <Skeleton />
-        ) : (
-          row.original.groupName
-        );
+        return isLoading || false ? <Skeleton /> : row.original.groupName;
       },
     },
     {
@@ -213,13 +203,14 @@ export default function Cards() {
   ] as ColumnDef<Card>[];
 
   const handleChangeFilter = (field: string, value: string) => {
-    setPage(1);
-    setCursorMap(initCursorMap);
-    setPageSize(0);
+    setPagination((prev) => ({
+      ...prev,
+      page: 1,
+      total: 0,
+    }));
     setCurrentFilter((prev) => ({
       ...prev,
       [field]: value,
-      cursor: "",
     }));
   };
 
@@ -233,32 +224,23 @@ export default function Cards() {
         <SectionContent>
           <FilterCard
             onGroupChange={(groupId) =>
-              handleChangeFilter("filter:cardGroupId", groupId)
+              handleChangeFilter("cardGroupId", groupId)
             }
             onVirtualAccountChange={(virtualAccountId) =>
-              handleChangeFilter("filter:virtualAccountId", virtualAccountId)
+              handleChangeFilter("virtualAccountId", virtualAccountId)
             }
-            onStatusChange={(status) =>
-              handleChangeFilter("filter:status", status)
-            }
+            onStatusChange={(status) => handleChangeFilter("status", status)}
           />
           <DataTable
             columns={columns}
             data={dataCardGrouped}
             maxHeight={"70vh"}
           />
-          <CursorPagination
-            page={page}
-            cursorMap={cursorMap}
-            hasNextPage={!!nextCursor}
-            disableNext={isLoading}
-            onPageChange={(cursor, newPage) => {
-              setPage(newPage);
-              setCursorMap((prev) => ({
-                ...prev,
-                [newPage]: cursor,
-              }));
-            }}
+          <ClientPagination
+            total={pagination.total}
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            onChange={(page) => setPagination((prev) => ({ ...prev, page }))}
           />
         </SectionContent>
       </Section>

@@ -2,36 +2,51 @@ import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
 
 export interface VirtualAccount {
-  virtualAccount: {
-    id: string;
-    name: string;
-    accountNumber: string;
-    routingNumber: string;
-    slashAccountGroupId: string;
-    accountType: "default";
-    accountId: string;
-  };
-  balance: {
-    amountCents: number;
-  };
-  spend: {
-    amountCents: number;
-  };
-  commissionRule?: {
-    id: string;
-    virtualAccountId: string;
-    commissionDetails: {
-      type: string;
-      takeRate: number;
-    };
-  };
+  _id: string;
+  slashId: string;
+  __v: number;
+  accountId: string;
+  availableBalanceCents: number;
+  balanceCents: number;
+  createdAt: string;
+  currency: string;
+  description: string;
+  isDeleted: boolean;
+  lastSyncedAt: string;
+  legalEntityId: string;
+  name: string;
+  pendingBalanceCents: number;
+  status: string;
+  syncSource: string;
+  updatedAt: string;
+  linkedAt: string;
+  linkedBy: string;
+  linkedTelegramId: string;
 }
 
 export interface VirtualAccountsListResponse {
-  items: VirtualAccount[];
-  metadata: {
-    nextCursor?: string;
-    count: number;
+  data: VirtualAccount[];
+  message: string;
+  meta: {
+    timestamp: string;
+  };
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+  success: boolean;
+}
+
+export interface VirtualAccountsDetailResponse {
+  success: true;
+  message: string;
+  data: VirtualAccount;
+  meta: {
+    timestamp: string;
   };
 }
 
@@ -41,7 +56,12 @@ export const virtualAccountsApi = {
   > => {
     return apiClient.get("/virtual-account");
   },
-  getVirtualAccountById: async (id: string): Promise<ApiResponse<VirtualAccount>> => {
-    return apiClient.get(`/virtual-account/${id}`);
+  getVirtualAccountById: async (
+    id: string
+  ): Promise<VirtualAccountsDetailResponse> => {
+    const res = (await apiClient.get(
+      `/virtual-account/${id}`
+    )) as ApiResponse<VirtualAccountsDetailResponse>;
+    return res.data;
   },
 };

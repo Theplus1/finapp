@@ -44,12 +44,9 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
           <SelectItem key="all" value="all">
             All
           </SelectItem>
-          {virtualAccountInfos?.items.map((virtualAccount) => (
-            <SelectItem
-              key={virtualAccount.virtualAccount.id}
-              value={virtualAccount.virtualAccount.id}
-            >
-              {virtualAccount.virtualAccount.name}
+          {virtualAccountInfos?.data.map((virtualAccount) => (
+            <SelectItem key={virtualAccount._id} value={virtualAccount.slashId}>
+              {virtualAccount.name}
             </SelectItem>
           ))}
         </SelectGroup>
