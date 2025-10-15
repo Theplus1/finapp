@@ -3,9 +3,9 @@ import { CardRepository } from '../../slash/repositories/card.repository';
 import { VirtualAccountRepository } from '../../slash/repositories/virtual-account.repository';
 import { CardDocument } from '../../slash/schemas/card.schema';
 import { CardQueryDto } from '../dto/card-query.dto';
-import { PaginatedResponseDto } from '../dto/paginated-response.dto';
 import { SlashService } from '../../slash/slash.service';
 import { CreateCardDto, UpdateCardDto } from '../../slash/dto/card.dto';
+import { createPaginatedResponse } from '../../common/dto/api-response.dto';
 
 export interface EnrichedCard {
   [key: string]: any;
@@ -33,7 +33,7 @@ export class CardsService {
   /**
    * Get cards with filters and pagination
    */
-  async findAll(query: CardQueryDto): Promise<PaginatedResponseDto<CardDocument>> {
+  async findAll(query: CardQueryDto) {
     this.logger.log(`Finding cards with query: ${JSON.stringify(query)}`);
 
     const page = query.page || 1;
@@ -58,7 +58,7 @@ export class CardsService {
     const data = filteredCards.slice(0, limit);
     const total = filteredCards.length;
 
-    return new PaginatedResponseDto(data, total, page, limit);
+    return createPaginatedResponse(data, page, limit, total, 'Cards retrieved successfully');
   }
 
   /**

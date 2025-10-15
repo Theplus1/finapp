@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { TransactionRepository, TransactionFilters } from '../../slash/repositories/transaction.repository';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { TransactionRepository } from '../../slash/repositories/transaction.repository';
 import { CardRepository } from '../../slash/repositories/card.repository';
 import { TransactionDocument } from '../../slash/schemas/transaction.schema';
 import { TransactionQueryDto } from '../dto/transaction-query.dto';
-import { PaginatedResponseDto } from '../dto/paginated-response.dto';
+import { createPaginatedResponse } from '../../common/dto/api-response.dto';
 
 export interface EnrichedTransaction {
   [key: string]: any;
@@ -15,6 +15,14 @@ export interface TransactionStats {
   totalAmount: number;
   byStatus: Record<string, number>;
   byType: Record<string, number>;
+}
+
+export interface TransactionFilters {
+  virtualAccountId?: string;
+  cardId?: string;
+  status?: string;
+  startDate?: Date;
+  endDate?: Date;
 }
 
 @Injectable()
@@ -29,7 +37,7 @@ export class TransactionsService {
   /**
    * Get transactions with filters and pagination
    */
-  async findAll(query: TransactionQueryDto): Promise<PaginatedResponseDto<TransactionDocument>> {
+  async findAll(query: TransactionQueryDto) {
     this.logger.log(`Finding transactions with query: ${JSON.stringify(query)}`);
 
     const filters = this.buildFilter(query);
@@ -42,7 +50,7 @@ export class TransactionsService {
       this.transactionRepo.count(filters),
     ]);
 
-    return new PaginatedResponseDto(data, total, page, limit);
+    return createPaginatedResponse(data, page, limit, total, 'Transactions retrieved successfully');
   }
 
   /**

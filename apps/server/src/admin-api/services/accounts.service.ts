@@ -2,10 +2,10 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { VirtualAccountRepository } from '../../slash/repositories/virtual-account.repository';
 import { VirtualAccountDocument } from '../../slash/schemas/virtual-account.schema';
 import { VirtualAccountQueryDto } from '../dto/virtual-account-query.dto';
-import { PaginatedResponseDto } from '../dto/paginated-response.dto';
 import { SlashService } from '../../slash/slash.service';
 import { CreateVirtualAccountDto, UpdateVirtualAccountDto } from '../../slash/dto/account.dto';
 import { LinkAccountResponseDto } from '../dto/link-account.dto';
+import { createPaginatedResponse } from '../../common/dto/api-response.dto';
 
 export interface AccountStats {
   total: number;
@@ -26,7 +26,7 @@ export class AccountsService {
   /**
    * Get virtual accounts with filters and pagination
    */
-  async findAll(query: VirtualAccountQueryDto): Promise<PaginatedResponseDto<VirtualAccountDocument>> {
+  async findAll(query: VirtualAccountQueryDto) {
     this.logger.log(`Finding virtual accounts with query: ${JSON.stringify(query)}`);
 
     const page = query.page || 1;
@@ -50,16 +50,15 @@ export class AccountsService {
     if (query.search) {
       const searchLower = query.search.toLowerCase();
       filtered = filtered.filter(va => 
-        va.name?.toLowerCase().includes(searchLower) ||
-        va.description?.toLowerCase().includes(searchLower)
+        va.name.toLowerCase().includes(searchLower) ||
+        va.slashId.toLowerCase().includes(searchLower)
       );
     }
     
-    // Pagination
     const data = filtered.slice(skip, skip + limit);
     const total = filtered.length;
 
-    return new PaginatedResponseDto(data, total, page, limit);
+    return createPaginatedResponse(data, page, limit, total, 'Virtual accounts retrieved successfully');
   }
 
   /**
