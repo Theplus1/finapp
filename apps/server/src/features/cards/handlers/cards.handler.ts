@@ -4,13 +4,14 @@ import { UsersService } from '../../../users/users.service';
 import { SlashService } from '../../../slash/slash.service';
 import { Messages } from '../../../bot/constants/messages.constant';
 import { Keyboards } from '../../../bot/constants/keyboards.constant';
-import { CardDto } from '../../../slash/dto/card.dto';
+import { CardDto, CardStatus } from '../../../slash/dto/card.dto';
 import { MarkdownUtil } from 'src/shared/utils/markdown.util';
 import { BotContext } from '../../../bot/interfaces/bot-context.interface';
 import { ValidateUser } from '../../../shared/decorators/validate-user.decorator';
 
 @Injectable()
 export class CardsHandler {
+
   private readonly logger = new Logger(CardsHandler.name);
 
   constructor(
@@ -18,6 +19,74 @@ export class CardsHandler {
     private readonly slashService: SlashService,
     private readonly configService: ConfigService,
   ) {}
+
+  @ValidateUser({ requireAccount: true, answerCallback: true })
+  async handleCardLock(ctx: BotContext, cardId: string) {
+    const userData = ctx.userData!;
+
+    try {
+      const card = await this.verifyCardOwnership(ctx, cardId, userData.virtualAccountId!);
+      if (!card) return;
+
+      // Check if card is already paused
+      if (card.status === CardStatus.PAUSED) {
+        await ctx.answerCbQuery('Card is already locked');
+        return;
+      }
+
+      // Update card status to paused (locked)
+      await this.slashService.updateCard(cardId, { status: CardStatus.PAUSED });
+
+      await ctx.answerCbQuery('Card locked successfully');
+      await ctx.reply(
+        `🔒 *Card Locked*\n\n` +
+        `Card *${card.name}* (••••${card.last4}) has been locked.\n\n` +
+        `The card cannot be used for transactions until unlocked.`,
+        { parse_mode: 'Markdown' }
+      );
+    } catch (error) {
+      this.logger.error(`Error locking card ${cardId}:`, error);
+      await ctx.answerCbQuery('Error locking card');
+      await ctx.reply('❌ Error locking card. Please try again later.');
+    }
+  }
+
+  @ValidateUser({ requireAccount: true, answerCallback: true })
+  async handleCardUnlock(ctx: BotContext, cardId: string) {
+    const userData = ctx.userData!;
+
+    try {
+      const card = await this.verifyCardOwnership(ctx, cardId, userData.virtualAccountId!);
+      if (!card) return;
+
+      // Check if card is already active
+      if (card.status === CardStatus.ACTIVE) {
+        await ctx.answerCbQuery('Card is already unlocked');
+        return;
+      }
+
+      // Check if card is closed (cannot be unlocked)
+      if (card.status === CardStatus.CLOSED) {
+        await ctx.answerCbQuery('Cannot unlock a closed card');
+        return;
+      }
+
+      // Update card status to active (unlocked)
+      await this.slashService.updateCard(cardId, { status: CardStatus.ACTIVE });
+
+      await ctx.answerCbQuery('Card unlocked successfully');
+      await ctx.reply(
+        `✅ *Card Unlocked*\n\n` +
+        `Card *${card.name}* (••••${card.last4}) has been unlocked.\n\n` +
+        `The card can now be used for transactions.`,
+        { parse_mode: 'Markdown' }
+      );
+    } catch (error) {
+      this.logger.error(`Error unlocking card ${cardId}:`, error);
+      await ctx.answerCbQuery('Error unlocking card');
+      await ctx.reply('❌ Error unlocking card. Please try again later.');
+    }
+  }
 
   @ValidateUser({ requireAccount: true })
   async handleListCards(ctx: BotContext, cursor?: string) {
@@ -123,7 +192,7 @@ export class CardsHandler {
       const cardDetail = this.formatCardDetail(card, cardDetailTimeout);
       const sentMessage = await ctx.reply(cardDetail, {
         parse_mode: 'MarkdownV2',
-        ...Keyboards.cardDetail(cardId),
+        ...Keyboards.cardDetail(cardId, card.status === CardStatus.ACTIVE),
       });
 
       setTimeout(async () => {
@@ -167,22 +236,36 @@ export class CardsHandler {
     const createdDate = new Date(card.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     message += `\n📅 Created: ${MarkdownUtil.escapse(createdDate)}`;
     message += `\n\n *Card detail will be removed after ${detailTimeout/60000} min for security*`;
-    
     return message;
   }
 
-  private getStatusEmoji(status: string): string {
+  private getStatusEmoji(status: CardStatus): string {
     switch (status) {
-      case 'active':
+      case CardStatus.ACTIVE:
         return '✅';
-      case 'paused':
+      case CardStatus.PAUSED:
         return '⏸️';
-      case 'inactive':
+      case CardStatus.INACTIVE:
         return '⏹️';
-      case 'closed':
-        return '🔒';
+      case CardStatus.CLOSED:
+        return '❌';
       default:
         return '❓';
     }
+  }
+
+  private async verifyCardOwnership(
+    ctx: BotContext,
+    cardId: string,
+    virtualAccountId: string,
+  ): Promise<CardDto | null> {
+    const card = await this.slashService.getCard(cardId, false, false);
+    
+    if (card.virtualAccountId !== virtualAccountId) {
+      await ctx.reply(Messages.cardNotFound);
+      return null;
+    }
+    
+    return card;
   }
 }

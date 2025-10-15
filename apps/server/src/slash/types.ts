@@ -17,6 +17,8 @@ export {
   ListTransactionsQuery,
   TransactionStatus,
   TransactionType,
+  TransactionDetailedStatus,
+  OriginalCurrency,
 } from './dto/transaction.dto';
 
 export {
@@ -52,6 +54,7 @@ export {
 export {
   SlashApiResponse,
   PaginatedResponse,
+  ListResponse,
 } from './interfaces/slash-response.interface';
 
 // Utility types

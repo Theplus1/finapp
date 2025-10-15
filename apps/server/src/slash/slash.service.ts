@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import {
   CardDto,
+  CardStatus,
   CreateCardDto,
   UpdateCardDto,
 } from './dto/card.dto';
@@ -167,7 +168,7 @@ export class SlashService {
       legalEntityId?: string;
       accountId?: string;
       virtualAccountId?: string;
-      status?: 'active' | 'paused' | 'closed' | 'inactive';
+      status?: CardStatus;
       cardGroupId?: string;
       cardGroupName?: string;
     };
@@ -230,10 +231,10 @@ export class SlashService {
 
   // ==================== Transaction Methods ====================
 
-  async listTransactions(query?: ListTransactionsQuery): Promise<PaginatedResponse<TransactionDto>> {
-    return this.request<PaginatedResponse<TransactionDto>>({
+  async listTransactions(query?: ListTransactionsQuery): Promise<ListResponse<TransactionDto>> {
+    return this.request<ListResponse<TransactionDto>>({
       method: 'GET',
-      url: '/transactions',
+      url: '/transaction', // Singular, not plural
       params: query,
     });
   }
@@ -248,7 +249,7 @@ export class SlashService {
   async addTransactionNote(transactionId: string, note: string): Promise<TransactionDto> {
     return this.request<TransactionDto>({
       method: 'POST',
-      url: `/transactions/${transactionId}/note`,
+      url: `/transaction/${transactionId}/note`, // Singular, not plural
       data: { note },
     });
   }

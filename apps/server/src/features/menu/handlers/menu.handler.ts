@@ -5,7 +5,9 @@ import { UsersService } from '../../../users/users.service';
 import { Messages } from '../../../bot/constants/messages.constant';
 import { Keyboards } from '../../../bot/constants/keyboards.constant';
 import { OnboardingHandler } from '../../onboarding/handlers/onboarding.handler';
+import { AdminHandler } from '../../admin/handlers/admin.handler';
 import { ValidateUser } from 'src/shared/decorators/validate-user.decorator';
+import { AccessStatus } from 'src/users/users.schema';
 
 @Injectable()
 export class MenuHandler {
@@ -14,6 +16,7 @@ export class MenuHandler {
   constructor(
     private readonly usersService: UsersService,
     private readonly onboardingHandler: OnboardingHandler,
+    private readonly adminHandler: AdminHandler,
   ) {}
 
   async handleStart(ctx: BotContext) {
@@ -28,17 +31,61 @@ export class MenuHandler {
       lastName: user.last_name,
     });
 
-    // Check if user already has an account number linked
-    if (existingUser.virtualAccountId) {
+    const isNewUser = !existingUser.accessRequestedAt;
+
+    // If new user, set access request timestamp and notify admins
+    if (isNewUser) {
+      await this.usersService.requestAccess(user.id);
+      
+      // Notify admins about new registration
+      await this.adminHandler.notifyAdminsNewRequest(
+        user.id,
+        user.username,
+        user.first_name,
+        user.last_name,
+      );
+
       await ctx.reply(
-        Messages.welcome(user.first_name || user.username || ''),
-        { parse_mode: 'Markdown', ...Keyboards.mainMenu() }
+        Messages.accessRequestSubmitted(user.first_name || user.username || 'User'),
+        { parse_mode: 'Markdown' }
       );
       return;
     }
 
-    // Request account number via onboarding handler
-    await this.onboardingHandler.initiateAccountLinking(ctx, user.first_name);
+    // Check access status
+    switch (existingUser.accessStatus) {
+      case AccessStatus.PENDING:
+        await ctx.reply(Messages.accessPending, { parse_mode: 'Markdown' });
+        return;
+
+      case AccessStatus.DENIED:
+        await ctx.reply(
+          Messages.accessDenied(existingUser.accessDeniedReason),
+          { parse_mode: 'Markdown' }
+        );
+        return;
+
+      case AccessStatus.REVOKED:
+        await ctx.reply(
+          Messages.accessRevoked(existingUser.accessDeniedReason),
+          { parse_mode: 'Markdown' }
+        );
+        return;
+
+      case AccessStatus.APPROVED:
+        // Check if user already has an account number linked
+        if (existingUser.virtualAccountId) {
+          await ctx.reply(
+            Messages.welcome(user.first_name || user.username || ''),
+            { parse_mode: 'Markdown', ...Keyboards.mainMenu() }
+          );
+          return;
+        }
+
+        // Request account number via onboarding handler
+        await this.onboardingHandler.initiateAccountLinking(ctx, user.first_name);
+        return;
+    }
   }
 
   async handleHelp(ctx: Context) {

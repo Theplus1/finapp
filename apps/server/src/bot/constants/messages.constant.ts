@@ -1,5 +1,7 @@
 import { formatCurrency } from "src/shared/utils/formatCurrency.util";
 import type { TransactionDataDTO } from "src/slash";
+import type { UserDocument } from "src/users/users.schema";
+import type { AccessStatus } from "src/users/users.schema";
 
 export const Messages = {
   // Welcome & Help
@@ -65,7 +67,6 @@ export const Messages = {
     'Please share your feedback with us. What do you think about this bot?\n\n' +
     '(Send /cancel to cancel)',
   feedbackRating: '⭐ *Rate Your Experience*\n\n' + 'Please rate your experience from 1 to 5:',
-  feedbackCancelled: '❌ Feedback cancelled.',
   feedbackInvalidRating: 'Please enter a number between 1 and 5.',
   feedbackThankYou: (feedback: string, rating: number) =>
     `✅ *Thank you for your feedback!*\n\n` +
@@ -126,4 +127,112 @@ export const Messages = {
     `Country: ${transaction.merchantData.location.country}\n` +
     `Created: ${new Date(transaction.date).toLocaleString()}\n` +
     `Transaction ID: ${transaction.id || 'N/A'}`,
+
+  replyCancelled: '❌ Reply cancelled.',
+
+  // ==================== Access Control Messages ====================
+  
+  // User-facing messages
+  accessPending:
+    '⏳ *Access Pending*\n\n' +
+    'Your access request is pending approval from an administrator.\n\n' +
+    'You will be notified once your request has been reviewed.',
+
+  accessDenied: (reason?: string) =>
+    `🚫 *Access Denied*\n\n` +
+    `Your access request has been denied.\n\n` +
+    `${reason ? `Reason: ${reason}\n\n` : ''}` +
+    `Please contact an administrator for more information.`,
+
+  accessRevoked: (reason?: string) =>
+    `🚫 *Access Revoked*\n\n` +
+    `Your access has been revoked.\n\n` +
+    `${reason ? `Reason: ${reason}\n\n` : ''}` +
+    `Please contact an administrator for more information.`,
+
+  yourAccessApproved:
+    '✅ *Access Approved!*\n\n' +
+    'Your access request has been approved by an administrator.\n\n' +
+    'You can now use all bot features!',
+
+  yourAccessDenied: (reason: string) =>
+    `🚫 *Access Denied*\n\n` +
+    `Your access request has been denied.\n\n` +
+    `Reason: ${reason}\n\n` +
+    `Please contact an administrator if you believe this is a mistake.`,
+
+  yourAccessRevoked: (reason: string) =>
+    `🚫 *Access Revoked*\n\n` +
+    `Your access has been revoked.\n\n` +
+    `Reason: ${reason}\n\n` +
+    `Please contact an administrator for more information.`,
+
+  accessRequestSubmitted: (name: string) =>
+    `✅ *Registration Successful!*\n\n` +
+    `Welcome ${name}!\n\n` +
+    `Your access request has been submitted to the administrators.\n\n` +
+    `You will be notified once your request has been reviewed.`,
+
+  // Admin-facing messages
+  notAuthorized: '🚫 You are not authorized to perform this action.',
+
+  adminPanel: (pendingCount: number, approvedCount: number) =>
+    `🔐 *Admin Panel*\n\n` +
+    `📊 *Statistics:*\n` +
+    `• Pending Requests: ${pendingCount}\n` +
+    `• Approved Users: ${approvedCount}\n\n` +
+    `Use the buttons below to manage users.`,
+
+  noPendingRequests:
+    '✅ *No Pending Requests*\n\n' +
+    'There are no pending access requests at the moment.',
+
+  pendingUserInfo: (user: UserDocument) =>
+    `👤 *New Access Request*\n\n` +
+    `*User Information:*\n` +
+    `• Telegram ID: \`${user.telegramId}\`\n` +
+    `• Username: ${user.username ? `@${user.username}` : 'N/A'}\n` +
+    `• Name: ${user.firstName || ''} ${user.lastName || ''}\n` +
+    `• Virtual Account: ${user.virtualAccountId || 'Not linked'}\n` +
+    `• Requested: ${user.accessRequestedAt ? new Date(user.accessRequestedAt).toLocaleString() : 'N/A'}\n\n` +
+    `Choose an action:`,
+
+  userAccessApproved: (user: UserDocument) =>
+    `✅ *Access Approved*\n\n` +
+    `User @${user.username || user.telegramId} has been granted access.`,
+
+  userAccessDenied: (user: UserDocument, reason: string) =>
+    `🚫 *Access Denied*\n\n` +
+    `User @${user.username || user.telegramId} access has been denied.\n` +
+    `Reason: ${reason}`,
+
+  userAccessRevoked: (user: UserDocument, reason: string) =>
+    `🚫 *Access Revoked*\n\n` +
+    `User @${user.username || user.telegramId} access has been revoked.\n` +
+    `Reason: ${reason}`,
+
+  newAccessRequest: (
+    telegramId: number,
+    username: string | undefined,
+    firstName: string | undefined,
+    lastName: string | undefined,
+  ) =>
+    `🔔 *New Access Request*\n\n` +
+    `*User Information:*\n` +
+    `• Telegram ID: \`${telegramId}\`\n` +
+    `• Username: ${username ? `@${username}` : 'N/A'}\n` +
+    `• Name: ${firstName || ''} ${lastName || ''}\n\n` +
+    `Use /admin to review and approve/deny this request.`,
+
+  allUsersStats: (
+    totalUsers: number,
+    statusCounts: Record<AccessStatus, number>,
+  ) =>
+    `📊 *All Users Statistics*\n\n` +
+    `*Total Users:* ${totalUsers}\n\n` +
+    `*By Status:*\n` +
+    `• ⏳ Pending: ${statusCounts.pending}\n` +
+    `• ✅ Approved: ${statusCounts.approved}\n` +
+    `• 🚫 Denied: ${statusCounts.denied}\n` +
+    `• ⛔ Revoked: ${statusCounts.revoked}`,
 };

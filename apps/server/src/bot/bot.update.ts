@@ -5,6 +5,7 @@ import { BotContext } from './interfaces/bot-context.interface';
 import { MenuHandler } from '../features/menu/handlers/menu.handler';
 import { SubscriptionHandler } from '../features/subscription/handlers/subscription.handler';
 import { OnboardingHandler } from '../features/onboarding/handlers/onboarding.handler';
+import { AdminHandler } from '../features/admin/handlers/admin.handler';
 import { Messages } from './constants/messages.constant';
 import { Keyboards } from './constants/keyboards.constant';
 import { SessionSteps } from './constants/session-steps.constant';
@@ -22,6 +23,7 @@ export class BotUpdate {
     private readonly onboardingHandler: OnboardingHandler,
     private readonly cardHandler: CardsHandler,
     private readonly transactionsHandler: TransactionsHandler,
+    private readonly adminHandler: AdminHandler,
   ) {}
 
   @Start()
@@ -36,65 +38,40 @@ export class BotUpdate {
     return this.menuHandler.handleHelp(ctx);
   }
 
-  @Command('menu')
+  @Command(Actions.menu.main)
   async menu(@Ctx() ctx: Context) {
     await ctx.sendChatAction('typing');
     return this.menuHandler.handleMenu(ctx);
   }
 
-  @Command('subscribe')
-  async subscribe(@Ctx() ctx: Context) {
-    await ctx.sendChatAction('typing');
-    return this.subscriptionHandler.handleSubscribe(ctx);
-  }
-
-  @Command('unsubscribe')
-  async unsubscribe(@Ctx() ctx: Context) {
-    await ctx.sendChatAction('typing');
-    return this.subscriptionHandler.handleUnsubscribe(ctx);
-  }
-
-  @Command('status')
-  async status(@Ctx() ctx: Context) {
-    await ctx.sendChatAction('typing');
-    return this.subscriptionHandler.handleStatus(ctx);
-  }
-
-  // TODO: Move to FeedbackHandler
-  @Command('feedback')
+  @Command(Actions.menu.feedback)
   async startFeedback(@Ctx() ctx: BotContext) {
     await ctx.sendChatAction('typing');
     ctx.session = { step: SessionSteps.AWAITING_FEEDBACK, data: {} };
     await ctx.reply(Messages.feedbackStart, { parse_mode: 'Markdown' });
   }
 
-  @Action('menu')
+  @Action(Actions.menu.main)
   async onMenuAction(@Ctx() ctx: BotContext) {
     await ctx.sendChatAction('typing');
     return this.menuHandler.handleMenuAction(ctx);
   }
 
-  @Action('notifications')
-  async onNotificationsAction(@Ctx() ctx: BotContext) {
-    await ctx.answerCbQuery();
-    return this.subscriptionHandler.handleNotificationSettings(ctx);
-  }
-
-  @Action('cards')
+  @Action(Actions.menu.cards)
   async onCardsAction(@Ctx() ctx: BotContext) {
     await ctx.answerCbQuery();
     await ctx.sendChatAction('typing');
     return this.cardHandler.handleListCards(ctx);
   }
 
-  @Action('cards_first')
+  @Action(Actions.cards.first)
   async onCardsFirstPageAction(@Ctx() ctx: BotContext) {
     await ctx.answerCbQuery();
     await ctx.sendChatAction('typing');
     return this.cardHandler.handleListCards(ctx);
   }
 
-  @Action('cards_next')
+  @Action(Actions.cards.next)
   async onCardsNextAction(@Ctx() ctx: BotContext) {
     const cursor = ctx.session?.data?.nextCursor as string | undefined;
     
@@ -121,12 +98,38 @@ export class BotUpdate {
     return this.cardHandler.handleCardDetail(ctx, cardId);
   }
 
+  // @Action('card.action.lock')
+  // async onCardLockAction(@Ctx() ctx: BotContext) {
+  //   await ctx.answerCbQuery();
+  //   const callbackQuery = ctx.callbackQuery;
+  //   if (!callbackQuery || !('data' in callbackQuery)) return;
+    
+  //   const match = callbackQuery.data.match(/^card_(.+)$/);
+  //   if (!match) return;
+  //   await ctx.sendChatAction('typing');
+  //   const cardId = match[1];
+  //   return this.cardHandler.handleCardLock(ctx, cardId);
+  // }
+
+  // @Action('card.action.unlock')
+  // async onCardUnlockAction(@Ctx() ctx: BotContext) {
+  //   await ctx.answerCbQuery();
+  //   const callbackQuery = ctx.callbackQuery;
+  //   if (!callbackQuery || !('data' in callbackQuery)) return;
+    
+  //   const match = callbackQuery.data.match(/^card_(.+)$/);
+  //   if (!match) return;
+  //   await ctx.sendChatAction('typing');
+  //   const cardId = match[1];
+  //   return this.cardHandler.handleCardUnlock(ctx, cardId);
+  // }
+
   // ==================== Transaction Actions ====================
   @Action(Actions.menu.transaction)
   async onTransactionAction(@Ctx() ctx: BotContext) {
     return this.menuHandler.handleTransactionAction(ctx);
   }
-  @Action(Actions.menu.transactionNotification)
+  @Action(Actions.transaction.notification)
   async onTransactionNotificationAction(@Ctx() ctx: BotContext) {
     return this.menuHandler.handleTransactionNotificationAction(ctx);
   }
@@ -156,16 +159,20 @@ export class BotUpdate {
     return this.subscriptionHandler.handleUnsubscribeAction(ctx);
   }
 
-  @Action('about')
+  @Action(Actions.menu.about)
   async onAboutAction(@Ctx() ctx: BotContext) {
     return this.menuHandler.handleAboutAction(ctx);
   }
 
-  @Action('start_feedback')
+  @Action(Actions.menu.feedback)
   async onStartFeedbackAction(@Ctx() ctx: BotContext) {
     await ctx.answerCbQuery();
     await this.startFeedback(ctx);
   }
+
+  // ==================== Admin Actions ====================
+  // Note: Admin operations are now handled via REST API
+  // See /admin endpoints in AdminController
 
 
   // TODO: Move to FeedbackHandler
@@ -180,7 +187,11 @@ export class BotUpdate {
       return this.handleCancelCommand(ctx);
     }
 
-    switch (ctx.session.step) {
+    return this.handleUserText(ctx, text);
+  }
+
+  private async handleUserText(ctx: BotContext, text: string) {
+    switch (ctx.session?.step) {
       case SessionSteps.AWAITING_ACCOUNT_NUMBER:
         await this.handleAccountNumberInput(ctx, text);
         break;
@@ -205,8 +216,23 @@ export class BotUpdate {
   }
 
   private async handleCancelCommand(ctx: BotContext): Promise<void> {
+    let cancelMessage = '';
+    switch (ctx.session?.step) {
+      case SessionSteps.AWAITING_ACCOUNT_NUMBER:
+        cancelMessage = Messages.replyCancelled;
+        break;
+      case SessionSteps.AWAITING_FEEDBACK:
+        cancelMessage = Messages.replyCancelled;
+        break;
+      case SessionSteps.AWAITING_RATING:
+        cancelMessage = Messages.replyCancelled;
+        break;
+      case SessionSteps.AWAITING_TRANSACTION_ID:
+        cancelMessage = Messages.replyCancelled;
+        break;
+    }
     ctx.session = undefined;
-    await ctx.reply(Messages.feedbackCancelled, Keyboards.removeKeyboard());
+    await ctx.reply(cancelMessage, Keyboards.removeKeyboard());
   }
 
   private async handleFeedbackInput(ctx: BotContext, text: string): Promise<void> {

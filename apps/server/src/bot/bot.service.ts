@@ -8,10 +8,11 @@ export class BotService {
 
   constructor(@InjectBot() private bot: Telegraf) {}
 
-  async sendMessage(chatId: number, message: string) {
+  async sendMessage(chatId: number, message: string, extra?: any) {
     try {
       await this.bot.telegram.sendMessage(chatId, message, {
         parse_mode: 'Markdown',
+        ...extra,
       });
       this.logger.log(`Message sent to ${chatId}`);
     } catch (error) {

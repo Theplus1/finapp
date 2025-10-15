@@ -6,11 +6,7 @@ import { SubscriptionModule } from '../features/subscription/subscription.module
 import { OnboardingModule } from '../features/onboarding/onboarding.module';
 import { CardsModule } from 'src/features/cards/cards.module';
 import { TransactionsModule } from 'src/features/transactions/transactions.module';
-
-// TODO: Import future feature modules
-// import { CardsModule } from '../features/cards/cards.module';
-// import { OtpModule } from '../features/otp/otp.module';
-// import { TransactionsModule } from '../features/transactions/transactions.module';
+import { AdminModule } from 'src/features/admin/admin.module';
 
 @Module({
   imports: [
@@ -18,7 +14,8 @@ import { TransactionsModule } from 'src/features/transactions/transactions.modul
     SubscriptionModule,
     OnboardingModule,
     CardsModule,
-    TransactionsModule
+    TransactionsModule,
+    AdminModule,
   ],
   providers: [BotUpdate, BotService],
   exports: [BotService],

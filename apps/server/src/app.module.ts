@@ -11,6 +11,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import configuration from './common/config/configuration';
 import { session } from 'telegraf';
 import { SlashModule } from './slash';
+import { AdminApiModule } from './admin-api/admin-api.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { SlashModule } from './slash';
     UsersModule,
     NotificationsModule,
     SlashModule,
+    AdminApiModule,  // Admin dashboard API
   ],
   controllers: [AppController],
   providers: [AppService],

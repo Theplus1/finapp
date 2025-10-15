@@ -43,12 +43,29 @@ export interface TransactionDto {
 }
 
 export interface ListTransactionsQuery {
-  accountId?: string;
-  cardId?: string;
-  status?: TransactionStatus;
-  type?: TransactionType;
-  startDate?: string;
-  endDate?: string;
-  limit?: number;
   cursor?: string;
+  'filter:legalEntityId'?: string;
+  'filter:accountId'?: string;
+  'filter:virtualAccountId'?: string;
+  'filter:from_date'?: number; // Unix timestamp in milliseconds
+  'filter:to_date'?: number; // Unix timestamp in milliseconds
+  'filter:from_authorized_at'?: number; // Unix timestamp in milliseconds
+  'filter:to_authorized_at'?: number; // Unix timestamp in milliseconds
+  'filter:status'?: TransactionStatus;
+  'filter:detailedStatus'?: TransactionDetailedStatus;
+  'filter:cardId'?: string;
+  'filter:providerAuthorizationId'?: string;
+}
+
+export enum TransactionDetailedStatus {
+  PENDING = 'pending',
+  PENDING_APPROVAL = 'pending_approval',
+  CANCELED = 'canceled',
+  FAILED = 'failed',
+  SETTLED = 'settled',
+  DECLINED = 'declined',
+  REFUND = 'refund',
+  REVERSED = 'reversed',
+  RETURNED = 'returned',
+  DISPUTE = 'dispute',
 }

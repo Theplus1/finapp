@@ -19,6 +19,8 @@ import {
 import { BotService } from 'src/bot/bot.service';
 import { UsersService } from 'src/users/users.service';
 import { Messages } from 'src/bot/constants/messages.constant';
+import { SlashSyncService } from './services/slash-sync.service';
+import { SlashService } from './slash.service';
 
 @Controller('slash/webhooks')
 export class SlashWebhookController {
@@ -29,6 +31,8 @@ export class SlashWebhookController {
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
     private readonly botService: BotService,
+    private readonly slashSyncService: SlashSyncService,
+    private readonly slashService: SlashService,
   ) {
     this.webhookSecret = this.configService.get<string>(
       'slash.webhookSecret',
@@ -41,8 +45,7 @@ export class SlashWebhookController {
    */
   private verifyWebhookSignature(
     payload: string,
-    signature: string,
-    timestamp: string,
+    signature: string
   ): boolean {
     if (!this.webhookSecret) {
       this.logger.warn('Webhook secret not configured, skipping signature verification');
@@ -50,16 +53,13 @@ export class SlashWebhookController {
     }
 
     try {
-      const signedPayload = `${timestamp}.${payload}`;
-      const expectedSignature = crypto
-        .createHmac('sha256', this.webhookSecret)
-        .update(signedPayload)
-        .digest('hex');
-
-      return crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(expectedSignature),
+      const result = crypto.verify(
+        'sha256',
+        Buffer.from(payload),
+        this.webhookSecret,
+        Buffer.from(signature, 'base64')
       );
+      return result;
     } catch (error) {
       this.logger.error('Error verifying webhook signature', error);
       return false;
@@ -101,7 +101,7 @@ export class SlashWebhookController {
         throw new BadRequestException('Webhook timestamp is too old');
       }
 
-      if (!this.verifyWebhookSignature(payloadString, signature, timestamp)) {
+      if (!this.verifyWebhookSignature(payloadString, signature)) {
         throw new BadRequestException('Invalid webhook signature');
       }
     }
@@ -139,7 +139,7 @@ export class SlashWebhookController {
         throw new BadRequestException('Webhook timestamp is too old');
       }
 
-      if (!this.verifyWebhookSignature(payloadString, signature, timestamp)) {
+      if (!this.verifyWebhookSignature(payloadString, signature)) {
         throw new BadRequestException('Invalid webhook signature');
       }
     }
@@ -203,40 +203,79 @@ export class SlashWebhookController {
 
   private async handleCardCreated(event: WebhookEventDto): Promise<void> {
     this.logger.log(`Card created: ${event.entityId}`);
-    // TODO: Implement your logic
+    
+    try {
+      // Fetch full card details from Slash API
+      const cardData = await this.slashService.getCard(event.entityId);
+      
+      // Sync to local database
+      await this.slashSyncService.syncCardFromWebhook(cardData);
+    } catch (error) {
+      this.logger.error(`Error handling card created event for ${event.entityId}:`, error);
+    }
   }
 
   private async handleCardUpdated(event: WebhookEventDto): Promise<void> {
     this.logger.log(`Card updated: ${event.entityId}`);
-    // TODO: Implement your logic
+    
+    try {
+      // Fetch full card details from Slash API
+      const cardData = await this.slashService.getCard(event.entityId);
+      
+      // Sync to local database
+      await this.slashSyncService.syncCardFromWebhook(cardData);
+    } catch (error) {
+      this.logger.error(`Error handling card updated event for ${event.entityId}:`, error);
+    }
   }
 
   private async handleCardClosed(event: WebhookEventDto): Promise<void> {
     this.logger.log(`Card closed: ${event.entityId}`);
-    // TODO: Implement your logic
+    
+    try {
+      // Fetch full card details from Slash API
+      const cardData = await this.slashService.getCard(event.entityId);
+      
+      // Sync to local database
+      await this.slashSyncService.syncCardFromWebhook(cardData);
+    } catch (error) {
+      this.logger.error(`Error handling card closed event for ${event.entityId}:`, error);
+    }
   }
 
   private async handleTransactionCreated(
     event: WebhookEventDto,
   ): Promise<void> {
     this.logger.log(`Transaction created: ${event.entityId}`);
-    const data = event.data as TransactionDataDTO;
-    const user = await this.usersService.findByAccountNumber(data.accountId || '');
-    if (!user) {
-      this.logger.warn(
-        `User not found for virtual account ID: ${data.accountId}`,
-      );
-      return;
-    }
-    if (!user.telegramId) {
-      this.logger.warn(`User ${user.id} does not have a Telegram ID`);
-      return;
-    }
-    if (user.isSubscribed) {
-      await this.botService.sendMessage(
-        user.telegramId,
-        Messages.transactionCreated(data),
-      );
+    
+    try {
+      // Fetch full transaction details from Slash API
+      const transactionData = await this.slashService.getTransaction(event.entityId);
+      
+      // Sync to local database
+      await this.slashSyncService.syncTransactionFromWebhook(transactionData);
+      
+      // Send notification to user
+      const data = event.data as TransactionDataDTO;
+      const user = await this.usersService.findByAccountNumber(data.accountId || '');
+      if (!user) {
+        this.logger.warn(
+          `User not found for virtual account ID: ${data.accountId}`,
+        );
+        return;
+      }
+      if (!user.telegramId) {
+        this.logger.warn(`User ${user.id} does not have a Telegram ID`);
+        return;
+      }
+      if (user.isSubscribed) {
+        await this.botService.sendMessage(
+          user.telegramId,
+          Messages.transactionCreated(data),
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Error handling transaction created event for ${event.entityId}:`, error);
     }
   }
 
@@ -244,23 +283,35 @@ export class SlashWebhookController {
     event: WebhookEventDto,
   ): Promise<void> {
     this.logger.log(`Transaction updated: ${event.entityId}`);
-    const data = event.data as TransactionDataDTO;
-    const user = await this.usersService.findByAccountNumber(data.accountId || '');
-    if (!user) {
-      this.logger.warn(
-        `User not found for virtual account ID: ${data.accountId}`,
-      );
-      return;
-    }
-    if (!user.telegramId) {
-      this.logger.warn(`User ${user.id} does not have a Telegram ID`);
-      return;
-    }
-    if (user.isSubscribed) {
-      await this.botService.sendMessage(
-        user.telegramId,
-        Messages.transactionUpdated(data),
-      );
+    
+    try {
+      // Fetch full transaction details from Slash API
+      const transactionData = await this.slashService.getTransaction(event.entityId);
+      
+      // Sync to local database
+      await this.slashSyncService.syncTransactionFromWebhook(transactionData);
+      
+      // Send notification to user
+      const data = event.data as TransactionDataDTO;
+      const user = await this.usersService.findByAccountNumber(data.accountId || '');
+      if (!user) {
+        this.logger.warn(
+          `User not found for virtual account ID: ${data.accountId}`,
+        );
+        return;
+      }
+      if (!user.telegramId) {
+        this.logger.warn(`User ${user.id} does not have a Telegram ID`);
+        return;
+      }
+      if (user.isSubscribed) {
+        await this.botService.sendMessage(
+          user.telegramId,
+          Messages.transactionUpdated(data),
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Error handling transaction updated event for ${event.entityId}:`, error);
     }
   }
 }
