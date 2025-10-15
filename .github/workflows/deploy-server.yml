@@ -51,6 +51,7 @@ jobs:
           SLASH_BASE_URL=${{ vars.SLASH_BASE_URL }}
           SLASH_TIMEOUT=${{ vars.SLASH_TIMEOUT }}
           SLASH_WEBHOOK_SECRET=${{ secrets.SLASH_WEBHOOK_SECRET }}
+          SUPER_ADMIN_TOKEN=${{ secrets.SUPER_ADMIN_TOKEN }}
           EOF
 
       - name: Build server
