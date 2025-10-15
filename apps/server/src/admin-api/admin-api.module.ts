@@ -3,14 +3,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { SlashModule } from '../slash/slash.module';
+import { SlashIntegrationModule } from '../integrations/slash/slash-integration.module';
 import { UsersModule } from '../users/users.module';
-
-// Schemas
-import { AdminUser, AdminUserSchema } from './schemas/admin-user.schema';
-
-// Repositories
-import { AdminUserRepository } from './repositories/admin-user.repository';
+import { CardsModule } from '../domain/cards/cards.module';
+import { TransactionsModule } from '../domain/transactions/transactions.module';
+import { AccountsModule } from '../domain/accounts/accounts.module';
+import { AdminUsersModule } from '../domain/admin-users/admin-users.module';
 
 // Controllers
 import { AuthController } from './controllers/auth.controller';
@@ -20,9 +18,6 @@ import { AccountsController } from './controllers/accounts.controller';
 
 // Services
 import { AdminAuthService } from './services/admin-auth.service';
-import { TransactionsService } from './services/transactions.service';
-import { CardsService } from './services/cards.service';
-import { AccountsService } from './services/accounts.service';
 
 // Strategies
 import { LocalStrategy } from './strategies/local.strategy';
@@ -37,9 +32,6 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
   imports: [
     ConfigModule,
     PassportModule,
-    MongooseModule.forFeature([
-      { name: AdminUser.name, schema: AdminUserSchema },
-    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -50,8 +42,12 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
       }),
       inject: [ConfigService],
     }),
-    SlashModule,  // Access to Slash repositories and services
+    SlashIntegrationModule,  // Access to Slash API client
     UsersModule,  // Access to user repository
+    CardsModule,  // Domain logic for cards
+    TransactionsModule,  // Domain logic for transactions
+    AccountsModule,  // Domain logic for accounts
+    AdminUsersModule,  // Domain logic for admin users
   ],
   controllers: [
     AuthController,
@@ -60,8 +56,6 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
     AccountsController,
   ],
   providers: [
-    // Repositories
-    AdminUserRepository,
     // Strategies
     LocalStrategy,
     JwtStrategy,
@@ -71,15 +65,9 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
     SuperAdminAuthGuard,
     // Services
     AdminAuthService,
-    TransactionsService,
-    CardsService,
-    AccountsService,
   ],
   exports: [
     AdminAuthService,
-    TransactionsService,
-    CardsService,
-    AccountsService,
   ],
 })
 export class AdminApiModule {}

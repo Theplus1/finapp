@@ -1,5 +1,5 @@
+import { TransactionDataDTO } from "src/integrations/slash/dto/webhook.dto";
 import { formatCurrency } from "src/shared/utils/formatCurrency.util";
-import type { TransactionDataDTO } from "src/slash";
 import type { UserDocument } from "src/users/users.schema";
 import type { AccessStatus } from "src/users/users.schema";
 

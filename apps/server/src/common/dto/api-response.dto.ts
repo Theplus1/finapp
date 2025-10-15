@@ -37,9 +37,6 @@ export class PaginatedApiResponseDto<T = any> extends ApiResponseDto<T[]> {
     page: number;
     limit: number;
     total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
   };
 }
 
@@ -72,7 +69,6 @@ export function createPaginatedResponse<T>(
   total: number,
   message: string = 'Success',
 ): PaginatedApiResponseDto<T> {
-  const totalPages = Math.ceil(total / limit);
   
   return {
     success: true,
@@ -81,10 +77,7 @@ export function createPaginatedResponse<T>(
     pagination: {
       page,
       limit,
-      total,
-      totalPages,
-      hasNext: page < totalPages,
-      hasPrev: page > 1,
+      total
     },
     meta: {
       timestamp: new Date().toISOString(),

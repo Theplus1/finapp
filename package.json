@@ -3,13 +3,9 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
-    "build:web": "turbo run build --filter=web",
-    "build:docs": "turbo run build --filter=docs",
     "build:admin": "turbo run build --filter=admin-web",
     "build:server": "turbo run build --filter=server",
     "dev": "turbo run dev",
-    "dev:web": "turbo run dev --filter=web",
-    "dev:docs": "turbo run dev --filter=docs",
     "dev:admin": "turbo run dev --filter=admin-web",
     "dev:server": "turbo run dev --filter=server",
     "lint": "turbo run lint",

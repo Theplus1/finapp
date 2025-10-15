@@ -16,10 +16,11 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
-import { CardsService } from '../services/cards.service';
 import { CardQueryDto } from '../dto/card-query.dto';
-import { CreateCardDto, UpdateCardDto } from '../../slash/dto/card.dto';
+import { CreateCardDto, UpdateCardDto } from '../../integrations/slash/dto/card.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { CardsService } from '../../domain/cards/cards.service';
+import { createPaginatedResponse } from '../../common/dto/api-response.dto';
 
 @ApiTags('Admin API - Cards')
 @ApiBearerAuth()
@@ -28,7 +29,9 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 export class CardsController {
   private readonly logger = new Logger(CardsController.name);
 
-  constructor(private readonly cardsService: CardsService) {}
+  constructor(
+    private readonly cardsService: CardsService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List cards with filters and pagination' })
@@ -36,7 +39,25 @@ export class CardsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async list(@Query() query: CardQueryDto) {
     this.logger.log('Listing cards');
-    return this.cardsService.findAll(query);
+    
+    const [data, total] = await this.cardsService.findAllWithFilters(
+      {
+        status: query.status,
+        cardGroupId: query.cardGroupId,
+      },
+      {
+        page: query.page || 1,
+        limit: query.limit || 20,
+      }
+    );
+    
+    return createPaginatedResponse(
+      data,
+      query.page || 1,
+      query.limit || 20,
+      total,
+      'Cards retrieved successfully'
+    );
   }
 
   @Get('stats')
@@ -47,15 +68,6 @@ export class CardsController {
     return this.cardsService.getStats(query);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get card by ID with details' })
-  @ApiParam({ name: 'id', description: 'Card Slash ID' })
-  @ApiResponse({ status: 200, description: 'Card retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Card not found' })
-  async getById(@Param('id') id: string) {
-    this.logger.log(`Getting card ${id}`);
-    return this.cardsService.findByIdWithDetails(id);
-  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new card' })
@@ -63,7 +75,7 @@ export class CardsController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   async create(@Body() dto: CreateCardDto) {
     this.logger.log('Creating card');
-    return this.cardsService.create(dto);
+    return this.cardsService.createCard(dto);
   }
 
   @Patch(':id')
@@ -73,6 +85,6 @@ export class CardsController {
   @ApiResponse({ status: 404, description: 'Card not found' })
   async update(@Param('id') id: string, @Body() dto: UpdateCardDto) {
     this.logger.log(`Updating card ${id}`);
-    return this.cardsService.update(id, dto);
+    return this.cardsService.updateCard(id, dto);
   }
 }

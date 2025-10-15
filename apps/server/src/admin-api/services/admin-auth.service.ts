@@ -1,9 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
-import { AdminUserRepository } from '../repositories/admin-user.repository';
-import { AdminUserDocument } from '../schemas/admin-user.schema';
+import { AdminUsersService } from '../../domain/admin-users/admin-users.service';
 
 export interface AdminLoginResponse {
   accessToken: string;
@@ -25,7 +23,7 @@ export class AdminAuthService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
-    private readonly adminUserRepo: AdminUserRepository,
+    private readonly adminUsersService: AdminUsersService,
   ) {
     this.jwtSecret = this.configService.get<string>('JWT_SECRET', 'default-secret');
     this.jwtExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '24h');
@@ -50,46 +48,20 @@ export class AdminAuthService implements OnModuleInit {
       return;
     }
 
-    // Check if admin user already exists
-    const existingUser = await this.adminUserRepo.findByUsername(defaultUsername);
-    if (existingUser) {
-      this.logger.log(`Default admin user already exists: ${defaultUsername}`);
-      return;
-    }
-
-    // Create default admin user
-    const passwordHash = await bcrypt.hash(defaultPassword, 10);
-    
-    await this.adminUserRepo.create({
-      username: defaultUsername,
-      passwordHash,
-      role: 'super-admin',
-      isActive: true,
-    });
-
-    this.logger.log(`Default admin user created in database: ${defaultUsername}`);
+    // Use domain service to initialize
+    await this.adminUsersService.initializeDefaultAdmin(defaultUsername, defaultPassword);
   }
 
   /**
    * Validate user credentials (used by Passport LocalStrategy)
    */
   async validateUser(username: string, password: string): Promise<any> {
-    // Find admin user in database
-    const adminUser = await this.adminUserRepo.findByUsername(username);
+    // Use domain service to validate credentials
+    const adminUser = await this.adminUsersService.validateCredentials(username, password);
+    
     if (!adminUser) {
-      this.logger.warn(`Login attempt with invalid username: ${username}`);
       return null;
     }
-
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, adminUser.passwordHash);
-    if (!isPasswordValid) {
-      this.logger.warn(`Login attempt with invalid password for user: ${username}`);
-      return null;
-    }
-
-    // Update last login time
-    await this.adminUserRepo.updateLastLogin(username);
 
     // Return user without password
     return {
@@ -136,59 +108,36 @@ export class AdminAuthService implements OnModuleInit {
     password: string, 
     role: 'super-admin' | 'admin' = 'admin',
     email?: string,
-  ): Promise<AdminUserDocument> {
-    // Check if user already exists
-    const exists = await this.adminUserRepo.exists(username);
-    if (exists) {
-      throw new Error('Admin user already exists');
-    }
-
-    // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
-    
-    // Create user in database
-    const adminUser = await this.adminUserRepo.create({
-      username,
-      passwordHash,
-      role,
-      email,
-      isActive: true,
-    });
-
-    this.logger.log(`New admin user created: ${username}`);
-
-    return adminUser;
+  ) {
+    return this.adminUsersService.createUser(username, password, role, email);
   }
 
   /**
    * Get admin user by username
    */
-  async getAdminUser(username: string): Promise<AdminUserDocument | null> {
-    return this.adminUserRepo.findByUsername(username);
+  async getAdminUser(username: string) {
+    return this.adminUsersService.findByUsername(username);
   }
 
   /**
-   * List all admin users (without password hashes)
+   * List all admin users
    */
-  async listAdminUsers(): Promise<AdminUserDocument[]> {
-    return this.adminUserRepo.findAll();
+  async listAdminUsers() {
+    return this.adminUsersService.findAll();
   }
 
   /**
    * Update admin user password
    */
   async updatePassword(username: string, newPassword: string): Promise<void> {
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-    await this.adminUserRepo.update(username, { passwordHash });
-    this.logger.log(`Password updated for user: ${username}`);
+    return this.adminUsersService.updatePassword(username, newPassword);
   }
 
   /**
    * Deactivate admin user
    */
   async deactivateUser(username: string): Promise<void> {
-    await this.adminUserRepo.softDelete(username);
-    this.logger.log(`Admin user deactivated: ${username}`);
+    return this.adminUsersService.deactivateUser(username);
   }
 
   /**

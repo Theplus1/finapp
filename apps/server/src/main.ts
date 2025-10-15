@@ -69,7 +69,6 @@ async function bootstrap() {
       authentication: {
         preferredSecurityScheme: 'bearer',
       },
-      defaultOpenAllTags: true,
     }),
   );
 

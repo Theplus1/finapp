@@ -2,15 +2,14 @@ import { Update, Ctx, Start, Help, Command, On, Action } from 'nestjs-telegraf';
 import { Context, Markup } from 'telegraf';
 import { Logger } from '@nestjs/common';
 import { BotContext } from './interfaces/bot-context.interface';
-import { MenuHandler } from '../features/menu/handlers/menu.handler';
-import { SubscriptionHandler } from '../features/subscription/handlers/subscription.handler';
-import { OnboardingHandler } from '../features/onboarding/handlers/onboarding.handler';
-import { AdminHandler } from '../features/admin/handlers/admin.handler';
+import { MenuHandler } from './features/menu/handlers/menu.handler';
+import { SubscriptionHandler } from './features/subscription/handlers/subscription.handler';
+import { OnboardingHandler } from './features/onboarding/handlers/onboarding.handler';
 import { Messages } from './constants/messages.constant';
 import { Keyboards } from './constants/keyboards.constant';
 import { SessionSteps } from './constants/session-steps.constant';
-import { CardsHandler } from 'src/features/cards/handlers/cards.handler';
-import { TransactionsHandler } from 'src/features/transactions/handlers/transactions.handler';
+import { CardsHandler } from './features/cards/handlers/cards.handler';
+import { TransactionsHandler } from './features/transactions/handlers/transactions.handler';
 import { Actions } from './constants/actions.constant';
 
 @Update()
@@ -23,7 +22,6 @@ export class BotUpdate {
     private readonly onboardingHandler: OnboardingHandler,
     private readonly cardHandler: CardsHandler,
     private readonly transactionsHandler: TransactionsHandler,
-    private readonly adminHandler: AdminHandler,
   ) {}
 
   @Start()

@@ -19,11 +19,14 @@ import {
   ApiParam,
   ApiBody,
 } from '@nestjs/swagger';
-import { AccountsService } from '../services/accounts.service';
 import { VirtualAccountQueryDto } from '../dto/virtual-account-query.dto';
-import { CreateVirtualAccountDto, UpdateVirtualAccountDto } from '../../slash/dto/account.dto';
+import { CreateVirtualAccountDto, UpdateVirtualAccountDto } from '../../integrations/slash/dto/account.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { LinkAccountDto, LinkAccountResponseDto } from '../dto/link-account.dto';
+import { AccountsService } from '../../domain/accounts/accounts.service';
+import { SlashApiService } from '../../integrations/slash/services/slash-api.service';
+import { createPaginatedResponse, PaginatedApiResponseDto } from '../../common/dto/api-response.dto';
+import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
 
 @ApiTags('Admin API - Virtual Accounts')
 @ApiBearerAuth()
@@ -32,15 +35,37 @@ import { LinkAccountDto, LinkAccountResponseDto } from '../dto/link-account.dto'
 export class AccountsController {
   private readonly logger = new Logger(AccountsController.name);
 
-  constructor(private readonly accountsService: AccountsService) {}
+  constructor(
+    private readonly accountsService: AccountsService,
+    private readonly slashApiService: SlashApiService,
+  ) { }
 
   @Get()
   @ApiOperation({ summary: 'List virtual accounts with filters and pagination' })
-  @ApiResponse({ status: 200, description: 'Virtual accounts retrieved successfully' })
+  @ApiResponse({ status: 200, description: 'Virtual accounts retrieved successfully', type: PaginatedApiResponseDto<VirtualAccountDocument> })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async list(@Query() query: VirtualAccountQueryDto) {
     this.logger.log('Listing virtual accounts');
-    return this.accountsService.findAll(query);
+
+    const [data, total] = await this.accountsService.findAllWithFilters(
+      {
+        accountId: query.accountId,
+        status: query.status,
+        search: query.search,
+      },
+      {
+        page: query.page || 1,
+        limit: query.limit || 20,
+      }
+    );
+
+    return createPaginatedResponse(
+      data,
+      query.page || 1,
+      query.limit || 20,
+      total,
+      'Virtual accounts retrieved successfully'
+    );
   }
 
   @Get('stats')
@@ -48,7 +73,7 @@ export class AccountsController {
   @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
   async getStats(@Query() query: VirtualAccountQueryDto) {
     this.logger.log('Getting virtual account statistics');
-    return this.accountsService.getStats(query);
+    return this.accountsService.getStats();
   }
 
   @Get(':id')
@@ -58,7 +83,23 @@ export class AccountsController {
   @ApiResponse({ status: 404, description: 'Virtual account not found' })
   async getById(@Param('id') id: string) {
     this.logger.log(`Getting virtual account ${id}`);
-    return this.accountsService.findByIdWithDetails(id);
+
+    const localAccount = await this.accountsService.findById(id);
+
+    // Fetch latest data from Slash API
+    try {
+      const slashAccount = await this.slashApiService.getVirtualAccount(localAccount.slashId);
+
+      const accountData = localAccount.toObject();
+      return {
+        ...accountData,
+        liveBalance: slashAccount.balance,
+        lastSynced: new Date(),
+      };
+    } catch (error) {
+      this.logger.warn(`Failed to fetch live data for account ${id}: ${error.message}`);
+      return localAccount;
+    }
   }
 
   @Patch(':id')
@@ -68,20 +109,20 @@ export class AccountsController {
   @ApiResponse({ status: 404, description: 'Virtual account not found' })
   async update(@Param('id') id: string, @Body() dto: UpdateVirtualAccountDto) {
     this.logger.log(`Updating virtual account ${id}`);
-    return this.accountsService.update(id, dto);
+    return this.accountsService.updateAccount(id, dto);
   }
 
   @Post(':id/link')
-  @ApiOperation({ 
-    summary: 'Link virtual account to user', 
-    description: 'Link a virtual account to a Telegram user' 
+  @ApiOperation({
+    summary: 'Link virtual account to user',
+    description: 'Link a virtual account to a Telegram user'
   })
   @ApiParam({ name: 'id', description: 'Virtual Account ID' })
   @ApiBody({ type: LinkAccountDto })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Account linked successfully',
-    type: LinkAccountResponseDto 
+    type: LinkAccountResponseDto
   })
   @ApiResponse({ status: 400, description: 'Bad request - user already has an account' })
   @ApiResponse({ status: 404, description: 'Virtual account not found' })
@@ -95,9 +136,9 @@ export class AccountsController {
   }
 
   @Delete(':id/link')
-  @ApiOperation({ 
-    summary: 'Unlink virtual account from user', 
-    description: 'Remove the link between a virtual account and user' 
+  @ApiOperation({
+    summary: 'Unlink virtual account from user',
+    description: 'Remove the link between a virtual account and user'
   })
   @ApiParam({ name: 'id', description: 'Virtual Account ID' })
   @ApiResponse({ status: 200, description: 'Account unlinked successfully' })
@@ -105,27 +146,5 @@ export class AccountsController {
   async unlinkAccount(@Param('id') id: string) {
     this.logger.log(`Unlinking virtual account ${id}`);
     return this.accountsService.unlinkFromUser(id);
-  }
-
-  @Get('linked')
-  @ApiOperation({ 
-    summary: 'Get all linked accounts', 
-    description: 'Get list of all virtual accounts that are linked to users' 
-  })
-  @ApiResponse({ status: 200, description: 'Linked accounts retrieved successfully' })
-  async getLinkedAccounts() {
-    this.logger.log('Getting all linked accounts');
-    return this.accountsService.findLinked();
-  }
-
-  @Get('unlinked')
-  @ApiOperation({ 
-    summary: 'Get all unlinked accounts', 
-    description: 'Get list of all virtual accounts that are available to link' 
-  })
-  @ApiResponse({ status: 200, description: 'Unlinked accounts retrieved successfully' })
-  async getUnlinkedAccounts() {
-    this.logger.log('Getting all unlinked accounts');
-    return this.accountsService.findUnlinked();
   }
 }

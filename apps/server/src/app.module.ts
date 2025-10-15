@@ -7,11 +7,14 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { BotModule } from './bot/bot.module';
 import { UsersModule } from './users/users.module';
-import { NotificationsModule } from './notifications/notifications.module';
 import configuration from './common/config/configuration';
 import { session } from 'telegraf';
-import { SlashModule } from './slash';
+import { SlashIntegrationModule } from './integrations/slash/slash-integration.module';
 import { AdminApiModule } from './admin-api/admin-api.module';
+import { DatabaseModule } from './database/database.module';
+import { CardsModule } from './domain/cards/cards.module';
+import { TransactionsModule } from './domain/transactions/transactions.module';
+import { AccountsModule } from './domain/accounts/accounts.module';
 
 @Module({
   imports: [
@@ -67,11 +70,20 @@ import { AdminApiModule } from './admin-api/admin-api.module';
       inject: [ConfigService],
     }),
 
+    // Core Modules
+    DatabaseModule,  // Data access layer
+    
+    // Domain Modules (Business Logic)
+    CardsModule,
+    TransactionsModule,
+    AccountsModule,
+    
+    // Integration Modules
+    SlashIntegrationModule,  // Slash API integration
+    
     // Feature Modules
-    BotModule,
     UsersModule,
-    NotificationsModule,
-    SlashModule,
+    BotModule,  // Telegram bot
     AdminApiModule,  // Admin dashboard API
   ],
   controllers: [AppController],

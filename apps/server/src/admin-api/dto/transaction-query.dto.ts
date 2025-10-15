@@ -1,7 +1,7 @@
 import { IsOptional, IsString, IsEnum, IsNumber, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { TransactionStatus, TransactionDetailedStatus } from '../../slash/dto/transaction.dto';
+import { TransactionDetailedStatus, TransactionStatus } from 'src/integrations/slash/types';
 
 export class TransactionQueryDto {
   @ApiPropertyOptional({ description: 'Virtual Account ID' })
