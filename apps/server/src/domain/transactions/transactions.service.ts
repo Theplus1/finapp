@@ -1,20 +1,13 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { TransactionRepository, TransactionFilters } from '../../database/repositories/transaction.repository';
 import { CardRepository } from '../../database/repositories/card.repository';
+import { VirtualAccountRepository } from '../../database/repositories/virtual-account.repository';
 import { TransactionDocument } from '../../database/schemas/transaction.schema';
+import { CardDocument } from '../../database/schemas/card.schema';
+import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
 import { PaginationOptions } from '../../common/types/repository-query.types';
-
-export interface EnrichedTransaction {
-  [key: string]: any;
-  card?: any;
-}
-
-export interface TransactionStats {
-  total: number;
-  totalAmount: number;
-  byStatus: Record<string, number>;
-  byType: Record<string, number>;
-}
+import { TransactionWithRelations, TransactionStats } from './types/transaction.types';
+import { SortOrder } from '../../common/constants/pagination.constants';
 
 @Injectable()
 export class TransactionsService {
@@ -23,6 +16,7 @@ export class TransactionsService {
   constructor(
     private readonly transactionRepository: TransactionRepository,
     private readonly cardRepository: CardRepository,
+    private readonly virtualAccountRepository: VirtualAccountRepository,
   ) {}
 
   /**
@@ -41,7 +35,6 @@ export class TransactionsService {
 
   /**
    * Find transactions with filters and pagination
-   * Optimized: Filters and paginates at database level
    */
   async findAllWithFilters(
     filters: {
@@ -50,10 +43,11 @@ export class TransactionsService {
       status?: string;
       startDate?: string;
       endDate?: string;
+      sortBy?: string;
+      sortOrder?: SortOrder;
     },
     pagination: PaginationOptions,
-  ): Promise<[TransactionDocument[], number]> {
-    // Build filters with date parsing
+  ): Promise<[TransactionWithRelations[], number]> {
     const dbFilters: any = {};
     if (filters.virtualAccountId) dbFilters.virtualAccountId = filters.virtualAccountId;
     if (filters.cardId) dbFilters.cardId = filters.cardId;
@@ -61,16 +55,21 @@ export class TransactionsService {
     if (filters.startDate) dbFilters.startDate = new Date(filters.startDate);
     if (filters.endDate) dbFilters.endDate = new Date(filters.endDate);
     
+    const sortField = filters.sortBy || 'createdAt';
+    const sortDirection = filters.sortOrder === SortOrder.ASC ? 1 : -1;
+    
     const [data, total] = await Promise.all([
       this.find({ 
         ...dbFilters, 
         limit: pagination.limit, 
-        skip: (pagination.page - 1) * pagination.limit 
+        skip: (pagination.page - 1) * pagination.limit,
+        sort: { [sortField]: sortDirection },
       }),
       this.count(dbFilters),
     ]);
     
-    return [data, total];
+    const enrichedData = await this.enrichTransactions(data);
+    return [enrichedData, total];
   }
 
   /**
@@ -83,7 +82,6 @@ export class TransactionsService {
     startDate?: string;
     endDate?: string;
   }): Promise<TransactionStats> {
-    // Build filters
     const filters: any = {};
     if (query.virtualAccountId) filters.virtualAccountId = query.virtualAccountId;
     if (query.cardId) filters.cardId = query.cardId;
@@ -108,22 +106,69 @@ export class TransactionsService {
   }
 
   /**
-   * Find transaction with enriched data (includes card info)
+   * Find transaction with enriched data (includes card and virtual account info)
    */
-  async findBySlashIdWithDetails(slashId: string): Promise<EnrichedTransaction> {
-    const transaction = await this.findBySlashId(slashId);
-    
-    // Fetch related card if exists
-    let card = null;
-    if (transaction.cardId) {
-      card = await this.cardRepository.findBySlashId(transaction.cardId);
+  async findBySlashIdWithDetails(slashId: string): Promise<TransactionDocument> {
+    return await this.findBySlashId(slashId);
+  }
+
+  /**
+   * Enrich transactions with card and virtual account data
+   * Uses batch queries to avoid N+1 problem
+   */
+  private async enrichTransactions(
+    transactions: TransactionDocument[],
+  ): Promise<TransactionWithRelations[]> {
+    if (transactions.length === 0) {
+      return [];
     }
 
-    const txnData = transaction.toObject();
-    return {
-      ...txnData,
-      card: card ? card.toObject() : null,
-    };
+    const cardIds = [...new Set(transactions.map(t => t.cardId).filter(Boolean))];
+    const virtualAccountIds = [...new Set(transactions.map(t => t.virtualAccountId).filter(Boolean))];
+
+    const [cards, virtualAccounts] = await Promise.all([
+      cardIds.length > 0
+        ? this.cardRepository.find({
+            filter: { slashId: { $in: cardIds }, isDeleted: false },
+            skip: 0,
+            limit: cardIds.length,
+          })
+        : Promise.resolve([]),
+      virtualAccountIds.length > 0
+        ? this.virtualAccountRepository.find({
+            filter: { slashId: { $in: virtualAccountIds }, isDeleted: false },
+            skip: 0,
+            limit: virtualAccountIds.length,
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const cardMap = new Map<string, CardDocument>();
+    cards.forEach(card => cardMap.set(card.slashId, card));
+
+    const virtualAccountMap = new Map<string, VirtualAccountDocument>();
+    virtualAccounts.forEach(va => virtualAccountMap.set(va.slashId, va));
+
+    return transactions.map(transaction => {
+      const txnData = transaction.toObject();
+      const enriched: TransactionWithRelations = { ...txnData };
+
+      if (transaction.cardId) {
+        const card = cardMap.get(transaction.cardId);
+        enriched.card = card ? {
+          slashId: card.slashId,
+          name: card.name,
+        } : null;
+      }
+
+      const virtualAccount = virtualAccountMap.get(transaction.virtualAccountId);
+      enriched.virtualAccount = virtualAccount ? {
+        slashId: virtualAccount.slashId,
+        name: virtualAccount.name,
+      } : null;
+
+      return enriched;
+    });
   }
 
   /**

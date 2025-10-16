@@ -1,34 +1,18 @@
-import { IsOptional, IsString, IsEnum, IsNumber, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsNumber, IsEnum, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PAGINATION_DEFAULTS, SORT_DEFAULTS, SortOrder } from '../../common/constants/pagination.constants';
 
-export enum VirtualAccountStatus {
-  ACTIVE = 'active',
-  CLOSED = 'closed',
-  SUSPENDED = 'suspended',
-}
-
-export class VirtualAccountQueryDto {
-  @ApiPropertyOptional({ description: 'Account ID' })
+export class CardGroupQueryDto {
+  @ApiPropertyOptional({ description: 'Virtual Account ID' })
   @IsOptional()
   @IsString()
-  accountId?: string;
+  virtualAccountId?: string;
 
-  @ApiPropertyOptional({ description: 'Legal Entity ID' })
+  @ApiPropertyOptional({ description: 'Search by name' })
   @IsOptional()
   @IsString()
-  legalEntityId?: string;
-
-  @ApiPropertyOptional({ enum: VirtualAccountStatus, description: 'Virtual account status' })
-  @IsOptional()
-  @IsEnum(VirtualAccountStatus)
-  status?: VirtualAccountStatus;
-
-  @ApiPropertyOptional({ description: 'Search term (name, description)' })
-  @IsOptional()
-  @IsString()
-  search?: string;
+  name?: string;
 
   @ApiPropertyOptional({ description: 'Page number', minimum: PAGINATION_DEFAULTS.MIN_PAGE, default: PAGINATION_DEFAULTS.PAGE })
   @IsOptional()

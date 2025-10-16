@@ -32,8 +32,15 @@ export class ApiResponseDto<T = any> {
  * Paginated response wrapper
  * Controllers return { data, pagination } and ResponseInterceptor wraps it
  */
-export class PaginatedApiResponseDto<T = any> extends ApiResponseDto<T[]> {
-  @ApiProperty({ description: 'Pagination metadata' })
+export class PaginatedApiResponseDto<T = any> {
+
+  @ApiProperty({ description: 'Response data', isArray: true, type: () => Object })
+  data: T[];
+
+  @ApiProperty({ 
+    description: 'Pagination metadata',
+    example: { page: 1, limit: 10, total: 100 }
+  })
   pagination: {
     page: number;
     limit: number;

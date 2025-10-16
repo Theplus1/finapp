@@ -26,6 +26,7 @@ export const SYNC_CONSTANTS = {
   // Entity types
   ENTITY_TYPE: {
     CARD: 'card' as const,
+    CARD_GROUP: 'card_group' as const,
     TRANSACTION: 'transaction' as const,
     VIRTUAL_ACCOUNT: 'virtual_account' as const,
     ACCOUNT: 'account' as const,

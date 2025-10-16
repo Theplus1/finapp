@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { VirtualAccountRepository } from '../../database/repositories/virtual-account.repository';
 import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
 import { PaginationOptions, RepositoryQuery } from '../../common/types/repository-query.types';
+import { SortOrder } from '../../common/constants/pagination.constants';
 
 export interface AccountStats {
   total: number;
@@ -23,6 +24,8 @@ export interface AccountFilters {
   accountId?: string;
   status?: string;
   search?: string;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 @Injectable()
@@ -51,12 +54,16 @@ export class AccountsService {
     // Build MongoDB filter
     const mongoFilter = this.buildMongoFilter(filters);
     
+    // Build sort
+    const sortField = filters.sortBy || 'createdAt';
+    const sortDirection = filters.sortOrder === SortOrder.ASC ? 1 : -1;
+    
     // Build repository query
     const query: RepositoryQuery = {
       filter: mongoFilter,
       skip: (pagination.page - 1) * pagination.limit,
       limit: pagination.limit,
-      sort: { createdAt: -1 },
+      sort: { [sortField]: sortDirection },
     };
 
     // Execute at DB level

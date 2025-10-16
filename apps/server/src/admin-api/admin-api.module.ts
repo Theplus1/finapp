@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SlashIntegrationModule } from '../integrations/slash/slash-integration.module';
 import { UsersModule } from '../users/users.module';
 import { CardsModule } from '../domain/cards/cards.module';
+import { CardGroupsModule } from '../domain/card-groups/card-groups.module';
 import { TransactionsModule } from '../domain/transactions/transactions.module';
 import { AccountsModule } from '../domain/accounts/accounts.module';
 import { AdminUsersModule } from '../domain/admin-users/admin-users.module';
@@ -14,6 +15,7 @@ import { AdminUsersModule } from '../domain/admin-users/admin-users.module';
 import { AuthController } from './controllers/auth.controller';
 import { TransactionsController } from './controllers/transactions.controller';
 import { CardsController } from './controllers/cards.controller';
+import { CardGroupsController } from './controllers/card-groups.controller';
 import { AccountsController } from './controllers/accounts.controller';
 
 // Services
@@ -45,6 +47,7 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
     SlashIntegrationModule,  // Access to Slash API client
     UsersModule,  // Access to user repository
     CardsModule,  // Domain logic for cards
+    CardGroupsModule,  // Domain logic for card groups
     TransactionsModule,  // Domain logic for transactions
     AccountsModule,  // Domain logic for accounts
     AdminUsersModule,  // Domain logic for admin users
@@ -53,6 +56,7 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
     AuthController,
     TransactionsController,
     CardsController,
+    CardGroupsController,
     AccountsController,
   ],
   providers: [

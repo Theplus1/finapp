@@ -18,6 +18,7 @@ import {
 import { CardQueryDto } from '../dto/card-query.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CardsService } from '../../domain/cards/cards.service';
+import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 
 @ApiTags('Admin API - Cards')
 @ApiBearerAuth()
@@ -42,16 +43,16 @@ export class CardsController {
         ...query
       },
       {
-        page: query.page || 1,
-        limit: query.limit || 20,
+        page: query.page || PAGINATION_DEFAULTS.PAGE,
+        limit: query.limit || PAGINATION_DEFAULTS.LIMIT,
       }
     );
     
     return {
       data,
       pagination: {
-        page: query.page || 1,
-        limit: query.limit || 20,
+        page: query.page || PAGINATION_DEFAULTS.PAGE,
+        limit: query.limit || PAGINATION_DEFAULTS.LIMIT,
         total,
       },
     };

@@ -2,6 +2,7 @@ import { IsOptional, IsString, IsEnum, IsNumber, Min, Max, IsBoolean } from 'cla
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { CardStatus } from 'src/integrations/slash/types';
+import { PAGINATION_DEFAULTS, SORT_DEFAULTS, SortOrder } from '../../common/constants/pagination.constants';
 
 export class CardQueryDto {
   @ApiPropertyOptional({ description: 'Virtual Account ID' })
@@ -41,28 +42,28 @@ export class CardQueryDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Page number', minimum: 1, default: 1 })
+  @ApiPropertyOptional({ description: 'Page number', minimum: PAGINATION_DEFAULTS.MIN_PAGE, default: PAGINATION_DEFAULTS.PAGE })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  @Min(1)
-  page?: number = 1;
+  @Min(PAGINATION_DEFAULTS.MIN_PAGE)
+  page?: number = PAGINATION_DEFAULTS.PAGE;
 
-  @ApiPropertyOptional({ description: 'Items per page', minimum: 1, maximum: 100, default: 20 })
+  @ApiPropertyOptional({ description: 'Items per page', minimum: PAGINATION_DEFAULTS.MIN_LIMIT, maximum: PAGINATION_DEFAULTS.MAX_LIMIT, default: PAGINATION_DEFAULTS.LIMIT })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  @Min(1)
-  @Max(100)
-  limit?: number = 20;
+  @Min(PAGINATION_DEFAULTS.MIN_LIMIT)
+  @Max(PAGINATION_DEFAULTS.MAX_LIMIT)
+  limit?: number = PAGINATION_DEFAULTS.LIMIT;
 
-  @ApiPropertyOptional({ description: 'Sort field', default: 'createdAt' })
+  @ApiPropertyOptional({ description: 'Sort field', default: SORT_DEFAULTS.FIELD })
   @IsOptional()
   @IsString()
-  sortBy?: string = 'createdAt';
+  sortBy?: string = SORT_DEFAULTS.FIELD;
 
-  @ApiPropertyOptional({ description: 'Sort order', enum: ['asc', 'desc'], default: 'desc' })
+  @ApiPropertyOptional({ description: 'Sort order', enum: SortOrder, default: SORT_DEFAULTS.ORDER })
   @IsOptional()
-  @IsEnum(['asc', 'desc'])
-  sortOrder?: 'asc' | 'desc' = 'desc';
+  @IsEnum(SortOrder)
+  sortOrder?: SortOrder = SORT_DEFAULTS.ORDER;
 }

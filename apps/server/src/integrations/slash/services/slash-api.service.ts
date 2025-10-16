@@ -26,6 +26,12 @@ import {
   CreateWebhookDto,
   WebhookEventDto,
 } from '../dto/webhook.dto';
+import {
+  CardGroupDto,
+  CreateCardGroupDto,
+  UpdateCardGroupDto,
+  ListCardGroupsQuery,
+} from '../dto/card-group.dto';
 import { SlashApiResponse, PaginatedResponse, ListResponse } from '../interfaces/slash-response.interface';
 
 /**
@@ -304,6 +310,46 @@ export class SlashApiService {
       method: 'POST',
       url: '/virtual-account/transfer',
       data,
+    });
+  }
+
+  // ==================== Card Group Methods ====================
+
+  async listCardGroups(query?: ListCardGroupsQuery): Promise<ListResponse<CardGroupDto>> {
+    return this.request<ListResponse<CardGroupDto>>({
+      method: 'GET',
+      url: '/card-group',
+      params: query,
+    });
+  }
+
+  async getCardGroup(cardGroupId: string): Promise<CardGroupDto> {
+    return this.request<CardGroupDto>({
+      method: 'GET',
+      url: `/card-group/${cardGroupId}`,
+    });
+  }
+
+  async createCardGroup(data: CreateCardGroupDto): Promise<CardGroupDto> {
+    return this.request<CardGroupDto>({
+      method: 'POST',
+      url: '/card-group',
+      data,
+    });
+  }
+
+  async updateCardGroup(cardGroupId: string, data: UpdateCardGroupDto): Promise<CardGroupDto> {
+    return this.request<CardGroupDto>({
+      method: 'PATCH',
+      url: `/card-group/${cardGroupId}`,
+      data,
+    });
+  }
+
+  async getCardGroupUtilization(cardGroupId: string): Promise<any> {
+    return this.request<any>({
+      method: 'GET',
+      url: `/card-group/${cardGroupId}/utilization`,
     });
   }
 

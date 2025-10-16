@@ -16,6 +16,7 @@ import {
 import { TransactionQueryDto } from '../dto/transaction-query.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { TransactionsService } from '../../domain/transactions/transactions.service';
+import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 
 @ApiTags('Admin API - Transactions')
 @ApiBearerAuth()
@@ -40,36 +41,23 @@ export class TransactionsController {
         status: query.status,
         startDate: query.startDate,
         endDate: query.endDate,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
       },
       {
-        page: query.page || 1,
-        limit: query.limit || 20,
+        page: query.page || PAGINATION_DEFAULTS.PAGE,
+        limit: query.limit || PAGINATION_DEFAULTS.LIMIT,
       }
     );
     
     return {
       data,
       pagination: {
-        page: query.page || 1,
-        limit: query.limit || 20,
+        page: query.page || PAGINATION_DEFAULTS.PAGE,
+        limit: query.limit || PAGINATION_DEFAULTS.LIMIT,
         total,
       },
     };
-  }
-
-  @Get('stats')
-  @ApiOperation({ summary: 'Get transaction statistics' })
-  @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
-  async getStats(@Query() query: TransactionQueryDto) {
-    this.logger.log('Getting transaction statistics');
-    
-    return this.transactionsService.getStatsWithFilters({
-      virtualAccountId: query.virtualAccountId,
-      cardId: query.cardId,
-      status: query.status,
-      startDate: query.startDate,
-      endDate: query.endDate,
-    });
   }
 
   @Get(':id')

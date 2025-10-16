@@ -33,11 +33,9 @@ const FilterCard = ({ onCardChange }: Props) => {
           page,
           limit: limitPerRequest,
         });
-        const { pagination: paginationRes, data } = res.data;
+        const { pagination: paginationRes, data } = res;
         totalCardInfors = [...totalCardInfors, ...data];
-        if (!paginationRes.hasNext) {
-          hasNext = false;
-        }
+        hasNext = (paginationRes?.total || 0) <= (paginationRes?.page || 1) * (paginationRes?.limit || 1);
         page++;
       }
       return totalCardInfors;

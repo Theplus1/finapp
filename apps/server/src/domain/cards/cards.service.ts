@@ -2,7 +2,10 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CardRepository } from '../../database/repositories/card.repository';
 import { VirtualAccountRepository } from '../../database/repositories/virtual-account.repository';
 import { CardDocument } from '../../database/schemas/card.schema';
+import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
 import { PaginationOptions, RepositoryQuery } from '../../common/types/repository-query.types';
+import { CardWithRelations } from './types/card.types';
+import { SortOrder } from '../../common/constants/pagination.constants';
 
 export interface CardStats {
   total: number;
@@ -16,6 +19,8 @@ export interface CardFilters {
   status?: string;
   cardGroupId?: string;
   virtualAccountId?: string;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 @Injectable()
@@ -52,7 +57,27 @@ export class CardsService {
       skip?: number;
     },
   ): Promise<CardDocument[]> {
-    return this.cardRepository.findByVirtualAccountId(virtualAccountId, filters);
+    const mongoFilter: any = {
+      virtualAccountId,
+      isDeleted: false,
+    };
+
+    if (filters?.status) {
+      mongoFilter.status = filters.status;
+    }
+
+    if (filters?.cardGroupId) {
+      mongoFilter.cardGroupId = filters.cardGroupId;
+    }
+
+    const query: RepositoryQuery = {
+      filter: mongoFilter,
+      skip: filters?.skip || 0,
+      limit: filters?.limit || 100,
+      sort: { createdAt: -1 },
+    };
+
+    return this.cardRepository.find(query);
   }
 
   /**
@@ -62,7 +87,16 @@ export class CardsService {
     virtualAccountId: string,
     filters?: { status?: string },
   ): Promise<number> {
-    return this.cardRepository.count(virtualAccountId, filters);
+    const mongoFilter: any = {
+      virtualAccountId,
+      isDeleted: false,
+    };
+
+    if (filters?.status) {
+      mongoFilter.status = filters.status;
+    }
+
+    return this.cardRepository.count(mongoFilter);
   }
 
   /**
@@ -80,28 +114,32 @@ export class CardsService {
 
   /**
    * Find all cards with filters and pagination
-   * Optimized: Filters and paginates at database level
+   * Returns cards with virtual account information
    */
   async findAllWithFilters(
     filters: CardFilters,
     pagination: PaginationOptions,
-  ): Promise<[CardDocument[], number]> {
-    // Build MongoDB filter
+  ): Promise<[CardWithRelations[], number]> {
     const mongoFilter = this.buildMongoFilter(filters);
     
-    // Build repository query
+    // Build sort
+    const sortField = filters.sortBy || 'createdAt';
+    const sortDirection = filters.sortOrder === SortOrder.ASC ? 1 : -1;
+    
     const query: RepositoryQuery = {
       filter: mongoFilter,
       skip: (pagination.page - 1) * pagination.limit,
       limit: pagination.limit,
-      sort: { createdAt: -1 },
+      sort: { [sortField]: sortDirection },
     };
 
-    // Execute at DB level
-    return Promise.all([
+    const [cards, total] = await Promise.all([
       this.cardRepository.find(query),
-      this.cardRepository.countWithFilter(mongoFilter),
+      this.cardRepository.count(mongoFilter),
     ]);
+
+    const enrichedCards = await this.enrichCards(cards);
+    return [enrichedCards, total];
   }
 
   /**
@@ -132,20 +170,44 @@ export class CardsService {
   /**
    * Find card by ID with details (including virtual account)
    */
-  async findBySlashIdWithDetails(slashId: string): Promise<any> {
-    const card = await this.findBySlashId(slashId);
-    
-    // Fetch related virtual account
-    let virtualAccount = null;
-    if (card.virtualAccountId) {
-      virtualAccount = await this.virtualAccountRepository.findBySlashId(card.virtualAccountId);
+  async findBySlashIdWithDetails(slashId: string): Promise<CardDocument> {
+    return await this.findBySlashId(slashId);
+  }
+
+  /**
+   * Enrich cards with virtual account data
+   * Uses batch queries to avoid N+1 problem
+   */
+  private async enrichCards(cards: CardDocument[]): Promise<CardWithRelations[]> {
+    if (cards.length === 0) {
+      return [];
     }
 
-    const cardData = card.toObject();
-    return {
-      ...cardData,
-      virtualAccount: virtualAccount ? virtualAccount.toObject() : null,
-    };
+    const virtualAccountIds = [...new Set(cards.map(c => c.virtualAccountId).filter(Boolean))];
+
+    const virtualAccounts = virtualAccountIds.length > 0
+      ? await this.virtualAccountRepository.find({
+          filter: { slashId: { $in: virtualAccountIds }, isDeleted: false },
+          skip: 0,
+          limit: virtualAccountIds.length,
+        })
+      : [];
+
+    const virtualAccountMap = new Map<string, VirtualAccountDocument>();
+    virtualAccounts.forEach(va => virtualAccountMap.set(va.slashId, va));
+
+    return cards.map(card => {
+      const cardData = card.toObject();
+      const enriched: CardWithRelations = { ...cardData };
+
+      const virtualAccount = virtualAccountMap.get(card.virtualAccountId);
+      enriched.virtualAccount = virtualAccount ? {
+        slashId: virtualAccount.slashId,
+        name: virtualAccount.name,
+      } : null;
+
+      return enriched;
+    });
   }
 
 }

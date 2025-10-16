@@ -32,54 +32,6 @@ export class CardRepository {
     return this.cardModel.findOne({ slashId, isDeleted: false }).exec();
   }
 
-  async findByVirtualAccountId(
-    virtualAccountId: string,
-    filters?: {
-      status?: string;
-      cardGroupId?: string;
-      limit?: number;
-      skip?: number;
-    },
-  ): Promise<CardDocument[]> {
-    const query: FilterQuery<CardDocument> = {
-      virtualAccountId,
-      isDeleted: false,
-    };
-
-    if (filters?.status) {
-      query.status = filters.status;
-    }
-
-    if (filters?.cardGroupId) {
-      query.cardGroupId = filters.cardGroupId;
-    }
-
-    let queryBuilder = this.cardModel.find(query).sort({ createdAt: -1 });
-
-    if (filters?.skip) {
-      queryBuilder = queryBuilder.skip(filters.skip);
-    }
-
-    if (filters?.limit) {
-      queryBuilder = queryBuilder.limit(filters.limit);
-    }
-
-    return queryBuilder.exec();
-  }
-
-  async count(virtualAccountId: string, filters?: { status?: string }): Promise<number> {
-    const query: FilterQuery<CardDocument> = {
-      virtualAccountId,
-      isDeleted: false,
-    };
-
-    if (filters?.status) {
-      query.status = filters.status;
-    }
-
-    return this.cardModel.countDocuments(query).exec();
-  }
-
   /**
    * Generic find method with filters and pagination
    * Used by domain services for optimized queries
@@ -97,7 +49,7 @@ export class CardRepository {
    * Generic count method with filters
    * Used by domain services for pagination
    */
-  async countWithFilter(filter: any): Promise<number> {
+  async count(filter: any): Promise<number> {
     return this.cardModel.countDocuments(filter).exec();
   }
 

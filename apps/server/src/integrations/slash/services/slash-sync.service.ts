@@ -3,10 +3,12 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { SlashApiService } from './slash-api.service';
 import { CardRepository } from '../../../database/repositories/card.repository';
+import { CardGroupRepository } from '../../../database/repositories/card-group.repository';
 import { TransactionRepository } from '../../../database/repositories/transaction.repository';
 import { VirtualAccountRepository } from '../../../database/repositories/virtual-account.repository';
 import { SyncLog, SyncLogDocument } from '../../../database/schemas/sync-log.schema';
 import { CardDto } from '../dto/card.dto';
+import { CardGroupDto } from '../dto/card-group.dto';
 import { TransactionDto } from '../dto/transaction.dto';
 import { VirtualAccountDto } from '../dto/account.dto';
 import {
@@ -17,6 +19,7 @@ import {
 } from '../constants/sync.constants';
 import {
   mapCardDtoToEntity,
+  mapCardGroupDtoToEntity,
   mapTransactionDtoToEntity,
   mapVirtualAccountDtoToEntity,
   mapVirtualAccountWithDetailsDtoToEntity,
@@ -38,6 +41,7 @@ export class SlashSyncService {
   constructor(
     private readonly slashApiService: SlashApiService,
     private readonly cardRepository: CardRepository,
+    private readonly cardGroupRepository: CardGroupRepository,
     private readonly transactionRepository: TransactionRepository,
     private readonly virtualAccountRepository: VirtualAccountRepository,
     @InjectModel(SyncLog.name) private syncLogModel: Model<SyncLogDocument>,
@@ -83,6 +87,20 @@ export class SlashSyncService {
       this.logger.log(`Synced virtual account ${accountData.id} from webhook`);
     } catch (error) {
       this.logger.error(`Error syncing virtual account ${accountData.id} from webhook:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync card group from webhook event
+   */
+  async syncCardGroupFromWebhook(cardGroupData: CardGroupDto): Promise<void> {
+    try {
+      const entityData = mapCardGroupDtoToEntity(cardGroupData, SYNC_CONSTANTS.SYNC_SOURCE.WEBHOOK);
+      await this.cardGroupRepository.upsert(cardGroupData.id, entityData);
+      this.logger.log(`Synced card group ${cardGroupData.id} from webhook`);
+    } catch (error) {
+      this.logger.error(`Error syncing card group ${cardGroupData.id} from webhook:`, error);
       throw error;
     }
   }
@@ -393,6 +411,90 @@ export class SlashSyncService {
       };
     } catch (error) {
       this.logger.error(`Error syncing virtual account ${item.virtualAccount.id}:`, error);
+      return { created: false, updated: false, failed: true };
+    }
+  }
+
+  /**
+   * Full sync of all card groups
+   */
+  async syncAllCardGroups(): Promise<void> {
+    const syncLog = await this.createSyncLog(
+      SYNC_CONSTANTS.ENTITY_TYPE.CARD_GROUP,
+      SYNC_CONSTANTS.SYNC_TYPE.SCHEDULED_FULL,
+    );
+
+    try {
+      const result = await this.syncCardGroupsWithPagination();
+      
+      await this.completeSyncLog(syncLog._id as Types.ObjectId, SYNC_CONSTANTS.SYNC_STATUS.COMPLETED, {
+        recordsProcessed: result.totalProcessed,
+        recordsCreated: result.totalCreated,
+        recordsUpdated: result.totalUpdated,
+        recordsFailed: result.totalFailed,
+      });
+
+      this.logger.log(
+        `Completed full card group sync: ${result.totalProcessed} processed, ` +
+        `${result.totalCreated} created, ${result.totalUpdated} updated, ${result.totalFailed} failed`,
+      );
+    } catch (error) {
+      await this.failSyncLog(syncLog._id as Types.ObjectId, error.message);
+      this.logger.error('Error during full card group sync:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync card groups with cursor-based pagination
+   */
+  private async syncCardGroupsWithPagination(): Promise<SyncResult> {
+    let cursor: string | undefined;
+    const result: SyncResult = {
+      totalProcessed: 0,
+      totalCreated: 0,
+      totalUpdated: 0,
+      totalFailed: 0,
+    };
+
+    do {
+      const response = await this.slashApiService.listCardGroups({ cursor });
+
+      if (response.items && response.items.length > 0) {
+        for (const cardGroup of response.items) {
+          const itemResult = await this.syncSingleCardGroup(cardGroup);
+          result.totalProcessed++;
+          if (itemResult.created) result.totalCreated++;
+          if (itemResult.updated) result.totalUpdated++;
+          if (itemResult.failed) result.totalFailed++;
+        }
+      }
+
+      cursor = response.metadata?.nextCursor;
+    } while (cursor);
+
+    return result;
+  }
+
+  /**
+   * Sync a single card group
+   */
+  private async syncSingleCardGroup(
+    cardGroup: CardGroupDto,
+  ): Promise<{ created: boolean; updated: boolean; failed: boolean }> {
+    try {
+      const existing = await this.cardGroupRepository.findBySlashId(cardGroup.id);
+      const entityData = mapCardGroupDtoToEntity(cardGroup, SYNC_CONSTANTS.SYNC_SOURCE.SCHEDULED);
+      
+      await this.cardGroupRepository.upsert(cardGroup.id, entityData);
+      
+      return {
+        created: !existing,
+        updated: !!existing,
+        failed: false,
+      };
+    } catch (error) {
+      this.logger.error(`Error syncing card group ${cardGroup.id}:`, error);
       return { created: false, updated: false, failed: true };
     }
   }

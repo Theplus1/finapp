@@ -75,6 +75,18 @@ export class SlashSyncController {
     return { message: 'Virtual account sync started' };
   }
 
+  @Post('card-groups')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Manually trigger card group sync' })
+  @ApiResponse({ status: 202, description: 'Sync started' })
+  async syncCardGroups() {
+    this.slashSyncService.syncAllCardGroups().catch((error) => {
+      this.logger.error('Manual card group sync failed:', error);
+    });
+    
+    return { message: 'Card group sync started' };
+  }
+
   @Get('stats')
   @ApiOperation({ summary: 'Get sync statistics' })
   @ApiResponse({ status: 200, description: 'Sync statistics' })

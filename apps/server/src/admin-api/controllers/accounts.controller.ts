@@ -26,6 +26,7 @@ import { LinkAccountDto, LinkAccountResponseDto } from '../dto/link-account.dto'
 import { AccountsService } from '../../domain/accounts/accounts.service';
 import { SlashApiService } from '../../integrations/slash/services/slash-api.service';
 import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
+import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 
 @ApiTags('Admin API - Virtual Accounts')
 @ApiBearerAuth()
@@ -51,18 +52,20 @@ export class AccountsController {
         accountId: query.accountId,
         status: query.status,
         search: query.search,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
       },
       {
-        page: query.page || 1,
-        limit: query.limit || 20,
+        page: query.page || PAGINATION_DEFAULTS.PAGE,
+        limit: query.limit || PAGINATION_DEFAULTS.LIMIT,
       }
     );
 
     return {
       data,
       pagination: {
-        page: query.page || 1,
-        limit: query.limit || 20,
+        page: query.page || PAGINATION_DEFAULTS.PAGE,
+        limit: query.limit || PAGINATION_DEFAULTS.LIMIT,
         total,
       },
     };

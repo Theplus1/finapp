@@ -5,13 +5,16 @@
 
 import { plainToInstance } from 'class-transformer';
 import { CardDto } from '../dto/card.dto';
+import { CardGroupDto } from '../dto/card-group.dto';
 import { TransactionDto } from '../dto/transaction.dto';
 import { VirtualAccountDto, VirtualAccountWithDetailsDto } from '../dto/account.dto';
 import { SyncSource } from '../constants/sync.constants';
 import { CardEntity } from '../entities/card.entity';
+import { CardGroupEntity } from '../entities/card-group.entity';
 import { TransactionEntity } from '../entities/transaction.entity';
 import { VirtualAccountEntity, VirtualAccountWithDetailsEntity } from '../entities/virtual-account.entity';
 import { Card } from '../../../database/schemas/card.schema';
+import { CardGroup } from '../../../database/schemas/card-group.schema';
 import { Transaction } from '../../../database/schemas/transaction.schema';
 import { VirtualAccount } from '../../../database/schemas/virtual-account.schema';
 
@@ -85,4 +88,22 @@ export function mapVirtualAccountWithDetailsDtoToEntity(
   entity.syncSource = syncSource;
   
   return entity as Partial<VirtualAccount>;
+}
+
+/**
+ * Map CardGroupDto to CardGroup entity data using class-transformer
+ * Uses class-transformer for consistent transformation
+ */
+export function mapCardGroupDtoToEntity(
+  cardGroupDto: CardGroupDto,
+  syncSource: SyncSource,
+): Partial<CardGroup> {
+  const entity = plainToInstance(CardGroupEntity, cardGroupDto, {
+    excludeExtraneousValues: true,
+    enableImplicitConversion: true,
+  });
+  
+  entity.syncSource = syncSource;
+  
+  return entity as Partial<CardGroup>;
 }
