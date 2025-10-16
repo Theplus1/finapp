@@ -31,8 +31,7 @@ jobs:
       - name: Create .env file for admin-web
         run: |
           cat > apps/admin-web/.env.production << EOF
-          API_KEY=${{ secrets.SLASH_API_KEY }}
-          API_URL=${{ vars.SLASH_BASE_URL }}
+          API_URL=${{ vars.SERVER_BASE_URL }}
           EOF
 
       - name: Build admin-web
