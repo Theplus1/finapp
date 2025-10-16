@@ -8,14 +8,20 @@ import { Keyboards } from 'src/bot/constants/keyboards.constant';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
 import { ValidateUser } from 'src/bot/decorators/validate-user.decorator';
 import { UserValidationGuard } from 'src/bot/guards/user-validation.guard';
-import { TransactionDto, TransactionStatus } from 'src/integrations/slash/dto/transaction.dto';
+import {
+  TransactionDto,
+  TransactionStatus,
+} from 'src/integrations/slash/dto/transaction.dto';
 import { SessionSteps } from 'src/bot/constants/session-steps.constant';
 import { formatCurrency } from 'src/shared/utils/formatCurrency.util';
+import { Actions } from 'src/bot/constants/actions.constant';
+import { toCsvFromObjects } from 'src/shared/utils/csv.util';
+import { buildTimestampedName } from 'src/shared/utils/naming.util';
+import { publicPath, writeTextFile } from 'src/shared/utils/file.util';
 
 @Injectable()
 @UseGuards(UserValidationGuard)
 export class TransactionsHandler {
-
   private readonly logger = new Logger(TransactionsHandler.name);
 
   constructor(
@@ -26,13 +32,22 @@ export class TransactionsHandler {
   ) {}
 
   // MENU
+  @ValidateUser({ requireAccount: true, answerCallback: true })
+  async handleTransactionListAction(ctx: BotContext) {
+    await ctx.answerCbQuery();
+    await ctx.reply(Messages.transactionsMenu, {
+      parse_mode: 'Markdown',
+      ...Keyboards.transactionTimeFilterMenu(),
+    });
+  }
+
   @ValidateUser({ answerCallback: true })
   async handleSubscribeTransactionsAction(ctx: BotContext) {
     await ctx.answerCbQuery('Subscribing...');
     await this.usersService.updateSubscription(ctx.from!.id, true);
     await ctx.editMessageText(Messages.subscribeTransactionsSuccess, {
       parse_mode: 'Markdown',
-      ...Keyboards.backToTransactions(),
+      ...Keyboards.backToTransaction(),
     });
   }
 
@@ -42,7 +57,7 @@ export class TransactionsHandler {
     await this.usersService.updateSubscription(ctx.from!.id, false);
     await ctx.editMessageText(Messages.unsubscribeTransactionsSuccess, {
       parse_mode: 'Markdown',
-      ...Keyboards.backToTransactions(),
+      ...Keyboards.backToTransaction(),
     });
   }
 
@@ -70,7 +85,8 @@ export class TransactionsHandler {
 
     await ctx.sendChatAction('typing');
     try {
-      const transactionDetail = await this.slashApiService.getTransaction(trimmed);
+      const transactionDetail =
+        await this.slashApiService.getTransaction(trimmed);
       if (
         !transactionDetail ||
         transactionDetail.virtualAccountId !== userData.virtualAccountId
@@ -82,7 +98,7 @@ export class TransactionsHandler {
       const detail = this.formatTransactionDetail(transactionDetail);
       await ctx.reply(detail, {
         parse_mode: 'Markdown',
-        ...Keyboards.backToTransactions(),
+        ...Keyboards.backToTransaction(),
       });
     } catch (error) {
       this.logger.error(`Error fetching transaction ${trimmed}:`, error);
@@ -117,6 +133,86 @@ export class TransactionsHandler {
         return '❌';
       default:
         return '❓';
+    }
+  }
+
+  @ValidateUser({ requireAccount: true, answerCallback: true })
+  async handleTransactionExportAction(ctx: BotContext) {
+    await ctx.answerCbQuery();
+    const callbackQuery = ctx.callbackQuery;
+    if (!callbackQuery || !('data' in callbackQuery)) return;
+
+    const now = new Date();
+    const dateFrom = new Date(now);
+    const dateTo = new Date(now);
+    dateFrom.setHours(0, 0, 0, 0);
+    dateTo.setHours(23, 59, 59, 999);
+
+    switch (callbackQuery.data) {
+      case Actions.transaction.listToday:
+        break;
+      case Actions.transaction.listYesterday:
+        dateFrom.setDate(dateFrom.getDate() - 1);
+        dateTo.setDate(dateTo.getDate() - 1);
+        break;
+      case Actions.transaction.listThisWeek:
+        dateFrom.setDate(dateFrom.getDate() - dateFrom.getDay());
+        break;
+      case Actions.transaction.listThisMonth:
+        dateFrom.setDate(1);
+        break;
+    }
+
+    await ctx.sendChatAction('typing');
+    const result = await this.slashApiService.listTransactions({
+      'filter:from_date': dateFrom.getTime(),
+      'filter:to_date': dateTo.getTime(),
+    });
+    const fileName = buildTimestampedName(dateFrom, {
+      prefix: 'transactions',
+      ext: 'csv',
+    });
+
+    try {
+      const transactionList = result?.items || [];
+      const csvData = toCsvFromObjects(transactionList, [
+        { key: 'id', header: 'id' },
+        { key: 'date', header: 'date' },
+        { key: 'status', header: 'status' },
+        { key: 'type', header: 'type' },
+        { key: 'amountCents', header: 'amountCents' },
+        {
+          key: 'currency',
+          header: 'currency',
+          map: (t) => t.originalCurrency?.code ?? '', // map nested field
+        },
+        { key: 'merchantDescription', header: 'merchantDescription' },
+        { key: 'merchantName', header: 'merchantName' },
+        { key: 'merchantCategory', header: 'merchantCategory' },
+        {
+          key: 'country',
+          header: 'country',
+          map: (t) => t.merchantData?.location?.country ?? '',
+        },
+        {
+          key: 'city',
+          header: 'city',
+          map: (t) => t.merchantData?.location?.city ?? '',
+        },
+      ]);
+
+      const outDir = publicPath('transaction', 'data');
+      await writeTextFile(outDir, fileName, csvData);
+      await ctx.reply(
+        Messages.exportTransactionsSuccess({
+          count: result?.items?.length || 0,
+          fileName,
+          uri: `${this.configService.get<string>('resourceBaseUrl', '')}/transaction/data/${fileName}`,
+        }),
+      );
+    } catch (err) {
+      this.logger.error('Failed to export transactions CSV', err as any);
+      await ctx.reply(Messages.errorFetchingTransactions);
     }
   }
 }

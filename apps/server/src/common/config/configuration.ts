@@ -1,5 +1,6 @@
 export default () => ({
   port: parseInt(process.env.PORT || '3000', 10),
+  resourceBaseUrl: process.env.RESOURCE_BASE_URL || `localhost:${process.env.PORT || '3000'}`,
   bot: {
     token: process.env.BOT_TOKEN,
     mode: process.env.MODE || 'polling',
