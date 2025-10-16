@@ -20,34 +20,30 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import { Transition } from "@/lib/api/endpoints/transaction";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
-import { CursorPagination } from "@/components/ui/cursor-pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/lib/api/endpoints/card";
 import FilterTransaction from "./components/filter";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 import { EMPTY_LABEL } from "@/app/utils/constants";
+import { ClientPagination } from "@/components/ui/client-pagination";
 
 const initFilter = {
-  "filter:cardId": "",
-  "filter:virtualAccountId": "",
-  "filter:from_date": "",
-  "filter:to_date": "",
-  cursor: "",
+  cardId: "",
+  virtualAccountId: "",
+  startDate: "",
+  endDate: "",
 };
 
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as Transition[];
-const initCursorMap = {
-  1: "",
-};
 export default function Dashboard() {
   const { setBreadcrumbs } = useBreadcrumbs();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(0);
-  const [cursorMap, setCursorMap] =
-    useState<Record<number, string>>(initCursorMap);
-  const [nextCursor, setNextCursor] = useState<string>();
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 20,
+    total: 0,
+  });
   const [currentFilter, setCurrentFilter] = useState(initFilter);
   const queryClient = useQueryClient();
 
@@ -56,32 +52,26 @@ export default function Dashboard() {
   }, [setBreadcrumbs]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["transactions", page, currentFilter],
+    queryKey: ["transactions", pagination.page, currentFilter],
     queryFn: async () => {
-      const currentCursor = cursorMap[page] ?? "";
       const res = await api.transactions.getTransactions({
         ...currentFilter,
-        cursor: currentCursor,
+        page: pagination.page,
+        limit: pagination.pageSize,
       });
-      const { nextCursor, count } = res.data.metadata;
-      setNextCursor(nextCursor);
-      if (!pageSize) {
-        setPageSize(count);
+      if (pagination.total === 0) {
+        setPagination((prev) => ({
+          ...prev,
+          total: res.data.pagination?.total ?? 0,
+        }));
       }
-      setCursorMap((prev) => ({
-        ...prev,
-        [page + 1]: nextCursor as string,
-      }));
       return res.data;
     },
     refetchOnMount: "always",
     gcTime: 0,
   });
 
-  const dataTransaction: Transition[] = useMemo(
-    () => data?.items ?? [],
-    [data]
-  );
+  const dataTransaction: Transition[] = useMemo(() => data?.data ?? [], [data]);
   const dataTransactionTable = useMemo(() => {
     if (isLoading) return maskDataTable;
     return dataTransaction;
@@ -164,7 +154,10 @@ export default function Dashboard() {
           return isLoading ? (
             <Skeleton />
           ) : (
-            renderNoTable({ page, pageSize }, row.index)
+            renderNoTable(
+              { page: pagination.page, pageSize: pagination.pageSize },
+              row.index
+            )
           );
         },
       },
@@ -172,7 +165,7 @@ export default function Dashboard() {
         header: "Card",
         cell: ({ row }: CellContext<Transition, string>) => {
           const cardInfo = cardInfos?.find(
-            (card) => card.id === row.original.cardId
+            (card) => card.slashId === row.original.cardId
           );
           return isLoading || isLoadingCardInfos ? (
             <Skeleton />
@@ -188,13 +181,12 @@ export default function Dashboard() {
         cell: ({ row }: CellContext<Transition, string>) => {
           const virtualAccountInfo = virtualAccountInfos?.find(
             (virtualAccount) =>
-              virtualAccount.virtualAccount?.id ===
-              row.original.virtualAccountId
+              virtualAccount.slashId === row.original.virtualAccountId
           );
           return isLoading || isLoadingVirtualAccountInfos ? (
             <Skeleton />
           ) : (
-            (virtualAccountInfo?.virtualAccount?.name ?? EMPTY_LABEL)
+            (virtualAccountInfo?.name ?? EMPTY_LABEL)
           );
         },
       },
@@ -231,21 +223,13 @@ export default function Dashboard() {
       {
         header: "Merchant",
         cell: ({ row }: CellContext<Transition, string>) => {
-          return isLoading ? (
-            <Skeleton />
-          ) : (
-            (row.original.merchantData?.name ?? EMPTY_LABEL)
-          );
+          return isLoading ? <Skeleton /> : EMPTY_LABEL;
         },
       },
       {
         header: "Country",
         cell: ({ row }: CellContext<Transition, string>) => {
-          return isLoading ? (
-            <Skeleton />
-          ) : (
-            (row.original.merchantData?.location?.country ?? EMPTY_LABEL)
-          );
+          return isLoading ? <Skeleton /> : EMPTY_LABEL;
         },
       },
       {
@@ -260,24 +244,24 @@ export default function Dashboard() {
       },
     ],
     [
-      page,
       isLoading,
       cardInfos,
       isLoadingCardInfos,
       virtualAccountInfos,
       isLoadingVirtualAccountInfos,
-      pageSize,
+      pagination,
     ]
   ) as ColumnDef<Transition>[];
 
   const handleChangeFilter = (field: string, value: string | undefined) => {
-    setPage(1);
-    setCursorMap(initCursorMap);
-    setPageSize(0);
+    setPagination((prev) => ({
+      ...prev,
+      page: 1,
+      total: 0,
+    }));
     setCurrentFilter((prev) => ({
       ...prev,
       [field]: value,
-      cursor: "",
     }));
   };
 
@@ -293,34 +277,26 @@ export default function Dashboard() {
         </SectionHeader>
         <SectionContent>
           <FilterTransaction
-            onCardChange={(cardId) =>
-              handleChangeFilter("filter:cardId", cardId)
-            }
+            onCardChange={(cardId) => handleChangeFilter("cardId", cardId)}
             onVirtualAccountChange={(virtualAccountId) =>
-              handleChangeFilter("filter:virtualAccountId", virtualAccountId)
+              handleChangeFilter("virtualAccountId", virtualAccountId)
             }
-            onDateFromChange={(date) =>
-              handleChangeFilter("filter:from_date", date)
-            }
-            onDateToChange={(date) =>
-              handleChangeFilter("filter:to_date", date)
-            }
+            onDateFromChange={(date) => handleChangeFilter("startDate", date)}
+            onDateToChange={(date) => handleChangeFilter("endDate", date)}
           />
           <DataTable
             columns={columns}
             data={dataTransactionTable}
             maxHeight={"70vh"}
           />
-          <CursorPagination
-            page={page}
-            cursorMap={cursorMap}
-            hasNextPage={!!nextCursor}
-            disableNext={isLoading}
-            onPageChange={(cursor, newPage) => {
-              setPage(newPage);
-              setCursorMap((prev) => ({
+          <ClientPagination
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            total={pagination.total}
+            onChange={(newPage) => {
+              setPagination((prev) => ({
                 ...prev,
-                [newPage]: cursor,
+                page: newPage,
               }));
             }}
           />

@@ -2,69 +2,67 @@ import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
 
 export interface Card {
-  id: string;
-  name: string;
-  last4: string;
+  _id: string;
+  slashId: string;
+  __v: number;
   accountId: string;
-  virtualAccountId: string;
-  expiryYear: string;
-  expiryMonth: string;
-  cardGroupId: string;
+  cardGroupName: string;
   createdAt: string;
+  expiryMonth: string;
+  expiryYear: string;
+  isDeleted: boolean;
   isPhysical: boolean;
   isSingleUse: boolean;
+  last4: string;
+  lastSyncedAt: string;
+  legalEntityId: string;
+  name: string;
   status: string;
-  spendingConstraint: {
-    merchantCategoryRule: {
-      merchantCategories: string[];
-      restriction: string;
-    };
-    merchantRule: {
-      merchants: string[];
-      restriction: string;
-    };
-    countryRule: {
-      countries: string[];
-      restriction: string;
-    };
-    spendingRule: {
-      utilizationLimit: {
-        limitAmount: {
-          amountCents: number;
-        };
-        preset: string;
-      };
-      utilizationLimitV2: [
-        {
-          limitAmount: {
-            amountCents: number;
-          };
-          preset: string;
-        }
-      ];
-    };
-  };
-  userData: null;
-  cardProductId: string;
+  syncSource: string;
+  updatedAt: string;
+  virtualAccountId: string;
 }
-
 export interface CardsListResponse {
-  items: Card[];
-  metadata: {
-    nextCursor?: string;
-    count: number;
+  data: Card[];
+  message: string;
+  meta: {
+    timestamp: string;
   };
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+  success: boolean;
 }
 
 type Params = {
-  cursor?: string;
+  page: number;
+  limit: number;
 };
 
+export interface CardsDetailResponse {
+  success: true;
+  message: string;
+  data: Card;
+  meta: {
+    timestamp: string;
+  };
+}
+
 export const cardsApi = {
-  getCards: async (params?: Params): Promise<ApiResponse<CardsListResponse>> => {
+  getCards: async (
+    params?: Params
+  ): Promise<ApiResponse<CardsListResponse>> => {
     return apiClient.get("/card", { params });
   },
-  getCardById: async (id: string): Promise<ApiResponse<Card>> => {
-    return apiClient.get(`/card/${id}`);
+  getCardById: async (id: string): Promise<CardsDetailResponse> => {
+    const res = (await apiClient.get(
+      `/card/${id}`
+    )) as ApiResponse<CardsDetailResponse>;
+    return res.data;
   },
 };

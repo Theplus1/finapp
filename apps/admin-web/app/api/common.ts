@@ -1,12 +1,7 @@
 import { NextRequest } from "next/server";
 
-const API_KEY = process.env.API_KEY as string;
-
-export const API_SLASH_HEADERS = {
-  headers: {
-    "X-API-Key": API_KEY,
-  },
-};
+// john.doe
+// admin@123
 
 export function serialize(obj: Record<string, string>) {
   const str: string[] = [];

@@ -18,7 +18,6 @@ import type { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
-import { CursorPagination } from "@/components/ui/cursor-pagination";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 
 import {
@@ -27,20 +26,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CopyIcon } from "@/components/ui/copy-button";
+import { ClientPagination } from "@/components/ui/client-pagination";
 const fakeIdTelegram = "fakeID";
-const initCursorMap = {
-  1: "",
-};
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as VirtualAccount[];
 export default function VirtualAccount() {
   const { setBreadcrumbs } = useBreadcrumbs();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(0);
-  const [cursorMap, setCursorMap] =
-    useState<Record<number, string>>(initCursorMap);
-  const [nextCursor, setNextCursor] = useState<string>();
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 20,
+    total: 0,
+  });
 
   useEffect(() => {
     setBreadcrumbs([
@@ -53,22 +50,19 @@ export default function VirtualAccount() {
     queryKey: ["virtual-accounts"],
     queryFn: async () => {
       const res = await api.virtualAccounts.getVirtualAccounts();
-      const { nextCursor, count } = res.data.metadata;
-      setNextCursor(nextCursor as string);
-      if (!pageSize) {
-        setPageSize(count);
+      if (pagination.total === 0) {
+        setPagination((prev) => ({
+          ...prev,
+          total: res.data.pagination.total,
+        }));
       }
-      setCursorMap((prev) => ({
-        ...prev,
-        [page + 1]: nextCursor as string,
-      }));
       return res.data;
     },
   });
 
   const dataVirtualAccount: VirtualAccount[] = useMemo(() => {
     if (isLoading) return maskDataTable;
-    return data?.items ?? [];
+    return data?.data ?? [];
   }, [isLoading, data]);
 
   const columns = [
@@ -80,8 +74,8 @@ export default function VirtualAccount() {
         ) : (
           renderNoTable(
             {
-              page,
-              pageSize,
+              page: pagination.page,
+              pageSize: pagination.pageSize,
             },
             row.index
           )
@@ -91,14 +85,21 @@ export default function VirtualAccount() {
     {
       header: "Name",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        return isLoading ? <Skeleton /> : row.original.virtualAccount.name;
+        return isLoading ? <Skeleton /> : row.original.name;
       },
     },
     {
       header: "Take Rate",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        const takeRate =
-          row.original.commissionRule?.commissionDetails?.takeRate;
+        const takeRate = (
+          row.original as unknown as VirtualAccount & {
+            commissionRule: {
+              commissionDetails: {
+                takeRate: number;
+              };
+            };
+          }
+        ).commissionRule?.commissionDetails?.takeRate;
         const takeRateLabel =
           typeof takeRate === "number"
             ? formatNumberAsPercentage(takeRate * 100)
@@ -109,22 +110,38 @@ export default function VirtualAccount() {
     {
       header: "Balance",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        const balance = row.original.balance?.amountCents;
+        const balance = row.original.balanceCents;
         return isLoading ? <Skeleton /> : formatDollarByCent(balance);
       },
     },
     {
       header: "Spend (30d)",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        const spend = row.original.spend?.amountCents;
+        const spend = row.original.pendingBalanceCents;
         return isLoading ? <Skeleton /> : formatDollarByCent(spend);
       },
     },
     {
       header: "Routing / Account",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        const routingNumber = row.original.virtualAccount?.routingNumber;
-        const accountNumber = row.original.virtualAccount?.accountNumber;
+        const routingNumber =
+          (
+            row.original as unknown as VirtualAccount & {
+              virtualAccount: {
+                routingNumber: string;
+                accountNumber: string;
+              };
+            }
+          ).virtualAccount?.routingNumber ?? EMPTY_LABEL;
+        const accountNumber =
+          (
+            row.original as unknown as VirtualAccount & {
+              virtualAccount: {
+                routingNumber: string;
+                accountNumber: string;
+              };
+            }
+          ).virtualAccount?.accountNumber ?? EMPTY_LABEL;
         return isLoading ? (
           <Skeleton />
         ) : (
@@ -160,11 +177,7 @@ export default function VirtualAccount() {
         </div>
       ),
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        const telegram = (
-          row.original.virtualAccount as unknown as VirtualAccount & {
-            telegram: string;
-          }
-        )?.telegram;
+        const telegram = row.original.linkedTelegramId;
         return isLoading ? (
           <Skeleton />
         ) : (
@@ -192,16 +205,14 @@ export default function VirtualAccount() {
             data={dataVirtualAccount}
             maxHeight={"70vh"}
           />
-          <CursorPagination
-            page={page}
-            cursorMap={cursorMap}
-            hasNextPage={!!nextCursor}
-            disableNext={isLoading}
-            onPageChange={(cursor, newPage) => {
-              setPage(newPage);
-              setCursorMap((prev) => ({
+          <ClientPagination
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            total={pagination.total}
+            onChange={(newPage) => {
+              setPagination((prev) => ({
                 ...prev,
-                [newPage]: cursor,
+                page: newPage,
               }));
             }}
           />

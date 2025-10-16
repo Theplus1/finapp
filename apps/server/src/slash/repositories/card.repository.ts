@@ -3,28 +3,39 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery } from 'mongoose';
 import { Card, CardDocument } from '../schemas/card.schema';
 
+export interface CardFilters {
+  virtualAccountId?: string;
+  cardGroupId?: string;
+  status?: string;
+  limit?: number;
+  skip?: number;
+}
+
 @Injectable()
 export class CardRepository {
   private readonly logger = new Logger(CardRepository.name);
 
-  constructor(
-    @InjectModel(Card.name) private cardModel: Model<CardDocument>,
-  ) {}
+  constructor(@InjectModel(Card.name) private cardModel: Model<CardDocument>) {}
 
   async create(cardData: Partial<Card>): Promise<CardDocument> {
     const card = new this.cardModel(cardData);
     return card.save();
   }
 
-  async upsert(slashId: string, cardData: Partial<Card>): Promise<CardDocument> {
-    return this.cardModel.findOneAndUpdate(
-      { slashId },
-      { 
-        ...cardData, 
-        lastSyncedAt: new Date(),
-      },
-      { upsert: true, new: true },
-    ).exec();
+  async upsert(
+    slashId: string,
+    cardData: Partial<Card>,
+  ): Promise<CardDocument> {
+    return this.cardModel
+      .findOneAndUpdate(
+        { slashId },
+        {
+          ...cardData,
+          lastSyncedAt: new Date(),
+        },
+        { upsert: true, new: true },
+      )
+      .exec();
   }
 
   async findBySlashId(slashId: string): Promise<CardDocument | null> {
@@ -66,9 +77,38 @@ export class CardRepository {
     return queryBuilder.exec();
   }
 
-  async count(virtualAccountId: string, filters?: { status?: string }): Promise<number> {
+  async find(filters: CardFilters): Promise<CardDocument[]> {
     const query: FilterQuery<CardDocument> = {
-      virtualAccountId,
+      isDeleted: false,
+    };
+
+    if (filters.virtualAccountId) {
+      query.virtualAccountId = filters.virtualAccountId;
+    }
+
+    if (filters.status) {
+      query.status = filters.status;
+    }
+
+    if (filters.cardGroupId) {
+      query.cardGroupId = filters.cardGroupId;
+    }
+
+    let queryBuilder = this.cardModel.find(query).sort({ createdAt: -1 });
+
+    if (filters.skip) {
+      queryBuilder = queryBuilder.skip(filters.skip);
+    }
+
+    if (filters.limit) {
+      queryBuilder = queryBuilder.limit(filters.limit);
+    }
+
+    return queryBuilder.exec();
+  }
+
+  async count(filters: Omit<CardFilters, 'limit' | 'skip'>): Promise<number> {
+    const query: FilterQuery<CardDocument> = {
       isDeleted: false,
     };
 
@@ -76,14 +116,21 @@ export class CardRepository {
       query.status = filters.status;
     }
 
+    if (filters?.cardGroupId) {
+      query.cardGroupId = filters.cardGroupId;
+    }
+
+    if (filters?.virtualAccountId) {
+      query.virtualAccountId = filters.virtualAccountId;
+    }
+
     return this.cardModel.countDocuments(query).exec();
   }
 
   async softDelete(slashId: string): Promise<void> {
-    await this.cardModel.updateOne(
-      { slashId },
-      { isDeleted: true, lastSyncedAt: new Date() },
-    ).exec();
+    await this.cardModel
+      .updateOne({ slashId }, { isDeleted: true, lastSyncedAt: new Date() })
+      .exec();
   }
 
   async findStale(olderThanMinutes: number): Promise<CardDocument[]> {
@@ -101,11 +148,11 @@ export class CardRepository {
     const bulkOps = cards.map((card) => ({
       updateOne: {
         filter: { slashId: card.slashId },
-        update: { 
-          $set: { 
-            ...card, 
-            lastSyncedAt: new Date() 
-          } 
+        update: {
+          $set: {
+            ...card,
+            lastSyncedAt: new Date(),
+          },
         },
         upsert: true,
       },
