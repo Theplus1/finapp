@@ -23,7 +23,7 @@ export const PROXY_ROUTES: ProxyRouteConfig[] = [
     serverEndpoint: '/cards', // Maps /api/card to /cards on server
   },
   {
-    path: '/card-group',
+    path: '/card-groups',
     enabled: true,
     serverEndpoint: '/card-groups',
   },

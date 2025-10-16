@@ -15,8 +15,6 @@ import { CardGroupQueryDto } from '../dto/card-group-query.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CardGroupsService } from '../../domain/card-groups/card-groups.service';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
-import { PaginatedApiResponseDto } from 'src/common/dto/api-response.dto';
-import { CardGroupWithRelations } from '../../domain/card-groups/types/card-groups.types';
 
 @ApiTags('Admin API - Card Groups')
 @ApiBearerAuth()
@@ -31,9 +29,9 @@ export class CardGroupsController {
 
   @Get()
   @ApiOperation({ summary: 'List card groups with filters and pagination' })
-  @ApiResponse({ status: 200, description: 'Card groups retrieved successfully', type: PaginatedApiResponseDto })
+  @ApiResponse({ status: 200, description: 'Card groups retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async list(@Query() query: CardGroupQueryDto): Promise<PaginatedApiResponseDto<CardGroupWithRelations>> {
+  async list(@Query() query: CardGroupQueryDto) {
     this.logger.log('Listing card groups');
     
     const [data, total] = await this.cardGroupsService.findAllWithFilters(

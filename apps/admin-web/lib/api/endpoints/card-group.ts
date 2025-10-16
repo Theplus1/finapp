@@ -39,9 +39,9 @@ export interface CardGroupsListResponse {
 
 export const cardGroupsApi = {
   getCardGroup: async (): Promise<ApiResponse<CardGroupsListResponse>> => {
-    return apiClient.get(`/card-group`);
+    return apiClient.get(`/card-groups`);
   },
   getCardGroupById: async (id: string): Promise<ApiResponse<CardGroup>> => {
-    return apiClient.get(`/card-group/${id}`);
+    return apiClient.get(`/card-groups/${id}`);
   },
 };
