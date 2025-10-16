@@ -18,6 +18,11 @@ interface ApiResponse<T = unknown> {
   data: T;
   message?: string;
   success: boolean;
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+  };
 }
 
 interface ApiError {
@@ -154,11 +159,7 @@ class HttpClient {
         ? (maybeObject.data as T)
         : (data as T);
 
-    return {
-      data: payload,
-      message: (data as { message: string }).message,
-      success: true,
-    };
+    return data as ApiResponse<T>;
   }
 
   /**

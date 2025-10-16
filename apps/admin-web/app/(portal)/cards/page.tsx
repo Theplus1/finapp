@@ -51,13 +51,11 @@ export default function Cards() {
         page: pagination.page,
         limit: pagination.pageSize,
       });
-      if (pagination.total === 0) {
-        setPagination((prev) => ({
-          ...prev,
-          total: res.data.pagination.total,
-        }));
-      }
-      return res.data;
+      setPagination((prev) => ({
+        ...prev,
+        total: res.pagination?.total ?? 0,
+      }));
+      return res;
     },
     refetchOnMount: "always",
     gcTime: 0,
@@ -113,8 +111,7 @@ export default function Cards() {
       // const groupName = card.cardGroupId
       //   ? groupInfos?.find((g) => g.id === card.cardGroupId)?.name
       //   : EMPTY_LABEL;
-      const virtualAccountName =
-        (virtualAccountInfos as VirtualAccount[])?.find(
+      const virtualAccountName = virtualAccountInfos?.find(
           (v) => v.slashId === card.virtualAccountId
         )?.name ?? EMPTY_LABEL;
       return {

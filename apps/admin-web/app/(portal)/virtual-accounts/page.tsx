@@ -50,19 +50,17 @@ export default function VirtualAccount() {
     queryKey: ["virtual-accounts"],
     queryFn: async () => {
       const res = await api.virtualAccounts.getVirtualAccounts();
-      if (pagination.total === 0) {
-        setPagination((prev) => ({
-          ...prev,
-          total: res.data.pagination.total,
-        }));
-      }
+      setPagination((prev) => ({
+        ...prev,
+        total: res.pagination?.total ?? 0,
+      }));
       return res.data;
     },
   });
 
   const dataVirtualAccount: VirtualAccount[] = useMemo(() => {
     if (isLoading) return maskDataTable;
-    return data?.data ?? [];
+    return data ?? [];
   }, [isLoading, data]);
 
   const columns = [

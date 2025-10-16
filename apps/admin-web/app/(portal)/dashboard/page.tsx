@@ -18,7 +18,7 @@ import {
   SectionTitle,
 } from "@/components/layouts/section";
 import { DataTable } from "@/components/ui/data-table";
-import { Transition } from "@/lib/api/endpoints/transaction";
+import { Transaction } from "@/lib/api/endpoints/transaction";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/lib/api/endpoints/card";
@@ -36,7 +36,7 @@ const initFilter = {
 
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
-}) as Transition[];
+}) as Transaction[];
 export default function Dashboard() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const [pagination, setPagination] = useState({
@@ -59,19 +59,17 @@ export default function Dashboard() {
         page: pagination.page,
         limit: pagination.pageSize,
       });
-      if (pagination.total === 0) {
-        setPagination((prev) => ({
-          ...prev,
-          total: res.data.pagination?.total ?? 0,
-        }));
-      }
+      setPagination((prev) => ({
+        ...prev,
+        total: res.pagination?.total ?? 0,
+      }));
       return res.data;
     },
     refetchOnMount: "always",
     gcTime: 0,
   });
 
-  const dataTransaction: Transition[] = useMemo(() => data?.data ?? [], [data]);
+  const dataTransaction: Transaction[] = useMemo(() => data ?? [], [data]);
   const dataTransactionTable = useMemo(() => {
     if (isLoading) return maskDataTable;
     return dataTransaction;
@@ -99,9 +97,9 @@ export default function Dashboard() {
           if (cachedCardInfo) {
             return { data: cachedCardInfo };
           }
-          const { data } = await api.cards.getCardById(id);
-          queryClient.setQueryData(["card-infos", id], data);
-          return { data };
+          const res = await api.cards.getCardById(id);
+          queryClient.setQueryData(["card-infos", id], res.data);
+          return { data: res.data };
         })
       );
       return results.map((r) => {
@@ -150,7 +148,7 @@ export default function Dashboard() {
     () => [
       {
         header: "No",
-        cell: ({ row }: CellContext<Transition, number>) => {
+        cell: ({ row }: CellContext<Transaction, number>) => {
           return isLoading ? (
             <Skeleton />
           ) : (
@@ -163,7 +161,7 @@ export default function Dashboard() {
       },
       {
         header: "Card",
-        cell: ({ row }: CellContext<Transition, string>) => {
+        cell: ({ row }: CellContext<Transaction, string>) => {
           const cardInfo = cardInfos?.find(
             (card) => card.slashId === row.original.cardId
           );
@@ -178,7 +176,7 @@ export default function Dashboard() {
       },
       {
         header: "Virtual account",
-        cell: ({ row }: CellContext<Transition, string>) => {
+        cell: ({ row }: CellContext<Transaction, string>) => {
           const virtualAccountInfo = virtualAccountInfos?.find(
             (virtualAccount) =>
               virtualAccount.slashId === row.original.virtualAccountId
@@ -192,7 +190,7 @@ export default function Dashboard() {
       },
       {
         header: "Amount",
-        cell: ({ row }: CellContext<Transition, string>) => {
+        cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? (
             <Skeleton />
           ) : (
@@ -210,31 +208,31 @@ export default function Dashboard() {
       },
       {
         header: "Status",
-        cell: ({ row }: CellContext<Transition, string>) => {
+        cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? <Skeleton /> : row.original.status;
         },
       },
       {
         header: "Description",
-        cell: ({ row }: CellContext<Transition, string>) => {
+        cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? <Skeleton /> : row.original.description;
         },
       },
       {
         header: "Merchant",
-        cell: ({ row }: CellContext<Transition, string>) => {
+        cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? <Skeleton /> : EMPTY_LABEL;
         },
       },
       {
         header: "Country",
-        cell: ({ row }: CellContext<Transition, string>) => {
+        cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? <Skeleton /> : EMPTY_LABEL;
         },
       },
       {
         header: "Date",
-        cell: ({ row }: CellContext<Transition, string>) => {
+        cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? (
             <Skeleton />
           ) : (
@@ -251,7 +249,7 @@ export default function Dashboard() {
       isLoadingVirtualAccountInfos,
       pagination,
     ]
-  ) as ColumnDef<Transition>[];
+  ) as ColumnDef<Transaction>[];
 
   const handleChangeFilter = (field: string, value: string | undefined) => {
     setPagination((prev) => ({

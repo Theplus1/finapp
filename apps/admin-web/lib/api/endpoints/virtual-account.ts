@@ -24,23 +24,6 @@ export interface VirtualAccount {
   linkedTelegramId: string;
 }
 
-export interface VirtualAccountsListResponse {
-  data: VirtualAccount[];
-  message: string;
-  meta: {
-    timestamp: string;
-  };
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-  success: boolean;
-}
-
 export interface VirtualAccountsDetailResponse {
   success: true;
   message: string;
@@ -52,16 +35,13 @@ export interface VirtualAccountsDetailResponse {
 
 export const virtualAccountsApi = {
   getVirtualAccounts: async (): Promise<
-    ApiResponse<VirtualAccountsListResponse>
+    ApiResponse<VirtualAccount[]>
   > => {
     return apiClient.get("/virtual-account");
   },
   getVirtualAccountById: async (
     id: string
-  ): Promise<VirtualAccountsDetailResponse> => {
-    const res = (await apiClient.get(
-      `/virtual-account/${id}`
-    )) as ApiResponse<VirtualAccountsDetailResponse>;
-    return res.data;
+  ): Promise<ApiResponse<VirtualAccount>> => {
+    return await apiClient.get(`/virtual-account/${id}`);
   },
 };

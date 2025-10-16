@@ -22,22 +22,6 @@ export interface Card {
   updatedAt: string;
   virtualAccountId: string;
 }
-export interface CardsListResponse {
-  data: Card[];
-  message: string;
-  meta: {
-    timestamp: string;
-  };
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-  success: boolean;
-}
 
 type Params = {
   page: number;
@@ -56,13 +40,12 @@ export interface CardsDetailResponse {
 export const cardsApi = {
   getCards: async (
     params?: Params
-  ): Promise<ApiResponse<CardsListResponse>> => {
+  ): Promise<ApiResponse<Card[]>> => {
     return apiClient.get("/card", { params });
   },
-  getCardById: async (id: string): Promise<CardsDetailResponse> => {
-    const res = (await apiClient.get(
+  getCardById: async (id: string): Promise<ApiResponse<Card>> => {
+    return await apiClient.get(
       `/card/${id}`
-    )) as ApiResponse<CardsDetailResponse>;
-    return res.data;
+    );
   },
 };

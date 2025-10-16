@@ -17,12 +17,21 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponseDto
   intercept(context: ExecutionContext, next: CallHandler): Observable<ApiResponseDto<T>> {
     return next.handle().pipe(
       map((data) => {
-        // If data is already wrapped in ApiResponseDto format, return as is
-        if (data && typeof data === 'object' && 'success' in data && 'message' in data) {
-          return data;
+        // Check if response has pagination metadata
+        if (data && typeof data === 'object' && 'pagination' in data) {
+          const { pagination, ...rest } = data as any;
+          return {
+            success: true,
+            message: 'Success',
+            ...rest,
+            pagination,
+            meta: {
+              timestamp: new Date().toISOString(),
+            },
+          };
         }
 
-        // Otherwise, wrap the response
+        // Otherwise, wrap the response normally
         return {
           success: true,
           message: 'Success',

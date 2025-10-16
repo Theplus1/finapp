@@ -10,6 +10,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Spinner } from "@/components/ui/spinner";
+import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 
 type Props = {
   onVirtualAccountChange: (virtualAccountId: string) => void;
@@ -21,13 +22,15 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
       queryKey: ["virtual-account-infos"],
       queryFn: async () => {
         const res = await api.virtualAccounts.getVirtualAccounts();
-        return res.data;
+        return res;
       },
     });
 
   const handleValueChange = (value: string) => {
     onVirtualAccountChange(value === "all" ? "" : value);
   };
+
+  const virtualAccountData = virtualAccountInfos?.data ?? [];
 
   return (
     <Select onValueChange={handleValueChange}>
@@ -44,8 +47,8 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
           <SelectItem key="all" value="all">
             All
           </SelectItem>
-          {virtualAccountInfos?.data.map((virtualAccount) => (
-            <SelectItem key={virtualAccount._id} value={virtualAccount.slashId}>
+          {virtualAccountData.map((virtualAccount: VirtualAccount) => (
+            <SelectItem key={virtualAccount.slashId} value={virtualAccount.slashId}>
               {virtualAccount.name}
             </SelectItem>
           ))}

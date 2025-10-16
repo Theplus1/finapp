@@ -25,12 +25,11 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { LinkAccountDto, LinkAccountResponseDto } from '../dto/link-account.dto';
 import { AccountsService } from '../../domain/accounts/accounts.service';
 import { SlashApiService } from '../../integrations/slash/services/slash-api.service';
-import { createPaginatedResponse, PaginatedApiResponseDto } from '../../common/dto/api-response.dto';
 import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
 
 @ApiTags('Admin API - Virtual Accounts')
 @ApiBearerAuth()
-@Controller('admin-api/accounts')
+@Controller('admin-api/virtual-accounts')
 @UseGuards(JwtAuthGuard)
 export class AccountsController {
   private readonly logger = new Logger(AccountsController.name);
@@ -42,7 +41,7 @@ export class AccountsController {
 
   @Get()
   @ApiOperation({ summary: 'List virtual accounts with filters and pagination' })
-  @ApiResponse({ status: 200, description: 'Virtual accounts retrieved successfully', type: PaginatedApiResponseDto<VirtualAccountDocument> })
+  @ApiResponse({ status: 200, description: 'Virtual accounts retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async list(@Query() query: VirtualAccountQueryDto) {
     this.logger.log('Listing virtual accounts');
@@ -59,13 +58,14 @@ export class AccountsController {
       }
     );
 
-    return createPaginatedResponse(
+    return {
       data,
-      query.page || 1,
-      query.limit || 20,
-      total,
-      'Virtual accounts retrieved successfully'
-    );
+      pagination: {
+        page: query.page || 1,
+        limit: query.limit || 20,
+        total,
+      },
+    };
   }
 
   @Get('stats')

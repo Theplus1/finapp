@@ -18,7 +18,6 @@ import {
 import { CardQueryDto } from '../dto/card-query.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CardsService } from '../../domain/cards/cards.service';
-import { createPaginatedResponse } from '../../common/dto/api-response.dto';
 
 @ApiTags('Admin API - Cards')
 @ApiBearerAuth()
@@ -48,12 +47,13 @@ export class CardsController {
       }
     );
     
-    return createPaginatedResponse(
+    return {
       data,
-      query.page || 1,
-      query.limit || 20,
-      total,
-      'Cards retrieved successfully'
-    );
+      pagination: {
+        page: query.page || 1,
+        limit: query.limit || 20,
+        total,
+      },
+    };
   }
 }

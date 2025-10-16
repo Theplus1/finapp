@@ -14,7 +14,7 @@ export default function Page() {
       console.log("Login failed:", error);
     },
     onSuccess: (response: ApiResponse<AuthResponse>) => {
-      localStorage.setItem("auth_token", response.data.data.accessToken);
+      localStorage.setItem("auth_token", response.data.accessToken);
       router.push("/dashboard");
     },
   });

@@ -16,7 +16,6 @@ import {
 import { TransactionQueryDto } from '../dto/transaction-query.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { TransactionsService } from '../../domain/transactions/transactions.service';
-import { createPaginatedResponse } from '../../common/dto/api-response.dto';
 
 @ApiTags('Admin API - Transactions')
 @ApiBearerAuth()
@@ -48,13 +47,14 @@ export class TransactionsController {
       }
     );
     
-    return createPaginatedResponse(
+    return {
       data,
-      query.page || 1,
-      query.limit || 20,
-      total,
-      'Transactions retrieved successfully'
-    );
+      pagination: {
+        page: query.page || 1,
+        limit: query.limit || 20,
+        total,
+      },
+    };
   }
 
   @Get('stats')

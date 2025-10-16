@@ -17,14 +17,7 @@ export interface RegisterData {
 }
 
 export interface AuthResponse {
-  user: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  data: {
-    accessToken: string;
-  };
+  accessToken: string;
 }
 
 export interface User {

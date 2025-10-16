@@ -1,7 +1,7 @@
 import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
 
-export interface Transition {
+export interface Transaction {
   _id: string;
   slashId: string;
   __v: number;
@@ -19,23 +19,6 @@ export interface Transition {
   virtualAccountId: string;
 }
 
-export interface TransactionsListResponse {
-  data: Transition[];
-  message: string;
-  meta: {
-    timestamp: string;
-  };
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-  success: boolean;
-}
-
 type Params = {
   page: number;
   limit: number;
@@ -44,7 +27,7 @@ type Params = {
 export const transactionsApi = {
   getTransactions: async (
     params?: Params
-  ): Promise<ApiResponse<TransactionsListResponse>> => {
+  ): Promise<ApiResponse<Transaction[]>> => {
     return apiClient.get("/transaction", { params });
   },
 };
