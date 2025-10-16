@@ -79,30 +79,6 @@ export class CardsService {
   }
 
   /**
-   * Find all cards with optional filters
-   */
-  async findAll(filters?: {
-    status?: string;
-    cardGroupId?: string;
-    virtualAccountId?: string;
-  }): Promise<CardDocument[]> {
-    if (filters?.virtualAccountId) {
-      return this.cardRepository.findByVirtualAccountId(filters.virtualAccountId, filters);
-    }
-
-    // Get all virtual accounts and fetch their cards
-    const allAccounts = await this.virtualAccountRepository.findAll();
-    const allCards: CardDocument[] = [];
-
-    for (const account of allAccounts) {
-      const cards = await this.cardRepository.findByVirtualAccountId(account.slashId, filters);
-      allCards.push(...cards);
-    }
-
-    return allCards;
-  }
-
-  /**
    * Find all cards with filters and pagination
    * Optimized: Filters and paginates at database level
    */
@@ -172,75 +148,4 @@ export class CardsService {
     };
   }
 
-  /**
-   * Get card statistics
-   */
-  async getStats(filters?: {
-    status?: string;
-    cardGroupId?: string;
-  }): Promise<CardStats> {
-    const allCards = await this.findAll(filters);
-
-    const stats: CardStats = {
-      total: allCards.length,
-      byStatus: {},
-      physical: 0,
-      virtual: 0,
-      singleUse: 0,
-    };
-
-    allCards.forEach((card) => {
-      stats.byStatus[card.status] = (stats.byStatus[card.status] || 0) + 1;
-      if (card.isPhysical) stats.physical++;
-      else stats.virtual++;
-      if (card.isSingleUse) stats.singleUse++;
-    });
-
-    return stats;
-  }
-
-  /**
-   * Create a new card
-   * Business logic: Validate and create in local database
-   */
-  async createCard(createDto: any): Promise<CardDocument> {
-    this.logger.log(`Creating card: ${JSON.stringify(createDto)}`);
-    
-    // Business validation
-    // Check if virtual account exists
-    if (createDto.virtualAccountId) {
-      const account = await this.virtualAccountRepository.findBySlashId(createDto.virtualAccountId);
-      if (!account) {
-        throw new NotFoundException(`Virtual account ${createDto.virtualAccountId} not found`);
-      }
-    }
-    
-    // Create in local database
-    const createdCard = await this.cardRepository.create(createDto);
-    
-    this.logger.log(`Card created successfully: ${createdCard.slashId}`);
-    
-    return createdCard;
-  }
-
-  /**
-   * Update a card
-   * Business logic: Validate and update in local database
-   */
-  async updateCard(cardId: string, updateDto: any): Promise<CardDocument> {
-    this.logger.log(`Updating card ${cardId}: ${JSON.stringify(updateDto)}`);
-    
-    // Business validation - check if card exists
-    const existingCard = await this.cardRepository.findBySlashId(cardId);
-    if (!existingCard) {
-      throw new NotFoundException(`Card ${cardId} not found`);
-    }
-    
-    // Update in local database
-    const updatedCard = await this.cardRepository.upsert(cardId, updateDto);
-    
-    this.logger.log(`Card updated successfully: ${cardId}`);
-    
-    return updatedCard;
-  }
 }

@@ -14,10 +14,8 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiParam,
 } from '@nestjs/swagger';
 import { CardQueryDto } from '../dto/card-query.dto';
-import { CreateCardDto, UpdateCardDto } from '../../integrations/slash/dto/card.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CardsService } from '../../domain/cards/cards.service';
 import { createPaginatedResponse } from '../../common/dto/api-response.dto';
@@ -42,8 +40,7 @@ export class CardsController {
     
     const [data, total] = await this.cardsService.findAllWithFilters(
       {
-        status: query.status,
-        cardGroupId: query.cardGroupId,
+        ...query
       },
       {
         page: query.page || 1,
@@ -58,33 +55,5 @@ export class CardsController {
       total,
       'Cards retrieved successfully'
     );
-  }
-
-  @Get('stats')
-  @ApiOperation({ summary: 'Get card statistics' })
-  @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
-  async getStats(@Query() query: CardQueryDto) {
-    this.logger.log('Getting card statistics');
-    return this.cardsService.getStats(query);
-  }
-
-
-  @Post()
-  @ApiOperation({ summary: 'Create a new card' })
-  @ApiResponse({ status: 201, description: 'Card created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  async create(@Body() dto: CreateCardDto) {
-    this.logger.log('Creating card');
-    return this.cardsService.createCard(dto);
-  }
-
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update card' })
-  @ApiParam({ name: 'id', description: 'Card Slash ID' })
-  @ApiResponse({ status: 200, description: 'Card updated successfully' })
-  @ApiResponse({ status: 404, description: 'Card not found' })
-  async update(@Param('id') id: string, @Body() dto: UpdateCardDto) {
-    this.logger.log(`Updating card ${id}`);
-    return this.cardsService.updateCard(id, dto);
   }
 }
