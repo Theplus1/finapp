@@ -1,17 +1,12 @@
-import {
-  // NextRequest,
-  NextResponse,
-} from "next/server";
-import { API_SLASH_HEADERS } from "../common";
+import { NextRequest, NextResponse } from "next/server";
 const API_URL = process.env.API_URL as string;
 
-export async function GET() {
-// request: NextRequest
+export async function GET(request: NextRequest) {
+  const { headers } = request;
   try {
-    const data = await fetch(
-      `${API_URL}/virtual-account`,
-      API_SLASH_HEADERS
-    ).then((res) => res.json());
+    const data = await fetch(`${API_URL}/accounts`, {
+      headers,
+    }).then((res) => res.json());
     return NextResponse.json({
       success: true,
       data,

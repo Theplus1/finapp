@@ -17,6 +17,7 @@ import { useMemo, useState } from "react";
 type Props = {
   onCardChange: (cardId: string) => void;
 };
+const limitPerRequest = 100;
 
 const FilterCard = ({ onCardChange }: Props) => {
   const [textSearch, setTextSearch] = useState("");
@@ -24,16 +25,20 @@ const FilterCard = ({ onCardChange }: Props) => {
   const { data: cardInfos, isLoading: isLoadingCardInfos } = useQuery({
     queryKey: ["card-infos"],
     queryFn: async () => {
-      let currentCursor: string | undefined = "";
       let totalCardInfors: Card[] = [];
-      while (typeof currentCursor !== "undefined") {
-        const res = await api.cards.getCards({ cursor: currentCursor });
-        const { metadata, items } = res.data;
-        totalCardInfors = [...totalCardInfors, ...items];
-        currentCursor = metadata.nextCursor;
-        if (!metadata.nextCursor) {
-          break;
+      let hasNext = true;
+      let page = 1;
+      while (hasNext) {
+        const res = await api.cards.getCards({
+          page,
+          limit: limitPerRequest,
+        });
+        const { pagination: paginationRes, data } = res.data;
+        totalCardInfors = [...totalCardInfors, ...data];
+        if (!paginationRes.hasNext) {
+          hasNext = false;
         }
+        page++;
       }
       return totalCardInfors;
     },
@@ -76,7 +81,7 @@ const FilterCard = ({ onCardChange }: Props) => {
             All
           </SelectItem>
           {cardInforsSelect?.map((card) => (
-            <SelectItem key={card.id} value={card.id}>
+            <SelectItem key={card._id} value={card.slashId}>
               {card.name}
             </SelectItem>
           ))}
