@@ -2,13 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CardGroup, CardGroupDocument } from '../schemas/card-group.schema';
+import { RepositoryQuery } from 'src/common/types/repository-query.types';
 
 @Injectable()
 export class CardGroupRepository {
   private readonly logger = new Logger(CardGroupRepository.name);
 
   constructor(
-    @InjectModel(CardGroup.name) private cardGroupModel: Model<CardGroupDocument>,
+    @InjectModel(CardGroup.name)
+    private cardGroupModel: Model<CardGroupDocument>,
   ) {}
 
   async create(cardGroupData: Partial<CardGroup>): Promise<CardGroupDocument> {
@@ -16,15 +18,20 @@ export class CardGroupRepository {
     return cardGroup.save();
   }
 
-  async upsert(slashId: string, cardGroupData: Partial<CardGroup>): Promise<CardGroupDocument> {
-    return this.cardGroupModel.findOneAndUpdate(
-      { slashId },
-      { 
-        ...cardGroupData, 
-        lastSyncedAt: new Date(),
-      },
-      { upsert: true, new: true },
-    ).exec();
+  async upsert(
+    slashId: string,
+    cardGroupData: Partial<CardGroup>,
+  ): Promise<CardGroupDocument> {
+    return this.cardGroupModel
+      .findOneAndUpdate(
+        { slashId },
+        {
+          ...cardGroupData,
+          lastSyncedAt: new Date(),
+        },
+        { upsert: true, new: true },
+      )
+      .exec();
   }
 
   async findBySlashId(slashId: string): Promise<CardGroupDocument | null> {
@@ -34,7 +41,7 @@ export class CardGroupRepository {
   /**
    * Generic find method with filters and pagination
    */
-  async find(query: { filter: any; skip: number; limit: number; sort: any }): Promise<CardGroupDocument[]> {
+  async find(query: RepositoryQuery): Promise<CardGroupDocument[]> {
     return this.cardGroupModel
       .find(query.filter)
       .skip(query.skip)
@@ -55,10 +62,9 @@ export class CardGroupRepository {
   }
 
   async softDelete(slashId: string): Promise<void> {
-    await this.cardGroupModel.updateOne(
-      { slashId },
-      { isDeleted: true, lastSyncedAt: new Date() },
-    ).exec();
+    await this.cardGroupModel
+      .updateOne({ slashId }, { isDeleted: true, lastSyncedAt: new Date() })
+      .exec();
   }
 
   async findStale(olderThanMinutes: number): Promise<CardGroupDocument[]> {
@@ -76,11 +82,11 @@ export class CardGroupRepository {
     const bulkOps = cardGroups.map((cardGroup) => ({
       updateOne: {
         filter: { slashId: cardGroup.slashId },
-        update: { 
-          $set: { 
-            ...cardGroup, 
-            lastSyncedAt: new Date() 
-          } 
+        update: {
+          $set: {
+            ...cardGroup,
+            lastSyncedAt: new Date(),
+          },
         },
         upsert: true,
       },

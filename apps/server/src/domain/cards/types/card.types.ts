@@ -9,8 +9,17 @@ export interface VirtualAccountInfo {
 }
 
 /**
+ * Minimal card group info for card response
+ */
+export interface CardGroupInfo {
+  slashId: string;
+  name: string;
+}
+
+/**
  * Card with populated virtual account relation
  */
 export interface CardWithRelations extends Omit<Card, 'toObject'> {
   virtualAccount?: VirtualAccountInfo | null;
+  cardGroup?: CardGroupInfo | null;
 }

@@ -11,6 +11,9 @@ export class Card {
   @Prop({ required: true, index: true })
   virtualAccountId: string;
 
+  @Prop({ required: true, index: true })
+  cardGroupId?: string;
+
   @Prop({ index: true })
   accountId?: string;
 
@@ -37,9 +40,6 @@ export class Card {
 
   @Prop({ default: false })
   isSingleUse: boolean;
-
-  @Prop()
-  cardGroupId?: string;
 
   @Prop()
   cardGroupName?: string;
