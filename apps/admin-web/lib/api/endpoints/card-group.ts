@@ -2,43 +2,24 @@ import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
 
 export interface CardGroup {
-  id: string;
+  _id: string;
+  slashId: string;
+  __v: number;
+  createdAt: string;
+  isDeleted: boolean;
+  lastSyncedAt: string;
   name: string;
+  syncSource: string;
+  updatedAt: string;
   virtualAccountId: string;
-  spendingConstraint: {
-    merchantRule: {
-      merchants: string[];
-      restriction: string;
-    };
-    spendingRule: {
-      utilizationLimit: {
-        limitAmount: {
-          amountCents: number;
-        };
-        preset: string;
-      };
-      utilizationLimitV2: [
-        {
-          limitAmount: {
-            amountCents: number;
-          };
-          preset: string;
-        }
-      ];
-    };
-  };
-}
-
-export interface CardGroupsListResponse {
-  items: CardGroup[];
-  metadata: {
-    nextCursor?: string;
-    count: number;
+  virtualAccount: {
+    slashId: string;
+    name: string;
   };
 }
 
 export const cardGroupsApi = {
-  getCardGroup: async (): Promise<ApiResponse<CardGroupsListResponse>> => {
+  getCardGroup: async (): Promise<ApiResponse<CardGroup[]>> => {
     return apiClient.get(`/card-groups`);
   },
   getCardGroupById: async (id: string): Promise<ApiResponse<CardGroup>> => {

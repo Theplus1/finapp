@@ -6,7 +6,11 @@ export interface Card {
   slashId: string;
   __v: number;
   accountId: string;
-  cardGroupName: string;
+  cardGroupId: string;
+  cardGroup: {
+    slashId: string;
+    name: string;
+  };
   createdAt: string;
   expiryMonth: string;
   expiryYear: string;
@@ -15,12 +19,15 @@ export interface Card {
   isSingleUse: boolean;
   last4: string;
   lastSyncedAt: string;
-  legalEntityId: string;
   name: string;
   status: string;
   syncSource: string;
   updatedAt: string;
   virtualAccountId: string;
+  virtualAccount: {
+    slashId: string;
+    name: string;
+  };
 }
 
 type Params = {
@@ -38,14 +45,10 @@ export interface CardsDetailResponse {
 }
 
 export const cardsApi = {
-  getCards: async (
-    params?: Params
-  ): Promise<ApiResponse<Card[]>> => {
+  getCards: async (params?: Params): Promise<ApiResponse<Card[]>> => {
     return apiClient.get("/card", { params });
   },
   getCardById: async (id: string): Promise<ApiResponse<Card>> => {
-    return await apiClient.get(
-      `/card/${id}`
-    );
+    return await apiClient.get(`/card/${id}`);
   },
 };

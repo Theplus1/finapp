@@ -17,6 +17,15 @@ export interface Transaction {
   syncSource: string;
   updatedAt: string;
   virtualAccountId: string;
+  card: {
+    slashId: string;
+    name: string;
+    last4: string;
+  };
+  virtualAccount: {
+    slashId: string;
+    name: string;
+  };
 }
 
 type Params = {

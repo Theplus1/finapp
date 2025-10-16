@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
   formatUtcMMDDYYYYHHMM,
@@ -21,9 +21,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { Transaction } from "@/lib/api/endpoints/transaction";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card } from "@/lib/api/endpoints/card";
 import FilterTransaction from "./components/filter";
-import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { ClientPagination } from "@/components/ui/client-pagination";
 
@@ -45,7 +43,6 @@ export default function Dashboard() {
     total: 0,
   });
   const [currentFilter, setCurrentFilter] = useState(initFilter);
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     setBreadcrumbs([{ label: "Dashboard", href: "/dashboard" }]);
@@ -75,75 +72,6 @@ export default function Dashboard() {
     return dataTransaction;
   }, [dataTransaction, isLoading]);
 
-  const uniqueCardIds: string[] = useMemo(() => {
-    const cardIds = dataTransaction.reduce((acc, item) => {
-      if (item.cardId && !acc.includes(item.cardId)) {
-        acc.push(item.cardId);
-      }
-      return acc;
-    }, [] as string[]);
-    return cardIds;
-  }, [dataTransaction]);
-
-  const { data: cardInfos, isLoading: isLoadingCardInfos } = useQuery({
-    queryKey: ["card-infos", uniqueCardIds],
-    queryFn: async () => {
-      const results = await Promise.all(
-        uniqueCardIds.map(async (id) => {
-          const cachedCardInfo = queryClient.getQueryData<Card>([
-            "card-infos",
-            id,
-          ]);
-          if (cachedCardInfo) {
-            return { data: cachedCardInfo };
-          }
-          const res = await api.cards.getCardById(id);
-          queryClient.setQueryData(["card-infos", id], res.data);
-          return { data: res.data };
-        })
-      );
-      return results.map((r) => {
-        return r.data;
-      });
-    },
-    enabled: !!uniqueCardIds.length,
-  });
-
-  const uniqueVirtualAccountIds: string[] = useMemo(() => {
-    const virtualAccountIds = dataTransaction.reduce((acc, item) => {
-      if (item.virtualAccountId && !acc.includes(item.virtualAccountId)) {
-        acc.push(item.virtualAccountId);
-      }
-      return acc;
-    }, [] as string[]);
-    return virtualAccountIds;
-  }, [dataTransaction]);
-
-  const { data: virtualAccountInfos, isLoading: isLoadingVirtualAccountInfos } =
-    useQuery({
-      queryKey: ["virtual-account-infos", uniqueVirtualAccountIds],
-      queryFn: async () => {
-        const results = await Promise.all(
-          uniqueVirtualAccountIds.map(async (id) => {
-            const cachedVirtualAccountInfo =
-              queryClient.getQueryData<VirtualAccount>([
-                "virtual-account-infos",
-                id,
-              ]);
-            if (cachedVirtualAccountInfo) {
-              return { data: cachedVirtualAccountInfo };
-            }
-            const { data } =
-              await api.virtualAccounts.getVirtualAccountById(id);
-            queryClient.setQueryData(["virtual-account-infos", id], data);
-            return { data };
-          })
-        );
-        return results.map((r) => r.data);
-      },
-      enabled: !!uniqueVirtualAccountIds.length,
-    });
-
   const columns = useMemo(
     () => [
       {
@@ -162,13 +90,10 @@ export default function Dashboard() {
       {
         header: "Card",
         cell: ({ row }: CellContext<Transaction, string>) => {
-          const cardInfo = cardInfos?.find(
-            (card) => card.slashId === row.original.cardId
-          );
-          return isLoading || isLoadingCardInfos ? (
+          return isLoading ? (
             <Skeleton />
-          ) : cardInfo?.name ? (
-            `${cardInfo.name} ${cardInfo.last4}`
+          ) : row.original.card?.name ? (
+            `${row.original.card.name} ${row.original.card.last4}`
           ) : (
             EMPTY_LABEL
           );
@@ -177,14 +102,12 @@ export default function Dashboard() {
       {
         header: "Virtual account",
         cell: ({ row }: CellContext<Transaction, string>) => {
-          const virtualAccountInfo = virtualAccountInfos?.find(
-            (virtualAccount) =>
-              virtualAccount.slashId === row.original.virtualAccountId
-          );
-          return isLoading || isLoadingVirtualAccountInfos ? (
+          return isLoading ? (
             <Skeleton />
+          ) : row.original.virtualAccount.name ? (
+            row.original.virtualAccount.name
           ) : (
-            (virtualAccountInfo?.name ?? EMPTY_LABEL)
+            EMPTY_LABEL
           );
         },
       },
@@ -241,14 +164,7 @@ export default function Dashboard() {
         },
       },
     ],
-    [
-      isLoading,
-      cardInfos,
-      isLoadingCardInfos,
-      virtualAccountInfos,
-      isLoadingVirtualAccountInfos,
-      pagination,
-    ]
+    [isLoading, pagination]
   ) as ColumnDef<Transaction>[];
 
   const handleChangeFilter = (field: string, value: string | undefined) => {
@@ -285,7 +201,7 @@ export default function Dashboard() {
           <DataTable
             columns={columns}
             data={dataTransactionTable}
-            maxHeight={"70vh"}
+            maxHeight={"65vh"}
           />
           <ClientPagination
             page={pagination.page}

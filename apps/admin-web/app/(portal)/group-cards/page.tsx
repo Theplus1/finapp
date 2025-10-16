@@ -13,6 +13,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ClientPagination } from "@/components/ui/client-pagination";
+import { EMPTY_LABEL } from "@/app/utils/constants";
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as CardGroup[];
@@ -35,44 +36,18 @@ export default function GroupCard() {
     queryKey: ["card-group"],
     queryFn: async () => {
       const res = await api.cardGroups.getCardGroup();
-      if (pagination.total === 0) {
-        setPagination((prev) => ({
-          ...prev,
-          total: res.data.metadata.count,
-        }));
-      }
+      setPagination((prev) => ({
+        ...prev,
+        total: res.pagination?.total ?? 0,
+      }));
       return res.data;
     },
   });
 
   const dataCardGroup: CardGroup[] = useMemo(() => {
     if (isLoading) return maskDataTable;
-    return data?.items ?? [];
+    return data ?? [];
   }, [isLoading, data]);
-
-  const [uniqueVirtualAccountIds]: string[][] = useMemo(() => {
-    const virtualAccountIds = dataCardGroup.reduce((acc, item) => {
-      if (!acc.includes(item.virtualAccountId)) {
-        acc.push(item.virtualAccountId);
-      }
-      return acc;
-    }, [] as string[]);
-    return [virtualAccountIds];
-  }, [dataCardGroup]);
-
-  const { data: virtualAccountInfos, isLoading: isLoadingVirtualAccount } =
-    useQuery({
-      queryKey: ["virtual-account-infos", uniqueVirtualAccountIds],
-      queryFn: async () => {
-        const results = await Promise.all(
-          uniqueVirtualAccountIds.map((id) =>
-            api.virtualAccounts.getVirtualAccountById(id)
-          )
-        );
-        return results.map((r) => r.data);
-      },
-      enabled: !!uniqueVirtualAccountIds.length,
-    });
 
   const columns = [
     {
@@ -100,39 +75,34 @@ export default function GroupCard() {
     {
       header: "Virtual accounts",
       cell: ({ row }: CellContext<CardGroup, string>) => {
-        const virtualAccountInfo = virtualAccountInfos?.find(
-          (virtualAccount) =>
-            virtualAccount._id === row.original.virtualAccountId
-        );
-        return isLoading || isLoadingVirtualAccount ? (
+        return isLoading ? (
           <Skeleton />
         ) : (
-          (virtualAccountInfo?.name ?? `ID: ${row.original.virtualAccountId}`)
+          (row.original.virtualAccount?.name ??
+            `ID: ${row.original.virtualAccountId}`)
         );
       },
     },
     {
       header: "Daily Limit",
       cell: ({ row }: CellContext<CardGroup, string>) => {
-        const dailyLimitV1 =
-          row.original.spendingConstraint?.spendingRule?.utilizationLimit
-            ?.limitAmount?.amountCents;
-        const dailyLimitV2 =
-          row.original.spendingConstraint?.spendingRule?.utilizationLimitV2?.[0]
-            ?.limitAmount?.amountCents;
+        const dailyLimitV1 = undefined;
+        const dailyLimitV2 = undefined;
         return isLoading ? (
           <Skeleton />
         ) : (
           <div>
             <div>
-              {typeof dailyLimitV1 !== "undefined" && (
-                <span>V1: {formatDollarByCent(dailyLimitV1)}</span>
-              )}
+              <span>
+                V1:{" "}
+                {dailyLimitV1 ? formatDollarByCent(dailyLimitV1) : EMPTY_LABEL}
+              </span>
             </div>
             <div>
-              {typeof dailyLimitV2 !== "undefined" && (
-                <span>V2: {formatDollarByCent(dailyLimitV2)}</span>
-              )}
+              <span>
+                V2:{" "}
+                {dailyLimitV2 ? formatDollarByCent(dailyLimitV2) : EMPTY_LABEL}
+              </span>
             </div>
           </div>
         );
