@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { shouldProxyRoute, getServerEndpoint } from "../proxy-config";
 import { renderRequestUrl } from "../common";
+import { HTTP_METHOD, HTTP_METHODS } from "next/dist/server/web/http";
 
 const API_URL = process.env.API_URL as string;
 
@@ -27,7 +28,7 @@ async function handleProxyRequest(
   }
 
   // Check if the HTTP method is allowed
-  if (proxyConfig.methods && !proxyConfig.methods.includes(request.method as any)) {
+  if (proxyConfig.methods && !proxyConfig.methods.includes(request.method as HTTP_METHOD)) {
     return NextResponse.json(
       {
         success: false,
@@ -50,7 +51,7 @@ async function handleProxyRequest(
     };
 
     // Add body for non-GET requests
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
+    if (request.method !== 'GET' && request.method !== HTTP_METHODS[1]) {
       const body = await request.text();
       if (body) {
         fetchOptions.body = body;
@@ -76,35 +77,40 @@ async function handleProxyRequest(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { proxy: string[] } }
+  { params }: { params: Promise<{ proxy: string[] }> }
 ) {
-  return handleProxyRequest(request, params);
+  const resolvedParams = await params;
+  return handleProxyRequest(request, resolvedParams);
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { proxy: string[] } }
+  { params }: { params: Promise<{ proxy: string[] }> }
 ) {
-  return handleProxyRequest(request, params);
+  const resolvedParams = await params;
+  return handleProxyRequest(request, resolvedParams);
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { proxy: string[] } }
+  { params }: { params: Promise<{ proxy: string[] }> }
 ) {
-  return handleProxyRequest(request, params);
+  const resolvedParams = await params;
+  return handleProxyRequest(request, resolvedParams);
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { proxy: string[] } }
+  { params }: { params: Promise<{ proxy: string[] }> }
 ) {
-  return handleProxyRequest(request, params);
+  const resolvedParams = await params;
+  return handleProxyRequest(request, resolvedParams);
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { proxy: string[] } }
+  { params }: { params: Promise<{ proxy: string[] }> }
 ) {
-  return handleProxyRequest(request, params);
+  const resolvedParams = await params;
+  return handleProxyRequest(request, resolvedParams);
 }

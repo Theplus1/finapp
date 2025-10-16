@@ -5,6 +5,8 @@
  * Routes not listed will need to be handled manually in their own route files
  */
 
+import { HTTP_METHOD } from "next/dist/server/web/http";
+
 export interface ProxyRouteConfig {
   /** The API path (e.g., '/card', '/transaction') */
   path: string;
@@ -13,7 +15,7 @@ export interface ProxyRouteConfig {
   /** Optional: Custom server endpoint if different from the path */
   serverEndpoint?: string;
   /** Optional: Allowed HTTP methods. If not specified, all methods are allowed */
-  methods?: ('GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE')[];
+  methods?: HTTP_METHOD[];
 }
 
 export const PROXY_ROUTES: ProxyRouteConfig[] = [
