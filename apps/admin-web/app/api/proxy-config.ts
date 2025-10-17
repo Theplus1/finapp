@@ -20,14 +20,14 @@ export interface ProxyRouteConfig {
 
 export const PROXY_ROUTES: ProxyRouteConfig[] = [
   {
-    path: '/card',
-    enabled: true,
-    serverEndpoint: '/cards', // Maps /api/card to /cards on server
-  },
-  {
     path: '/card-groups',
     enabled: true,
     serverEndpoint: '/card-groups',
+  },
+  {
+    path: '/card',
+    enabled: true,
+    serverEndpoint: '/cards', // Maps /api/card to /cards on server
   },
   {
     path: '/transaction',

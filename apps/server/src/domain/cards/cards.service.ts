@@ -3,9 +3,14 @@ import { CardRepository } from '../../database/repositories/card.repository';
 import { VirtualAccountRepository } from '../../database/repositories/virtual-account.repository';
 import { CardDocument } from '../../database/schemas/card.schema';
 import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
-import { PaginationOptions, RepositoryQuery } from '../../common/types/repository-query.types';
+import {
+  PaginationOptions,
+  RepositoryQuery,
+} from '../../common/types/repository-query.types';
 import { CardWithRelations } from './types/card.types';
 import { SortOrder } from '../../common/constants/pagination.constants';
+import { CardGroupDocument } from 'src/database/schemas/card-group.schema';
+import { CardGroupRepository } from 'src/database/repositories/card-group.repository';
 
 export interface CardStats {
   total: number;
@@ -30,6 +35,7 @@ export class CardsService {
   constructor(
     private readonly cardRepository: CardRepository,
     private readonly virtualAccountRepository: VirtualAccountRepository,
+    private readonly cardGroupRepository: CardGroupRepository,
   ) {}
 
   /**
@@ -37,7 +43,7 @@ export class CardsService {
    */
   async findBySlashId(slashId: string): Promise<CardDocument> {
     const card = await this.cardRepository.findBySlashId(slashId);
-    
+
     if (!card) {
       throw new NotFoundException(`Card ${slashId} not found`);
     }
@@ -102,9 +108,12 @@ export class CardsService {
   /**
    * Verify card ownership
    */
-  async verifyOwnership(slashId: string, virtualAccountId: string): Promise<boolean> {
+  async verifyOwnership(
+    slashId: string,
+    virtualAccountId: string,
+  ): Promise<boolean> {
     const card = await this.cardRepository.findBySlashId(slashId);
-    
+
     if (!card) {
       return false;
     }
@@ -121,11 +130,11 @@ export class CardsService {
     pagination: PaginationOptions,
   ): Promise<[CardWithRelations[], number]> {
     const mongoFilter = this.buildMongoFilter(filters);
-    
+
     // Build sort
     const sortField = filters.sortBy || 'createdAt';
     const sortDirection = filters.sortOrder === SortOrder.ASC ? 1 : -1;
-    
+
     const query: RepositoryQuery = {
       filter: mongoFilter,
       skip: (pagination.page - 1) * pagination.limit,
@@ -178,36 +187,65 @@ export class CardsService {
    * Enrich cards with virtual account data
    * Uses batch queries to avoid N+1 problem
    */
-  private async enrichCards(cards: CardDocument[]): Promise<CardWithRelations[]> {
+  private async enrichCards(
+    cards: CardDocument[],
+  ): Promise<CardWithRelations[]> {
     if (cards.length === 0) {
       return [];
     }
 
-    const virtualAccountIds = [...new Set(cards.map(c => c.virtualAccountId).filter(Boolean))];
+    const virtualAccountIds = [
+      ...new Set(cards.map((c) => c.virtualAccountId).filter(Boolean)),
+    ];
 
-    const virtualAccounts = virtualAccountIds.length > 0
-      ? await this.virtualAccountRepository.find({
-          filter: { slashId: { $in: virtualAccountIds }, isDeleted: false },
-          skip: 0,
-          limit: virtualAccountIds.length,
-        })
-      : [];
+    const virtualAccounts =
+      virtualAccountIds.length > 0
+        ? await this.virtualAccountRepository.find({
+            filter: { slashId: { $in: virtualAccountIds }, isDeleted: false },
+            skip: 0,
+            limit: virtualAccountIds.length,
+          })
+        : [];
 
     const virtualAccountMap = new Map<string, VirtualAccountDocument>();
-    virtualAccounts.forEach(va => virtualAccountMap.set(va.slashId, va));
+    virtualAccounts.forEach((va) => virtualAccountMap.set(va.slashId, va));
 
-    return cards.map(card => {
+    const cardGroupIds = [
+      ...new Set(cards.map((c) => c.cardGroupId).filter(Boolean)),
+    ];
+
+    const cardGroups =
+      cardGroupIds.length > 0
+        ? await this.cardGroupRepository.find({
+            filter: { slashId: { $in: cardGroupIds }, isDeleted: false },
+            skip: 0,
+            limit: cardGroupIds.length,
+          })
+        : [];
+
+    const cardGroupMap = new Map<string, CardGroupDocument>();
+    cardGroups.forEach((cg) => cardGroupMap.set(cg.slashId, cg));
+
+    return cards.map((card) => {
       const cardData = card.toObject();
       const enriched: CardWithRelations = { ...cardData };
 
       const virtualAccount = virtualAccountMap.get(card.virtualAccountId);
-      enriched.virtualAccount = virtualAccount ? {
-        slashId: virtualAccount.slashId,
-        name: virtualAccount.name,
-      } : null;
+      const cardGroup = cardGroupMap.get(card.cardGroupId || '');
+      enriched.virtualAccount = virtualAccount
+        ? {
+            slashId: virtualAccount.slashId,
+            name: virtualAccount.name,
+          }
+        : null;
+      enriched.cardGroup = cardGroup
+        ? {
+            slashId: cardGroup.slashId,
+            name: cardGroup.name,
+          }
+        : null;
 
       return enriched;
     });
   }
-
 }

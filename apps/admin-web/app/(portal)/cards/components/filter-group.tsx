@@ -16,11 +16,11 @@ type Props = {
 };
 
 const FilterGroup = ({ onGroupChange }: Props) => {
-  const { data: groupInfos, isLoading: isLoadingGroupInfos } = useQuery({
+  const { data: groupInfos = [], isLoading: isLoadingGroupInfos } = useQuery({
     queryKey: ["group-infos"],
     queryFn: async () => {
       const res = await api.cardGroups.getCardGroup();
-      return res.data;
+      return res.data ?? [];
     },
   });
 
@@ -43,8 +43,8 @@ const FilterGroup = ({ onGroupChange }: Props) => {
           <SelectItem key="all" value="all">
             All
           </SelectItem>
-          {groupInfos?.items.map((group) => (
-            <SelectItem key={group.id} value={group.id}>
+          {groupInfos.map((group) => (
+            <SelectItem key={group._id} value={group.slashId}>
               {group.name}
             </SelectItem>
           ))}

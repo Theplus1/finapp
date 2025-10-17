@@ -1,6 +1,6 @@
+import FilterVirtualAccount from "../../cards/components/filter-virtual-account";
 import FilterCard from "./filter-card";
 import { FilterDate } from "./filter-date";
-import FilterVirtualAccount from "./filter-virtual-account";
 
 interface Props {
   onCardChange: (cardId: string) => void;

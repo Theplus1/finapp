@@ -1,4 +1,4 @@
-// import FilterGroup from "./filter-group";
+import FilterGroup from "./filter-group";
 import FilterStatus from "./filter-status";
 import FilterVirtualAccount from "./filter-virtual-account";
 
@@ -8,10 +8,14 @@ interface Props {
   onStatusChange: (status: string) => void;
 }
 
-const FilterCard = ({ onGroupChange, onVirtualAccountChange, onStatusChange }: Props) => {
+const FilterCard = ({
+  onGroupChange,
+  onVirtualAccountChange,
+  onStatusChange,
+}: Props) => {
   return (
     <div className="pb-4 flex gap-4">
-      {/* <FilterGroup onGroupChange={onGroupChange} /> */}
+      <FilterGroup onGroupChange={onGroupChange} />
       <FilterVirtualAccount onVirtualAccountChange={onVirtualAccountChange} />
       <FilterStatus onStatusChange={onStatusChange} />
     </div>
