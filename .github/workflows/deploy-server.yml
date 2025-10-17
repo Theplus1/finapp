@@ -60,11 +60,17 @@ jobs:
       - name: Sync server files to VPS
         run: |
           rsync -avz --delete \
+            --include 'dist/***' \
+            --include 'package*.json' \
+            --include '.env' \
             --exclude 'node_modules' \
             --exclude 'src' \
             --exclude 'test' \
             --exclude '.turbo' \
             --exclude 'coverage' \
+            --exclude 'tsconfig*.json' \
+            --exclude 'nest-cli.json' \
+            --exclude 'jest.config.js' \
             -e "ssh -o StrictHostKeyChecking=no" \
             apps/server/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.SERVER_APP_DIR }}/
 
