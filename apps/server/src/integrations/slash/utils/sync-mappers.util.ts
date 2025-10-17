@@ -27,7 +27,6 @@ export function mapCardDtoToEntity(
   syncSource: SyncSource,
 ): Partial<Card> {
   const entity = plainToInstance(CardEntity, cardDto, {
-    excludeExtraneousValues: true,
     enableImplicitConversion: true,
   });
   
