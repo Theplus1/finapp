@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { CommissionRuleDto } from 'src/integrations/slash/dto/account.dto';
 
 export type VirtualAccountDocument = VirtualAccount & Document;
 
@@ -43,6 +44,9 @@ export class VirtualAccount {
 
   @Prop()
   routingNumber?: string;
+
+  @Prop({ type: Object })
+  commissionRule: CommissionRuleDto;
 
   // User Linking (Simple approach)
   @Prop({ index: true })

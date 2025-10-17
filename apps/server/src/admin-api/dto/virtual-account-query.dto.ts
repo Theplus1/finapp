@@ -2,6 +2,7 @@ import { IsOptional, IsString, IsEnum, IsNumber, Min, Max } from 'class-validato
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PAGINATION_DEFAULTS, SORT_DEFAULTS, SortOrder } from '../../common/constants/pagination.constants';
+import { CommissionRuleDto } from 'src/integrations/slash/dto/account.dto';
 
 export enum VirtualAccountStatus {
   ACTIVE = 'active',

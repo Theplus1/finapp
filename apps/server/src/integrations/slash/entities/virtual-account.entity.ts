@@ -3,7 +3,7 @@
  */
 
 import { Expose, Transform, Type } from 'class-transformer';
-import { VirtualAccountDto, VirtualAccountWithDetailsDto } from '../dto/account.dto';
+import { CommissionRuleDto, VirtualAccountDto, VirtualAccountWithDetailsDto } from '../dto/account.dto';
 import { SYNC_CONSTANTS, SyncSource } from '../constants/sync.constants';
 
 export class VirtualAccountEntity {
@@ -52,6 +52,8 @@ export class VirtualAccountEntity {
 
   @Expose()
   routingNumber: string;
+
+
 
   syncSource: SyncSource;
 
@@ -108,6 +110,8 @@ export class VirtualAccountWithDetailsEntity {
   @Expose({ name: 'virtualAccount.routingNumber' })
   @Transform(({ obj }) => obj.virtualAccount?.routingNumber, { toClassOnly: true })
   routingNumber: string;
+
+  commissionRule: CommissionRuleDto;
 
   @Transform(() => new Date())
   createdAt: Date;

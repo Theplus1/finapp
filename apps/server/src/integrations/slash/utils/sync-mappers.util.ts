@@ -81,7 +81,6 @@ export function mapVirtualAccountWithDetailsDtoToEntity(
   syncSource: SyncSource,
 ): Partial<VirtualAccount> {
   const entity = plainToInstance(VirtualAccountWithDetailsEntity, item, {
-    excludeExtraneousValues: true,
     enableImplicitConversion: true,
   });
   
@@ -99,7 +98,6 @@ export function mapCardGroupDtoToEntity(
   syncSource: SyncSource,
 ): Partial<CardGroup> {
   const entity = plainToInstance(CardGroupEntity, cardGroupDto, {
-    excludeExtraneousValues: true,
     enableImplicitConversion: true,
   });
   
