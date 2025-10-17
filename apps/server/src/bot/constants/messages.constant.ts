@@ -110,6 +110,10 @@ export const Messages = {
   noTransactionsFound: '📭 No transactions found for your account.',
   transactionInfoPrompt: 'Please send the transaction ID you want to look up.\n\n(Send /cancel to cancel)',
   errorFetchingTransactions: '❌ Error fetching transactions. Please try again later.',
+  exportTransactionsSuccess: ({count, fileName, uri}: {count: number, fileName: string, uri: string}) =>
+    `✅ *Exported ${count} transactions*\n` +
+    `File: ${fileName}\n` +
+    `Download: ${uri}`,
 
   transactionCreated: (transaction: TransactionDataDTO) =>
     `✅ *Transaction Created!*\n` +

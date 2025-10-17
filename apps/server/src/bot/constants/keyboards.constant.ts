@@ -15,11 +15,17 @@ export const Keyboards = {
     ]),
 
   // Transactions keyboards
+  backToTransaction: () =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback('« Back', Actions.menu.transaction)],
+    ]),
+
   transactionMenu: () =>
     Markup.inlineKeyboard([
+      [Markup.button.callback('List Transactions', Actions.transaction.list)],
       [
         Markup.button.callback(
-          'Transaction Details',
+          'Detail Transaction',
           Actions.transaction.detail,
         ),
       ],
@@ -30,6 +36,14 @@ export const Keyboards = {
         ),
       ],
       [Markup.button.callback('« Back to Menu', Actions.menu.main)],
+    ]),
+  transactionTimeFilterMenu: () =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback('Today', Actions.transaction.listToday)],
+      [Markup.button.callback('Yesterday', Actions.transaction.listYesterday)],
+      [Markup.button.callback('This Week', Actions.transaction.listThisWeek)],
+      [Markup.button.callback('This Month', Actions.transaction.listThisMonth)],
+      [Markup.button.callback('« Back to Menu', Actions.menu.transaction)],
     ]),
   transactionNotificationMenu: (isSubscribed: boolean) =>
     Markup.inlineKeyboard([

@@ -136,12 +136,19 @@ export class BotUpdate {
   async onSubscribeTransactionsAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleSubscribeTransactionsAction(ctx);
   }
-
   @Action(Actions.transaction.unsubscribeNotification)
   async onUnsubscribeTransactionsAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleUnsubscribeTransactionsAction(ctx);
   }
 
+  @Action(Actions.transaction.list)
+  async onTransactionListAction(@Ctx() ctx: BotContext) {
+    return this.transactionsHandler.handleTransactionListAction(ctx);
+  }
+  @Action(/^transaction.action.list.(?!s_)(.+)$/)
+  async onTransactionExportAction(@Ctx() ctx: BotContext) {
+    return this.transactionsHandler.handleTransactionExportAction(ctx);
+  }
   @Action(Actions.transaction.detail)
   async onTransactionDetailAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleTransactionDetailAction(ctx);
