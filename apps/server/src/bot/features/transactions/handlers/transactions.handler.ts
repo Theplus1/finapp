@@ -18,6 +18,7 @@ import { Actions } from 'src/bot/constants/actions.constant';
 import { toCsvFromObjects } from 'src/shared/utils/csv.util';
 import { buildTimestampedName } from 'src/shared/utils/naming.util';
 import { publicPath, writeTextFile } from 'src/shared/utils/file.util';
+import { TransactionFilters } from 'src/database/repositories/transaction.repository';
 
 @Injectable()
 @UseGuards(UserValidationGuard)
@@ -31,8 +32,6 @@ export class TransactionsHandler {
     private readonly configService: ConfigService,
   ) {}
 
-  // MENU
-  @ValidateUser({ requireAccount: true, answerCallback: true })
   async handleTransactionListAction(ctx: BotContext) {
     await ctx.answerCbQuery();
     await ctx.reply(Messages.transactionsMenu, {
@@ -41,7 +40,6 @@ export class TransactionsHandler {
     });
   }
 
-  @ValidateUser({ answerCallback: true })
   async handleSubscribeTransactionsAction(ctx: BotContext) {
     await ctx.answerCbQuery('Subscribing...');
     await this.usersService.updateSubscription(ctx.from!.id, true);
@@ -51,7 +49,6 @@ export class TransactionsHandler {
     });
   }
 
-  @ValidateUser({ answerCallback: true })
   async handleUnsubscribeTransactionsAction(ctx: BotContext) {
     await ctx.answerCbQuery('Unsubscribing...');
     await this.usersService.updateSubscription(ctx.from!.id, false);
@@ -61,7 +58,6 @@ export class TransactionsHandler {
     });
   }
 
-  @ValidateUser({ requireAccount: true, answerCallback: true })
   async handleTransactionDetailAction(ctx: BotContext) {
     if (!ctx.session) return;
     ctx.session.step = SessionSteps.AWAITING_TRANSACTION_ID;
@@ -71,8 +67,6 @@ export class TransactionsHandler {
     });
   }
 
-  // INPUT
-  @ValidateUser({ requireAccount: true })
   async handleTransactionInput(ctx: BotContext, transactionId: string) {
     if (!ctx.session) return;
 
@@ -136,7 +130,6 @@ export class TransactionsHandler {
     }
   }
 
-  @ValidateUser({ requireAccount: true, answerCallback: true })
   async handleTransactionExportAction(ctx: BotContext) {
     await ctx.answerCbQuery();
     const callbackQuery = ctx.callbackQuery;
@@ -164,9 +157,10 @@ export class TransactionsHandler {
     }
 
     await ctx.sendChatAction('typing');
-    const result = await this.slashApiService.listTransactions({
-      'filter:from_date': dateFrom.getTime(),
-      'filter:to_date': dateTo.getTime(),
+    const transactions = await this.transactionsService.find({
+      virtualAccountId: ctx.virtualAccount?.slashId,
+      startDate: dateFrom,
+      endDate: dateTo,
     });
     const fileName = buildTimestampedName(dateFrom, {
       prefix: 'transactions',
@@ -174,8 +168,7 @@ export class TransactionsHandler {
     });
 
     try {
-      const transactionList = result?.items || [];
-      const csvData = toCsvFromObjects(transactionList, [
+      const csvData = toCsvFromObjects(transactions, [
         { key: 'id', header: 'id' },
         { key: 'date', header: 'date' },
         { key: 'status', header: 'status' },
@@ -205,7 +198,7 @@ export class TransactionsHandler {
       await writeTextFile(outDir, fileName, csvData);
       await ctx.reply(
         Messages.exportTransactionsSuccess({
-          count: result?.items?.length || 0,
+          count: transactions.length,
           fileName,
           uri: `${this.configService.get<string>('resourceBaseUrl', '')}/transaction/data/${fileName}`,
         }),

@@ -1,11 +1,27 @@
-export interface MerchantDTO {
+import { Expose, Type } from 'class-transformer';
+
+export class MerchantLocationDTO {
+  @Expose()
+  city: string;
+
+  @Expose()
+  country: string;
+
+  @Expose()
+  state: string;
+
+  @Expose()
+  zip: string;
+}
+
+export class MerchantDTO {
+  @Expose()
   categoryCode: string;
+
+  @Expose()
   description: string;
-  location: {
-    city: string;
-    country: string;
-    state: string;
-    zip: string;
-  };
-  name: string;
+  
+  @Expose()
+  @Type(() => MerchantLocationDTO)
+  location: MerchantLocationDTO;
 }

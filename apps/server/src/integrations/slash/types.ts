@@ -17,7 +17,6 @@ export {
   TransactionStatus,
   TransactionType,
   TransactionDetailedStatus,
-  OriginalCurrency,
 } from './dto/transaction.dto';
 
 export {

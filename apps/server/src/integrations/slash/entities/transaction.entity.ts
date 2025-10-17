@@ -3,9 +3,9 @@
  */
 
 import { Expose, Transform, Type } from 'class-transformer';
-import { TransactionDto, OriginalCurrency } from '../dto/transaction.dto';
 import { MerchantDTO } from '../dto/merchant.dto';
 import { SYNC_CONSTANTS, SyncSource } from '../constants/sync.constants';
+import { OriginalCurrencyDto } from '../dto/original-currency.dto';
 
 export class TransactionEntity {
   @Expose({ name: 'id' })
@@ -29,7 +29,7 @@ export class TransactionEntity {
   currency: string;
 
   @Expose()
-  originalCurrency: OriginalCurrency;
+  originalCurrency: OriginalCurrencyDto;
 
   @Expose()
   description?: string;
@@ -49,6 +49,7 @@ export class TransactionEntity {
   date: Date;
 
   @Expose()
+  @Type(() => MerchantDTO)
   merchantData: MerchantDTO;
 
   @Expose()

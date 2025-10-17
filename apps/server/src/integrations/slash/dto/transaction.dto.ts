@@ -1,4 +1,5 @@
 import type { MerchantDTO } from './merchant.dto';
+import { OriginalCurrencyDto } from './original-currency.dto';
 
 export enum TransactionStatus {
   PENDING = 'pending',
@@ -15,11 +16,6 @@ export enum TransactionType {
   REFUND = 'refund',
 }
 
-export interface OriginalCurrency {
-  amountCents: number;
-  code: string;
-  conversionRate: number;
-}
 
 export interface TransactionDto {
   id: string;
@@ -27,7 +23,7 @@ export interface TransactionDto {
   cardId?: string;
   virtualAccountId?: string;
   amountCents: number;
-  originalCurrency: OriginalCurrency;
+  originalCurrency: OriginalCurrencyDto;
   date: string;
   accountSubtype: string;
   merchantDescription: string;

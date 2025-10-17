@@ -38,6 +38,12 @@ export class VirtualAccount {
   @Prop({ type: Object })
   metadata?: any;
 
+  @Prop()
+  accountNumber?: string;
+
+  @Prop()
+  routingNumber?: string;
+
   // User Linking (Simple approach)
   @Prop({ index: true })
   linkedTelegramId?: number; // Telegram ID of linked user

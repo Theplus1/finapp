@@ -47,9 +47,9 @@ export class UserValidationGuard implements CanActivate {
     }
 
     // Find user by telegram ID
-    const userData = await this.accountsService.findByTelegramId(telegramUser.id);
+    const virtualAccount = await this.accountsService.findByTelegramId(telegramUser.id);
     
-    if (!userData) {
+    if (!virtualAccount) {
       if (options.answerCallback && ctx.callbackQuery) {
         await ctx.answerCbQuery('Please use /start first');
       }
@@ -58,7 +58,7 @@ export class UserValidationGuard implements CanActivate {
     }
 
     // Validate linked account if required
-    if (options.requireAccount && !userData.linkedTelegramId) {
+    if (options.requireAccount && !virtualAccount.linkedTelegramId) {
       if (options.answerCallback && ctx.callbackQuery) {
         await ctx.answerCbQuery('Account not linked');
       }
@@ -67,7 +67,7 @@ export class UserValidationGuard implements CanActivate {
     }
 
     // Attach user data to context
-    ctx.virtualAccount = userData;
+    ctx.virtualAccount = virtualAccount;
 
     return true;
   }

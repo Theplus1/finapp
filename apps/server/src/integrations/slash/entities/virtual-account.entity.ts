@@ -47,6 +47,12 @@ export class VirtualAccountEntity {
   @Transform(() => new Date())
   updatedAt: Date;
 
+  @Expose()
+  accountNumber: string;
+
+  @Expose()
+  routingNumber: string;
+
   syncSource: SyncSource;
 
   constructor(partial: Partial<VirtualAccountEntity> = {}) {
@@ -94,6 +100,14 @@ export class VirtualAccountWithDetailsEntity {
 
   @Transform(() => ({}))
   metadata: Record<string, any>;
+
+  @Expose({ name: 'virtualAccount.accountNumber' })
+  @Transform(({ obj }) => obj.virtualAccount?.accountNumber, { toClassOnly: true })
+  accountNumber: string;
+
+  @Expose({ name: 'virtualAccount.routingNumber' })
+  @Transform(({ obj }) => obj.virtualAccount?.routingNumber, { toClassOnly: true })
+  routingNumber: string;
 
   @Transform(() => new Date())
   createdAt: Date;
