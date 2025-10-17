@@ -27,6 +27,9 @@ import {
 } from "@/components/ui/tooltip";
 import { CopyIcon } from "@/components/ui/copy-button";
 import { ClientPagination } from "@/components/ui/client-pagination";
+import FormLinkTelegram from "./(components)/form-link-telegram";
+import { cn } from "@/lib/utils";
+
 const fakeIdTelegram = "fakeID";
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
@@ -38,6 +41,10 @@ export default function VirtualAccount() {
     pageSize: 20,
     total: 0,
   });
+  const [openDrawer, setOpenDrawer] = useState(false);
+  const [virtualAccountEdit, setVirtualAccountEdit] =
+    useState<VirtualAccount | null>(null);
+  const [countGetList, setCountGetList] = useState(0);
 
   useEffect(() => {
     setBreadcrumbs([
@@ -47,7 +54,7 @@ export default function VirtualAccount() {
   }, [setBreadcrumbs]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["virtual-accounts"],
+    queryKey: ["virtual-accounts", countGetList],
     queryFn: async () => {
       const res = await api.virtualAccounts.getVirtualAccounts();
       setPagination((prev) => ({
@@ -122,24 +129,8 @@ export default function VirtualAccount() {
     {
       header: "Routing / Account",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        const routingNumber =
-          (
-            row.original as unknown as VirtualAccount & {
-              virtualAccount: {
-                routingNumber: string;
-                accountNumber: string;
-              };
-            }
-          ).virtualAccount?.routingNumber ?? EMPTY_LABEL;
-        const accountNumber =
-          (
-            row.original as unknown as VirtualAccount & {
-              virtualAccount: {
-                routingNumber: string;
-                accountNumber: string;
-              };
-            }
-          ).virtualAccount?.accountNumber ?? EMPTY_LABEL;
+        const routingNumber = row.original.routingNumber ?? EMPTY_LABEL;
+        const accountNumber = row.original.accountNumber ?? EMPTY_LABEL;
         return isLoading ? (
           <Skeleton />
         ) : (
@@ -168,8 +159,10 @@ export default function VirtualAccount() {
                 width: "200px",
               }}
             >
-              Your telegram group will receive notifications from bot with this
-              ID: {fakeIdTelegram}
+              Copy this id and add it to the group you want to receive
+              notifications from, then take that group id and assign it to the
+              virtual account you want to receive notifications from:{" "}
+              {fakeIdTelegram}
             </TooltipContent>
           </Tooltip>
         </div>
@@ -180,15 +173,35 @@ export default function VirtualAccount() {
           <Skeleton />
         ) : (
           <>
-            <div>
+            <div className="flex items-center gap-2 hover-container">
               <span className="font-medium">Telegram:</span>{" "}
-              {telegram || "Not set yet"}
+              <span
+                className={cn(
+                  "text-green-500 cursor-pointer",
+                  telegram ? "" : "underline"
+                )}
+                onClick={() => {
+                  setVirtualAccountEdit(row.original);
+                  setOpenDrawer(true);
+                }}
+              >
+                {telegram ? telegram : "Set ID"}
+              </span>
             </div>
           </>
         );
       },
     },
   ] as ColumnDef<VirtualAccount>[];
+
+  const handleCancelDrawer = () => {
+    setOpenDrawer(false);
+  };
+
+  const handleSuccess = () => {
+    setOpenDrawer(false);
+    setCountGetList((prev) => prev + 1);
+  };
 
   return (
     <PageLayout>
@@ -213,6 +226,12 @@ export default function VirtualAccount() {
                 page: newPage,
               }));
             }}
+          />
+          <FormLinkTelegram
+            virtualAccount={virtualAccountEdit}
+            openDrawer={openDrawer}
+            onCancel={handleCancelDrawer}
+            onSubmitSuccess={handleSuccess}
           />
         </SectionContent>
       </Section>

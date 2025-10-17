@@ -86,8 +86,12 @@ export default function GroupCard() {
     {
       header: "Daily Limit",
       cell: ({ row }: CellContext<CardGroup, string>) => {
-        const dailyLimitV1 = undefined;
-        const dailyLimitV2 = undefined;
+        const dailyLimitV1 =
+          row.original?.spendingConstraint?.spendingRule?.utilizationLimit
+            ?.limitAmount?.amountCents;
+        const dailyLimitV2 =
+          row.original?.spendingConstraint?.spendingRule?.utilizationLimitV2 ??
+          [];
         return isLoading ? (
           <Skeleton />
         ) : (
@@ -95,14 +99,27 @@ export default function GroupCard() {
             <div>
               <span>
                 V1:{" "}
-                {dailyLimitV1 ? formatDollarByCent(dailyLimitV1) : EMPTY_LABEL}
+                {dailyLimitV1 !== undefined
+                  ? formatDollarByCent(dailyLimitV1)
+                  : EMPTY_LABEL}
               </span>
             </div>
-            <div>
-              <span>
-                V2:{" "}
-                {dailyLimitV2 ? formatDollarByCent(dailyLimitV2) : EMPTY_LABEL}
-              </span>
+            <div className="flex gap-1">
+              <div>V2: </div>
+              <div>
+                {/* {dailyLimitV2.length > 0
+                  ? dailyLimitV2.map((item, index) => (
+                      <div key={index}>
+                        {index + 1}. {formatDollarByCent(item?.limitAmount?.amountCents ?? 0)}
+                      </div>
+                    ))
+                  : EMPTY_LABEL} */}
+                {dailyLimitV2.length > 0
+                  ? formatDollarByCent(
+                      dailyLimitV2[0]?.limitAmount?.amountCents ?? 0
+                    )
+                  : EMPTY_LABEL}
+              </div>
             </div>
           </div>
         );
