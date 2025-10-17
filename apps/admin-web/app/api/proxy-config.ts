@@ -37,6 +37,7 @@ export const PROXY_ROUTES: ProxyRouteConfig[] = [
   {
     path: '/users',
     enabled: true,
+    serverEndpoint: '/users',
   },
   {
     path: '/virtual-account',

@@ -144,13 +144,21 @@ export default function Dashboard() {
       {
         header: "Merchant",
         cell: ({ row }: CellContext<Transaction, string>) => {
-          return isLoading ? <Skeleton /> : EMPTY_LABEL;
+          return isLoading ? (
+            <Skeleton />
+          ) : (
+            (row.original.merchantData?.name ?? EMPTY_LABEL)
+          );
         },
       },
       {
         header: "Country",
         cell: ({ row }: CellContext<Transaction, string>) => {
-          return isLoading ? <Skeleton /> : EMPTY_LABEL;
+          return isLoading ? (
+            <Skeleton />
+          ) : (
+            (row.original.merchantData?.location.country ?? EMPTY_LABEL)
+          );
         },
       },
       {

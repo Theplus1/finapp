@@ -15,6 +15,7 @@ export default function Page() {
     },
     onSuccess: (response: ApiResponse<AuthResponse>) => {
       localStorage.setItem("auth_token", response.data.accessToken);
+      localStorage.setItem("username", response.data.username);
       router.push("/dashboard");
     },
   });

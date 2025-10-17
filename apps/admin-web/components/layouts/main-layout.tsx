@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { AppSidebar } from "@/components/navigation/app-sidebar"
+import { AppSidebar } from "@/components/navigation/app-sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,21 +8,22 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { useBreadcrumbs } from "@/contexts/breadcrumb-context"
+} from "@/components/ui/sidebar";
+import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
+import { Toaster } from "../ui/sonner";
 
 interface MainLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { breadcrumbs } = useBreadcrumbs()
+  const { breadcrumbs } = useBreadcrumbs();
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -39,8 +40,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <BreadcrumbList>
                   {breadcrumbs.map((crumb, index) => (
                     <div key={index} className="flex items-center">
-                      {index > 0 && <BreadcrumbSeparator className="hidden md:block" />}
-                      <BreadcrumbItem className={index === 0 ? "hidden md:block" : ""}>
+                      {index > 0 && (
+                        <BreadcrumbSeparator className="hidden md:block" />
+                      )}
+                      <BreadcrumbItem
+                        className={index === 0 ? "hidden md:block" : ""}
+                      >
                         {crumb.href ? (
                           <BreadcrumbLink href={crumb.href}>
                             {crumb.label}
@@ -57,9 +62,10 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          <Toaster position="top-center" />
           {children}
         </div>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

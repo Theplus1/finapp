@@ -120,3 +120,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* custom */
+
+.hover-container .hover-icon {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.hover-container:hover .hover-icon {
+  opacity: 1;
+}
