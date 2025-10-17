@@ -87,7 +87,7 @@ jobs:
             npm install --omit=dev --legacy-peer-deps
             
             echo "🔄 Restarting server..."
-            pm2 restart server || pm2 start dist/src/main.js --name server
+            pm2 restart server || pm2 start dist/src/main.js --name server --cwd ${{ vars.SERVER_APP_DIR }}
             pm2 save
             
             echo "✅ Deployment complete"

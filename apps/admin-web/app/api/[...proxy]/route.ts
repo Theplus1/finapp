@@ -38,16 +38,25 @@ async function handleProxyRequest(
     );
   }
 
-  const { headers } = request;
   const serverEndpoint = getServerEndpoint(apiPath, proxyConfig);
   
   try {
     const requestUrl = renderRequestUrl(`${API_URL}${serverEndpoint}`, request);
     
+    // Filter headers - remove headers that shouldn't be forwarded
+    const forwardHeaders = new Headers();
+    const headersToExclude = ['host', 'connection', 'keep-alive', 'transfer-encoding', 'upgrade'];
+    
+    request.headers.forEach((value, key) => {
+      if (!headersToExclude.includes(key.toLowerCase())) {
+        forwardHeaders.set(key, value);
+      }
+    });
+    
     // Prepare fetch options
     const fetchOptions: RequestInit = {
       method: request.method,
-      headers,
+      headers: forwardHeaders,
     };
 
     // Add body for non-GET requests
