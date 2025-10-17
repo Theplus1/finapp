@@ -60,9 +60,6 @@ jobs:
       - name: Sync server files to VPS
         run: |
           rsync -avz --delete \
-            --include 'dist/***' \
-            --include 'package*.json' \
-            --include '.env' \
             --exclude 'node_modules' \
             --exclude 'src' \
             --exclude 'test' \
@@ -71,6 +68,8 @@ jobs:
             --exclude 'tsconfig*.json' \
             --exclude 'nest-cli.json' \
             --exclude 'jest.config.js' \
+            --exclude '*.spec.ts' \
+            --exclude '.eslintrc.js' \
             -e "ssh -o StrictHostKeyChecking=no" \
             apps/server/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.SERVER_APP_DIR }}/
 
@@ -88,7 +87,7 @@ jobs:
             npm install --omit=dev --legacy-peer-deps
             
             echo "🔄 Restarting server..."
-            pm2 restart server || pm2 start dist/main.js --name server
+            pm2 restart server || pm2 start dist/src/main.js --name server
             pm2 save
             
             echo "✅ Deployment complete"
