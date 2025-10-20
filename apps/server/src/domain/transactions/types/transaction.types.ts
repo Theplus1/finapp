@@ -6,6 +6,7 @@ import { Transaction } from '../../../database/schemas/transaction.schema';
 export interface CardInfo {
   slashId: string;
   name: string;
+  last4: string;
 }
 
 /**

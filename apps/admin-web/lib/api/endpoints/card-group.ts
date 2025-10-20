@@ -4,6 +4,30 @@ import type { ApiResponse } from "../client";
 export interface CardGroup {
   _id: string;
   slashId: string;
+  spendingConstraint?: {
+    merchantRule: {
+      merchants: string[];
+      restriction: string;
+    };
+    countryRule: {
+      countries: string[];
+      restriction: string;
+    };
+    spendingRule: {
+      utilizationLimit: {
+        limitAmount: {
+          amountCents: number;
+        };
+        preset: string;
+      };
+      utilizationLimitV2: {
+        limitAmount: {
+          amountCents: number;
+        };
+        preset: string;
+      }[];
+    };
+  };
   __v: number;
   createdAt: string;
   isDeleted: boolean;

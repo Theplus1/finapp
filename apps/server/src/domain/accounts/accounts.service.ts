@@ -187,11 +187,11 @@ export class AccountsService {
     }
 
     // Check if account is already linked
-    if (account.linkedTelegramId) {
-      throw new BadRequestException(
-        `Virtual account is already linked to telegram ID ${account.linkedTelegramId}`
-      );
-    }
+    // if (account.linkedTelegramId) {
+    //   throw new BadRequestException(
+    //     `Virtual account is already linked to telegram ID ${account.linkedTelegramId}`
+    //   );
+    // }
 
     // Check if user already has a linked account
     const userHasAccount = await this.virtualAccountRepository.hasLinkedAccount(telegramId);

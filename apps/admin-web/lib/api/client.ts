@@ -93,6 +93,9 @@ class HttpClient {
    * Transform API errors to user-friendly messages
    */
   private getErrorMessage(status: number, data: unknown): string {
+    if (data && (data as { message: string }).message) {
+      return (data as { message: string }).message;
+    }
     // Map HTTP status codes to user-friendly messages
     const statusMessages: Record<number, string> = {
       400: "Invalid request. Please check your input",

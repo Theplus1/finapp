@@ -19,9 +19,11 @@ export interface VirtualAccount {
   status: string;
   syncSource: string;
   updatedAt: string;
-  linkedAt: string;
-  linkedBy: string;
-  linkedTelegramId: string;
+  linkedAt?: string;
+  linkedBy?: string;
+  linkedTelegramId?: number;
+  accountNumber: string;
+  routingNumber: string;
 }
 
 export interface VirtualAccountsDetailResponse {
@@ -34,14 +36,21 @@ export interface VirtualAccountsDetailResponse {
 }
 
 export const virtualAccountsApi = {
-  getVirtualAccounts: async (): Promise<
-    ApiResponse<VirtualAccount[]>
-  > => {
+  getVirtualAccounts: async (): Promise<ApiResponse<VirtualAccount[]>> => {
     return apiClient.get("/virtual-account");
   },
   getVirtualAccountById: async (
     id: string
   ): Promise<ApiResponse<VirtualAccount>> => {
     return await apiClient.get(`/virtual-account/${id}`);
+  },
+  linkTelegram: async (
+    virtualAccountId: string,
+    body: { telegramId: number }
+  ): Promise<ApiResponse<VirtualAccount>> => {
+    return await apiClient.post(
+      `/virtual-account/${virtualAccountId}/link`,
+      body
+    );
   },
 };

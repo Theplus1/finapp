@@ -4,7 +4,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { NavMain } from "@/components/navigation/nav-main";
 // import { NavUser } from "@/components/navigation/nav-user";
-import { TeamSwitcher } from "@/components/navigation/team-switcher";
+import { SidebarAction } from "@/components/navigation/sidebar-action";
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +12,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { teams, navMain as navMainConfig } from "@/config/navigation";
+import { navMain as navMainConfig } from "@/config/navigation";
 
 // This is sample data - replace with actual user data from auth
 // const userData = {
@@ -35,7 +35,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={teams} />
+        <SidebarAction />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMainItems} />

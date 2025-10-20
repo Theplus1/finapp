@@ -17,6 +17,17 @@ export interface Transaction {
   syncSource: string;
   updatedAt: string;
   virtualAccountId: string;
+  merchantData?: {
+    categoryCode: string;
+    description: string;
+    location: {
+      city: string;
+      country: string;
+      state: string;
+      zip: string;
+    };
+    name: string;
+  };
   card: {
     slashId: string;
     name: string;

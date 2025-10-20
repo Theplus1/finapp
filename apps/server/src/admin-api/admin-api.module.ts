@@ -17,6 +17,7 @@ import { TransactionsController } from './controllers/transactions.controller';
 import { CardsController } from './controllers/cards.controller';
 import { CardGroupsController } from './controllers/card-groups.controller';
 import { AccountsController } from './controllers/accounts.controller';
+import { UsersController } from './controllers/users.controller';
 
 // Services
 import { AdminAuthService } from './services/admin-auth.service';
@@ -44,13 +45,13 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
       }),
       inject: [ConfigService],
     }),
-    SlashIntegrationModule,  // Access to Slash API client
-    UsersModule,  // Access to user repository
-    CardsModule,  // Domain logic for cards
-    CardGroupsModule,  // Domain logic for card groups
-    TransactionsModule,  // Domain logic for transactions
-    AccountsModule,  // Domain logic for accounts
-    AdminUsersModule,  // Domain logic for admin users
+    SlashIntegrationModule, // Access to Slash API client
+    UsersModule, // Access to user repository
+    CardsModule, // Domain logic for cards
+    CardGroupsModule, // Domain logic for card groups
+    TransactionsModule, // Domain logic for transactions
+    AccountsModule, // Domain logic for accounts
+    AdminUsersModule, // Domain logic for admin users
   ],
   controllers: [
     AuthController,
@@ -58,6 +59,7 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
     CardsController,
     CardGroupsController,
     AccountsController,
+    UsersController
   ],
   providers: [
     // Strategies
@@ -70,8 +72,6 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
     // Services
     AdminAuthService,
   ],
-  exports: [
-    AdminAuthService,
-  ],
+  exports: [AdminAuthService],
 })
 export class AdminApiModule {}

@@ -158,6 +158,7 @@ export class TransactionsService {
         enriched.card = card ? {
           slashId: card.slashId,
           name: card.name,
+          last4: card.last4,
         } : null;
       }
 
