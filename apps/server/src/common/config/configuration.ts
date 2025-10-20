@@ -15,7 +15,7 @@ export default () => ({
     password: process.env.REDIS_PASSWORD,
   },
   jwt: {
-    secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+    secret: process.env.EXPORT_SECRET || 'your-secret-key-change-in-production',
   },
   notification: {
     cron: process.env.NOTIFICATION_CRON || '0 9 * * *',

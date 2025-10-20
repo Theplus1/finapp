@@ -52,6 +52,10 @@ jobs:
           SLASH_TIMEOUT=${{ vars.SLASH_TIMEOUT }}
           SLASH_WEBHOOK_SECRET=${{ secrets.SLASH_WEBHOOK_SECRET }}
           SUPER_ADMIN_TOKEN=${{ secrets.SUPER_ADMIN_TOKEN }}
+          REDIS_HOST=${{ vars.REDIS_HOST }}
+          REDIS_PORT=${{ vars.REDIS_PORT }}
+          EXPORT_SECRET=${{ secrets.EXPORT_SECRET }}
+          RESOURCE_BASE_URL=${{ vars.RESOURCE_BASE_URL }}
           EOF
 
       - name: Build server
