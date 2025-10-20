@@ -8,13 +8,13 @@ on:
       - 'apps/server/**'
       - 'packages/**'
       - '.github/workflows/deploy-server.yml'
-  workflow_dispatch:
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   deploy-server:
     name: Deploy Server Application
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,16 +27,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
-
-      - name: Add VPS to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts
 
       - name: Create .env file for server
         run: |
@@ -58,28 +48,30 @@ jobs:
           RESOURCE_BASE_URL=${{ vars.RESOURCE_BASE_URL }}
           EOF
 
-      # 👇 Ensure fresh build (clean dist and disable cache)
-      - name: Clean old dist
-        run: rm -rf apps/server/dist
-
       - name: Build server
         run: |
-          # Disable Turbo cache to ensure full rebuild
-          TURBO_FORCE=true npm run build:server
+          npm run build:server
 
-      # 👇 Verify build actually produced files
-      - name: Debug build output
+      - name: Install production dependencies for server
         run: |
-          echo "Listing apps/server/dist folder:"
-          ls -R apps/server/dist || echo "❌ dist folder missing"
+          cd apps/server
+          npm ci --omit=dev --legacy-peer-deps
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts
 
       - name: Sync server files to VPS
-        if: success()
         run: |
           rsync -avz --delete \
-            --exclude 'node_modules' \
+            --exclude '.env' \
             --exclude 'src' \
-            --exclude 'public' \
             --exclude 'test' \
             --exclude '.turbo' \
             --exclude 'coverage' \
@@ -88,24 +80,22 @@ jobs:
             --exclude 'jest.config.js' \
             --exclude '*.spec.ts' \
             --exclude '.eslintrc.js' \
-            -e "ssh -o StrictHostKeyChecking=no" \
+            -e "ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=10" \
             apps/server/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.SERVER_APP_DIR }}/
 
-      - name: Deploy server to VPS
+      # 9️⃣ Restart PM2 app
+      - name: Restart server on VPS
         env:
           VPS_HOST: ${{ vars.VPS_HOST }}
           VPS_USER: ${{ vars.VPS_USER }}
           SERVER_APP_DIR: ${{ vars.SERVER_APP_DIR }}
         run: |
-          ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
-            set -ex
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=10 $VPS_USER@$VPS_HOST << 'ENDSSH'
+            set -e
             cd ${{ vars.SERVER_APP_DIR }}
 
-            echo "📦 Installing dependencies..."
-            npm install --omit=dev --legacy-peer-deps
-
             echo "🔄 Restarting server..."
-            pm2 reload server --update-env || pm2 start dist/main.js --name server --cwd ${{ vars.SERVER_APP_DIR }}
+            pm2 restart server || pm2 start dist/main.js --name server --cwd ${{ vars.SERVER_APP_DIR }}
             pm2 save
 
             echo "✅ Deployment complete"
