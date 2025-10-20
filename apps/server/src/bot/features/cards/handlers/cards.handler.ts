@@ -1,4 +1,4 @@
-import { Injectable, Logger, UseGuards } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SlashApiService } from 'src/integrations/slash/services/slash-api.service';
 import { CardsService } from 'src/domain/cards/cards.service';
@@ -7,11 +7,10 @@ import { Keyboards } from 'src/bot/constants/keyboards.constant';
 import { CardDto, CardStatus } from 'src/integrations/slash/dto/card.dto';
 import { MarkdownUtil } from 'src/shared/utils/markdown.util';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
-import { ValidateUser } from 'src/bot/decorators/validate-user.decorator';
-import { UserValidationGuard } from 'src/bot/guards/user-validation.guard';
+import { ExportType } from 'src/database/schemas/export-job.schema';
+import { ExportsService } from 'src/domain/exports/exports.service';
 
 @Injectable()
-@UseGuards(UserValidationGuard)
 export class CardsHandler {
 
   private readonly logger = new Logger(CardsHandler.name);
@@ -19,10 +18,24 @@ export class CardsHandler {
   constructor(
     private readonly slashApiService: SlashApiService,
     private readonly cardsService: CardsService,
+    private readonly exportsService: ExportsService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
-  @ValidateUser({ requireAccount: true, answerCallback: true })
+  async handleCardMenu(ctx: BotContext) {
+    const virtualAccount = ctx.virtualAccount!;
+
+    try {
+      await ctx.sendChatAction('typing');
+      await ctx.reply(Messages.cardsMenu, {
+        parse_mode: 'Markdown',
+        ...Keyboards.cardsMenu(),
+      });
+    } catch (error) {
+      await ctx.reply('❌ Error fetching cards. Please try again later.');
+    }
+  }
+
   async handleCardLock(ctx: BotContext, cardId: string) {
     const userData = ctx.userData!;
 
@@ -53,7 +66,6 @@ export class CardsHandler {
     }
   }
 
-  @ValidateUser({ requireAccount: true, answerCallback: true })
   async handleCardUnlock(ctx: BotContext, cardId: string) {
     const userData = ctx.userData!;
 
@@ -90,68 +102,33 @@ export class CardsHandler {
     }
   }
 
-  @ValidateUser({ requireAccount: true })
-  async handleListCards(ctx: BotContext, cursor?: string) {
-    const userData = ctx.userData!;
-
+  async exportCardsList(ctx: BotContext) {
     try {
-      const response = await this.slashApiService.listCards({
-        filter: {
-          virtualAccountId: userData.virtualAccountId,
+      // Create async export job
+      const exportJob = await this.exportsService.createExport(
+        ctx.from!.id,
+        ctx.chat!.id,
+        {
+          type: ExportType.CARDS,
+          filters: {
+            virtualAccountId: ctx.virtualAccount?.slashId,
+          },
         },
-        cursor: cursor,
-      });
+      );
 
-      if (!response.items || response.items.length === 0) {
-        if (cursor) {
-          await ctx.answerCbQuery('No more cards found');
-        } else {
-          await ctx.reply(Messages.noCardsFound);
-        }
-        return;
-      }
+      await ctx.reply(
+        '⏳ *Generating your export...*\n\n' +
+        'This may take a moment. You\'ll receive a download link when it\'s ready.',
+        { parse_mode: 'Markdown' },
+      );
 
-      const cardsList = this.formatCardsList(response.items, response.metadata.count, cursor, response.metadata.nextCursor);
-      
-      if (response.metadata.nextCursor) {
-        if (!ctx.session) {
-          ctx.session = { data: {} };
-        }
-        if (!ctx.session.data) {
-          ctx.session.data = {};
-        }
-        ctx.session.data.nextCursor = response.metadata.nextCursor;
-      }
-      
-      if (cursor && ctx.callbackQuery && 'message' in ctx.callbackQuery) {
-        try {
-          await ctx.editMessageText(cardsList, {
-            parse_mode: 'Markdown',
-            ...Keyboards.cardsList(response.items, cursor, response.metadata.nextCursor),
-          });
-          await ctx.answerCbQuery();
-        } catch (editError) {
-          await ctx.answerCbQuery();
-        }
-      } else {
-        await ctx.reply(cardsList, {
-          parse_mode: 'Markdown',
-          ...Keyboards.cardsList(response.items, cursor, response.metadata.nextCursor),
-        });
-      }
-    } catch (error) {
-      this.logger.error(`Error fetching cards for user ${ctx.from?.id}:`, error);
-      if (cursor) {
-        try {
-          await ctx.answerCbQuery('Error loading cards');
-        } catch (e) {
-        }
-      } else {
-        await ctx.reply(Messages.errorFetchingCards);
-      }
+      this.logger.log(`Export job ${exportJob.id} created for user ${ctx.from!.id}`);
+    } catch (err) {
+      this.logger.error('Failed to create export job', err as any);
+      await ctx.reply(Messages.errorFetchingTransactions);
     }
   }
-  
+
   private formatCardsList(cards: CardDto[], count: number, currentCursor?: string, nextCursor?: string): string {
     let message = `💳 *Your Cards (${count})*\n\n`;
 
@@ -177,13 +154,12 @@ export class CardsHandler {
     return message;
   }
 
-  @ValidateUser({ requireAccount: true, answerCallback: true })
   async handleCardDetail(ctx: BotContext, cardId: string) {
     const userData = ctx.userData!;
 
     try {
       const card = await this.slashApiService.getCard(cardId, false, true);
-      
+
       // Verify the card belongs to the user's virtual account
       if (card.virtualAccountId !== userData.virtualAccountId) {
         await ctx.reply(Messages.cardNotFound);
@@ -215,29 +191,29 @@ export class CardsHandler {
     const statusEmoji = this.getStatusEmoji(card.status);
     const cardType = card.isPhysical ? '💳 Physical Card' : '🌐 Virtual Card';
     const singleUse = card.isSingleUse ? ' (Single Use)' : '';
-    
+
     let message = `💳 *Card Details*\n\n`;
     message += `*${MarkdownUtil.escapse(card.name)}*\n`;
     message += `${cardType}${singleUse}\n\n`;
-    
+
     message += `📋 *Information*\n`;
     message += `Card Number: •••• ${card.last4}\n`;
-    if(card.cvv){
-        message += `CVV: ||${MarkdownUtil.escapse(card.cvv)}||\n`;
+    if (card.cvv) {
+      message += `CVV: ||${MarkdownUtil.escapse(card.cvv)}||\n`;
     }
     message += `Expiry: ${card.expiryMonth}\\-${card.expiryYear}\n`;
     message += `Status: ${statusEmoji} ${MarkdownUtil.escapse(card.status)}\n`;
-    
+
     if (card.spendingConstraint) {
       message += `\n💰 *Spending Limits*\n`;
-      
+
       // The API returns a complex nested structure for spending constraints
       message += `Spending limits configured\n`;
     }
-    
+
     const createdDate = new Date(card.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     message += `\n📅 Created: ${MarkdownUtil.escapse(createdDate)}`;
-    message += `\n\n *Card detail will be removed after ${detailTimeout/60000} min for security*`;
+    message += `\n\n *Card detail will be removed after ${detailTimeout / 60000} min for security*`;
     return message;
   }
 
@@ -262,12 +238,12 @@ export class CardsHandler {
     virtualAccountId: string,
   ): Promise<CardDto | null> {
     const card = await this.slashApiService.getCard(cardId, false, false);
-    
+
     if (card.virtualAccountId !== virtualAccountId) {
       await ctx.reply(Messages.cardNotFound);
       return null;
     }
-    
+
     return card;
   }
 }

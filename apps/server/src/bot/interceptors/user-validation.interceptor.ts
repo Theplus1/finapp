@@ -19,7 +19,7 @@ import { VALIDATE_USER_KEY, ValidateUserOptions } from '../guards/user-validatio
 export class UserValidationInterceptor implements NestInterceptor {
   constructor(
     private readonly reflector: Reflector,
-    private readonly accountsService: AccountsService,
+    private readonly virtualAccountsService: AccountsService,
   ) {}
 
   async intercept(
@@ -50,7 +50,7 @@ export class UserValidationInterceptor implements NestInterceptor {
     }
 
     // Find user by telegram ID
-    const virtualAccount = await this.accountsService.findByTelegramId(telegramUser.id);
+    const virtualAccount = await this.virtualAccountsService.findByTelegramId(telegramUser.id);
     
     if (!virtualAccount) {
       if (options.answerCallback && ctx.callbackQuery) {

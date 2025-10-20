@@ -89,10 +89,13 @@ export const Messages = {
   mustLinkAccount: '⚠️ Please link your virtual account first. Use /start to set up your account.',
 
   // Cards
+  cardsMenu: '📋 *Cards Menu*\n\nChoose an option:',
   accountNotLinked: '⚠️ Please link your virtual account first. Use /start to set up your account.',
   noCardsFound: '📭 No cards found for your account.',
   cardNotFound: '❌ Card not found or you do not have access to this card.',
   errorFetchingCards: '❌ Error fetching cards. Please try again later.',
+  cardDetailStart: '💬 *Card Detail Form*\n\n' +
+    'Please send the card ID you want to look up.\n\n(Send /cancel to cancel)',
 
   // Transactions
   transactionsMenu: '📋 *Transactions Menu*\n\nChoose an option:',

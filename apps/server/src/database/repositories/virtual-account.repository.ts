@@ -63,12 +63,18 @@ export class VirtualAccountRepository {
    * Used by domain services for optimized queries
    */
   async find(query: RepositoryQuery): Promise<VirtualAccountDocument[]> {
-    return this.virtualAccountModel
+    let queryBuilder = this.virtualAccountModel
       .find(query.filter)
-      .skip(query.skip)
-      .limit(query.limit)
-      .sort(query.sort || { createdAt: -1 })
-      .exec();
+      .sort(query.sort || { createdAt: -1 });
+    
+    if (query.skip) {
+      queryBuilder = queryBuilder.skip(query.skip);
+    }
+    if (query.limit) {
+      queryBuilder = queryBuilder.limit(query.limit);
+    }
+
+    return queryBuilder.exec();
   }
 
   /**

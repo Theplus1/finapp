@@ -98,6 +98,12 @@ export const Keyboards = {
   removeKeyboard: () => Markup.removeKeyboard(),
 
   // Cards keyboards
+  cardsMenu: () =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback('List Cards', Actions.cards.list)],
+      [Markup.button.callback('Card Detail', Actions.cards.detail)],
+      [Markup.button.callback('« Back to Menu', Actions.menu.main)],
+    ]),
   cardsList: (cards: any[], currentCursor?: string, nextCursor?: string) => {
     const buttons = cards.map((card) =>
       [Markup.button.callback(`💳 ${card.name}`, `card_${card.id}`)],

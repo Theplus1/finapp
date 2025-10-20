@@ -4,6 +4,7 @@ import { UsersModule } from '../../../users/users.module';
 import { SlashIntegrationModule } from '../../../integrations/slash/slash-integration.module';
 import { TransactionsModule as DomainTransactionsModule } from '../../../domain/transactions/transactions.module';
 import { AccountsModule } from '../../../domain/accounts/accounts.module';
+import { ExportsModule } from '../../../domain/exports/exports.module';
 import { UserValidationGuard } from '../../guards/user-validation.guard';
 
 // TODO: Implement transaction feature
@@ -18,6 +19,7 @@ import { UserValidationGuard } from '../../guards/user-validation.guard';
     SlashIntegrationModule,
     DomainTransactionsModule,
     AccountsModule,
+    ExportsModule,
   ],
   providers: [
     TransactionsHandler,

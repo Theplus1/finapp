@@ -37,12 +37,18 @@ export class CardRepository {
    * Used by domain services for optimized queries
    */
   async find(query: RepositoryQuery): Promise<CardDocument[]> {
-    return this.cardModel
+    let queryBuilder = this.cardModel
       .find(query.filter)
-      .skip(query.skip)
-      .limit(query.limit)
-      .sort(query.sort || { createdAt: -1 })
-      .exec();
+      .sort(query.sort || { createdAt: -1 });
+    
+    if (query.skip) {
+      queryBuilder = queryBuilder.skip(query.skip);
+    }
+    if (query.limit) {
+      queryBuilder = queryBuilder.limit(query.limit);
+    }
+
+    return queryBuilder.exec();
   }
 
   /**

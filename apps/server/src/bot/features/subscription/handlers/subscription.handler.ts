@@ -1,13 +1,10 @@
-import { Injectable, Logger, UseGuards } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { UsersService } from 'src/users/users.service';
 import { Messages } from 'src/bot/constants/messages.constant';
 import { Keyboards } from 'src/bot/constants/keyboards.constant';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
-import { ValidateUser } from 'src/bot/decorators/validate-user.decorator';
-import { UserValidationGuard } from 'src/bot/guards/user-validation.guard';
 
 @Injectable()
-@UseGuards(UserValidationGuard)
 export class SubscriptionHandler {
   private readonly logger = new Logger(SubscriptionHandler.name);
 
@@ -31,13 +28,11 @@ export class SubscriptionHandler {
     await ctx.reply(Messages.subscribed);
   }
 
-  @ValidateUser()
   async handleUnsubscribe(ctx: BotContext) {
     await this.usersService.updateSubscription(ctx.from!.id, false);
     await ctx.reply(Messages.unsubscribed);
   }
 
-  @ValidateUser()
   async handleStatus(ctx: BotContext) {
     const userData = ctx.userData!;
 
@@ -52,7 +47,6 @@ export class SubscriptionHandler {
     );
   }
 
-  @ValidateUser()
   async handleNotificationSettings(ctx: BotContext) {
     const userData = ctx.userData!;
 
@@ -89,7 +83,6 @@ export class SubscriptionHandler {
     });
   }
 
-  @ValidateUser({ answerCallback: true })
   async handleUnsubscribeAction(ctx: BotContext) {
     await ctx.answerCbQuery('Unsubscribing...');
     await this.usersService.updateSubscription(ctx.from!.id, false);

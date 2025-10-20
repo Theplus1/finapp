@@ -44,8 +44,8 @@ export class CardGroupRepository {
   async find(query: RepositoryQuery): Promise<CardGroupDocument[]> {
     return this.cardGroupModel
       .find(query.filter)
-      .skip(query.skip)
-      .limit(query.limit)
+      .skip(query.skip || 0)
+      .limit(query.limit || 100)
       .sort(query.sort)
       .exec();
   }

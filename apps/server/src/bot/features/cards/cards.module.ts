@@ -5,6 +5,7 @@ import { SlashIntegrationModule } from 'src/integrations/slash/slash-integration
 import { CardsModule as DomainCardsModule } from 'src/domain/cards/cards.module';
 import { AccountsModule } from 'src/domain/accounts/accounts.module';
 import { UserValidationGuard } from 'src/bot/guards/user-validation.guard';
+import { ExportsModule } from 'src/domain/exports/exports.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { UserValidationGuard } from 'src/bot/guards/user-validation.guard';
     SlashIntegrationModule,
     DomainCardsModule,
     AccountsModule,
+    ExportsModule,
   ],
   providers: [
     CardsHandler,

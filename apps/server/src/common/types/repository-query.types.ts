@@ -4,8 +4,8 @@
  */
 export interface RepositoryQuery {
   filter: any; // MongoDB filter object
-  skip: number;
-  limit: number;
+  skip?: number;
+  limit?: number;
   sort?: any; // MongoDB sort object
 }
 

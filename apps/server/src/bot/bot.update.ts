@@ -1,6 +1,6 @@
 import { Update, Ctx, Start, Help, Command, On, Action } from 'nestjs-telegraf';
 import { Context, Markup } from 'telegraf';
-import { Logger } from '@nestjs/common';
+import { Logger, UseInterceptors } from '@nestjs/common';
 import { BotContext } from './interfaces/bot-context.interface';
 import { MenuHandler } from './features/menu/handlers/menu.handler';
 import { SubscriptionHandler } from './features/subscription/handlers/subscription.handler';
@@ -11,8 +11,11 @@ import { SessionSteps } from './constants/session-steps.constant';
 import { CardsHandler } from './features/cards/handlers/cards.handler';
 import { TransactionsHandler } from './features/transactions/handlers/transactions.handler';
 import { Actions } from './constants/actions.constant';
+import { UserValidationInterceptor } from './interceptors/user-validation.interceptor';
+import { ValidateUser } from './decorators/validate-user.decorator';
 
 @Update()
+@UseInterceptors(UserValidationInterceptor)
 export class BotUpdate {
   private readonly logger = new Logger(BotUpdate.name);
 
@@ -24,6 +27,7 @@ export class BotUpdate {
     private readonly transactionsHandler: TransactionsHandler,
   ) {}
 
+  @ValidateUser({ answerCallback: true })
   @Start()
   async start(@Ctx() ctx: BotContext) {
     await ctx.sendChatAction('typing');
@@ -36,6 +40,7 @@ export class BotUpdate {
     return this.menuHandler.handleHelp(ctx);
   }
 
+  @ValidateUser({ answerCallback: true })
   @Command(Actions.menu.main)
   async menu(@Ctx() ctx: Context) {
     await ctx.sendChatAction('typing');
@@ -49,51 +54,32 @@ export class BotUpdate {
     await ctx.reply(Messages.feedbackStart, { parse_mode: 'Markdown' });
   }
 
+  @ValidateUser({ answerCallback: true })
   @Action(Actions.menu.main)
   async onMenuAction(@Ctx() ctx: BotContext) {
     await ctx.sendChatAction('typing');
     return this.menuHandler.handleMenuAction(ctx);
   }
 
+  @ValidateUser({ answerCallback: true })
   @Action(Actions.menu.cards)
   async onCardsAction(@Ctx() ctx: BotContext) {
     await ctx.answerCbQuery();
-    await ctx.sendChatAction('typing');
-    return this.cardHandler.handleListCards(ctx);
+    return this.cardHandler.handleCardMenu(ctx);
   }
 
-  @Action(Actions.cards.first)
-  async onCardsFirstPageAction(@Ctx() ctx: BotContext) {
+  @ValidateUser({ answerCallback: true })
+  @Action(Actions.cards.list)
+  async onCardsListAction(@Ctx() ctx: BotContext) {
     await ctx.answerCbQuery();
-    await ctx.sendChatAction('typing');
-    return this.cardHandler.handleListCards(ctx);
+    return this.cardHandler.exportCardsList(ctx);
   }
 
-  @Action(Actions.cards.next)
-  async onCardsNextAction(@Ctx() ctx: BotContext) {
-    const cursor = ctx.session?.data?.nextCursor as string | undefined;
-    
-    if (!cursor) {
-      await ctx.answerCbQuery('Unable to load next page');
-      return;
-    }
-    
-    await ctx.sendChatAction('typing');
-    return this.cardHandler.handleListCards(ctx, cursor);
-  }
-
-  @Action(/^card_(?!s_)(.+)$/)
+  @ValidateUser({ answerCallback: true })
+  @Action(Actions.cards.detail)
   async onCardDetailAction(@Ctx() ctx: BotContext) {
-    await ctx.answerCbQuery();
-    const callbackQuery = ctx.callbackQuery;
-    if (!callbackQuery || !('data' in callbackQuery)) return;
-    
-    const match = callbackQuery.data.match(/^card_(.+)$/);
-    if (!match) return;
-
-    await ctx.sendChatAction('typing');
-    const cardId = match[1];
-    return this.cardHandler.handleCardDetail(ctx, cardId);
+    ctx.session = { step: SessionSteps.AWAITING_CARD_ID, data: {} };
+    await ctx.reply(Messages.cardDetailStart, { parse_mode: 'Markdown' });
   }
 
   // @Action('card.action.lock')
@@ -123,47 +109,61 @@ export class BotUpdate {
   // }
 
   // ==================== Transaction Actions ====================
+  @ValidateUser({ answerCallback: true })
   @Action(Actions.menu.transaction)
   async onTransactionAction(@Ctx() ctx: BotContext) {
     return this.menuHandler.handleTransactionAction(ctx);
   }
+
+  @ValidateUser({ answerCallback: true })
   @Action(Actions.transaction.notification)
   async onTransactionNotificationAction(@Ctx() ctx: BotContext) {
     return this.menuHandler.handleTransactionNotificationAction(ctx);
   }
 
+  @ValidateUser({ answerCallback: true })
   @Action(Actions.transaction.subscribeNotification)
   async onSubscribeTransactionsAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleSubscribeTransactionsAction(ctx);
   }
+
+  @ValidateUser({ answerCallback: true })
   @Action(Actions.transaction.unsubscribeNotification)
   async onUnsubscribeTransactionsAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleUnsubscribeTransactionsAction(ctx);
   }
 
+  @ValidateUser({ answerCallback: true })
   @Action(Actions.transaction.list)
   async onTransactionListAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleTransactionListAction(ctx);
   }
+
+  @ValidateUser({ answerCallback: true })
   @Action(/^transaction.action.list.(?!s_)(.+)$/)
   async onTransactionExportAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleTransactionExportAction(ctx);
   }
+
+  @ValidateUser({ answerCallback: true })
   @Action(Actions.transaction.detail)
   async onTransactionDetailAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleTransactionDetailAction(ctx);
   }
 
+  @ValidateUser({ answerCallback: true })
   @Action('subscribe')
   async onSubscribeAction(@Ctx() ctx: BotContext) {
     return this.subscriptionHandler.handleSubscribeAction(ctx);
   }
 
+  @ValidateUser({ answerCallback: true })
   @Action('unsubscribe')
   async onUnsubscribeAction(@Ctx() ctx: BotContext) {
     return this.subscriptionHandler.handleUnsubscribeAction(ctx);
   }
 
+  @ValidateUser({ answerCallback: true })
   @Action(Actions.menu.about)
   async onAboutAction(@Ctx() ctx: BotContext) {
     return this.menuHandler.handleAboutAction(ctx);
@@ -181,6 +181,7 @@ export class BotUpdate {
 
 
   // TODO: Move to FeedbackHandler
+  @ValidateUser({ answerCallback: true })
   @On('text')
   async onText(@Ctx() ctx: BotContext) {
     if (!this.isValidTextMessage(ctx)) return;
@@ -209,6 +210,9 @@ export class BotUpdate {
       case SessionSteps.AWAITING_TRANSACTION_ID:
         await this.transactionsHandler.handleTransactionInput(ctx, text);
         break;
+      case SessionSteps.AWAITING_CARD_ID:
+        await this.cardHandler.handleCardDetail(ctx, text);
+        break;
     }
   }
 
@@ -233,6 +237,9 @@ export class BotUpdate {
         cancelMessage = Messages.replyCancelled;
         break;
       case SessionSteps.AWAITING_TRANSACTION_ID:
+        cancelMessage = Messages.replyCancelled;
+        break;
+      default:
         cancelMessage = Messages.replyCancelled;
         break;
     }

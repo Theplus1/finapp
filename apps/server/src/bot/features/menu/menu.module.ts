@@ -3,7 +3,6 @@ import { MenuHandler } from './handlers/menu.handler';
 import { UsersModule } from 'src/users/users.module';
 import { OnboardingModule } from '../onboarding/onboarding.module';
 import { AccountsModule } from 'src/domain/accounts/accounts.module';
-import { UserValidationGuard } from 'src/bot/guards/user-validation.guard';
 
 @Module({
   imports: [
@@ -13,7 +12,6 @@ import { UserValidationGuard } from 'src/bot/guards/user-validation.guard';
   ],
   providers: [
     MenuHandler,
-    UserValidationGuard,
   ],
   exports: [MenuHandler],
 })

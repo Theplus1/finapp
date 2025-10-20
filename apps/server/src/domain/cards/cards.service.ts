@@ -127,7 +127,7 @@ export class CardsService {
    */
   async findAllWithFilters(
     filters: CardFilters,
-    pagination: PaginationOptions,
+    pagination?: PaginationOptions,
   ): Promise<[CardWithRelations[], number]> {
     const mongoFilter = this.buildMongoFilter(filters);
 
@@ -135,12 +135,15 @@ export class CardsService {
     const sortField = filters.sortBy || 'createdAt';
     const sortDirection = filters.sortOrder === SortOrder.ASC ? 1 : -1;
 
-    const query: RepositoryQuery = {
+    let query: RepositoryQuery = {
       filter: mongoFilter,
-      skip: (pagination.page - 1) * pagination.limit,
-      limit: pagination.limit,
       sort: { [sortField]: sortDirection },
     };
+
+    if (pagination) {
+      query.skip = (pagination.page - 1) * pagination.limit;
+      query.limit = pagination.limit;
+    }
 
     const [cards, total] = await Promise.all([
       this.cardRepository.find(query),

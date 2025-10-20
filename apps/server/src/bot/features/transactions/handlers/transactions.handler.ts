@@ -1,13 +1,12 @@
-import { Injectable, Logger, UseGuards } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from 'src/users/users.service';
 import { SlashApiService } from 'src/integrations/slash/services/slash-api.service';
 import { TransactionsService } from 'src/domain/transactions/transactions.service';
+import { ExportsService } from 'src/domain/exports/exports.service';
 import { Messages } from 'src/bot/constants/messages.constant';
 import { Keyboards } from 'src/bot/constants/keyboards.constant';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
-import { ValidateUser } from 'src/bot/decorators/validate-user.decorator';
-import { UserValidationGuard } from 'src/bot/guards/user-validation.guard';
 import {
   TransactionDto,
   TransactionStatus,
@@ -15,13 +14,9 @@ import {
 import { SessionSteps } from 'src/bot/constants/session-steps.constant';
 import { formatCurrency } from 'src/shared/utils/formatCurrency.util';
 import { Actions } from 'src/bot/constants/actions.constant';
-import { toCsvFromObjects } from 'src/shared/utils/csv.util';
-import { buildTimestampedName } from 'src/shared/utils/naming.util';
-import { publicPath, writeTextFile } from 'src/shared/utils/file.util';
-import { TransactionFilters } from 'src/database/repositories/transaction.repository';
+import { ExportType } from 'src/database/schemas/export-job.schema';
 
 @Injectable()
-@UseGuards(UserValidationGuard)
 export class TransactionsHandler {
   private readonly logger = new Logger(TransactionsHandler.name);
 
@@ -29,6 +24,7 @@ export class TransactionsHandler {
     private readonly usersService: UsersService,
     private readonly slashApiService: SlashApiService,
     private readonly transactionsService: TransactionsService,
+    private readonly exportsService: ExportsService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -156,55 +152,30 @@ export class TransactionsHandler {
         break;
     }
 
-    await ctx.sendChatAction('typing');
-    const transactions = await this.transactionsService.find({
-      virtualAccountId: ctx.virtualAccount?.slashId,
-      startDate: dateFrom,
-      endDate: dateTo,
-    });
-    const fileName = buildTimestampedName(dateFrom, {
-      prefix: 'transactions',
-      ext: 'csv',
-    });
-
     try {
-      const csvData = toCsvFromObjects(transactions, [
-        { key: 'id', header: 'id' },
-        { key: 'date', header: 'date' },
-        { key: 'status', header: 'status' },
-        { key: 'type', header: 'type' },
-        { key: 'amountCents', header: 'amountCents' },
+      // Create async export job
+      const exportJob = await this.exportsService.createExport(
+        ctx.from!.id,
+        ctx.chat!.id,
         {
-          key: 'currency',
-          header: 'currency',
-          map: (t) => t.originalCurrency?.code ?? '', // map nested field
+          type: ExportType.TRANSACTIONS,
+          filters: {
+            virtualAccountId: ctx.virtualAccount?.slashId,
+            startDate: dateFrom.toISOString(),
+            endDate: dateTo.toISOString(),
+          },
         },
-        { key: 'merchantDescription', header: 'merchantDescription' },
-        { key: 'merchantName', header: 'merchantName' },
-        { key: 'merchantCategory', header: 'merchantCategory' },
-        {
-          key: 'country',
-          header: 'country',
-          map: (t) => t.merchantData?.location?.country ?? '',
-        },
-        {
-          key: 'city',
-          header: 'city',
-          map: (t) => t.merchantData?.location?.city ?? '',
-        },
-      ]);
-
-      const outDir = publicPath('transaction', 'data');
-      await writeTextFile(outDir, fileName, csvData);
-      await ctx.reply(
-        Messages.exportTransactionsSuccess({
-          count: transactions.length,
-          fileName,
-          uri: `${this.configService.get<string>('resourceBaseUrl', '')}/transaction/data/${fileName}`,
-        }),
       );
+
+      await ctx.reply(
+        '⏳ *Generating your export...*\n\n' +
+          'This may take a moment. You\'ll receive a download link when it\'s ready.',
+        { parse_mode: 'Markdown' },
+      );
+
+      this.logger.log(`Export job ${exportJob.id} created for user ${ctx.from!.id}`);
     } catch (err) {
-      this.logger.error('Failed to export transactions CSV', err as any);
+      this.logger.error('Failed to create export job', err as any);
       await ctx.reply(Messages.errorFetchingTransactions);
     }
   }

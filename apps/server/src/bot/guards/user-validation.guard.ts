@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { AccountsService } from '../../domain/accounts/accounts.service';
 import { BotContext } from '../interfaces/bot-context.interface';
 import { Messages } from '../constants/messages.constant';
+import { Logger } from '@nestjs/common';
 
 export const VALIDATE_USER_KEY = 'validateUser';
 
@@ -17,6 +18,8 @@ export interface ValidateUserOptions {
  */
 @Injectable()
 export class UserValidationGuard implements CanActivate {
+    private readonly logger = new Logger(UserValidationGuard.name);
+  
   constructor(
     private readonly reflector: Reflector,
     private readonly accountsService: AccountsService,
@@ -56,17 +59,7 @@ export class UserValidationGuard implements CanActivate {
       await ctx.reply(Messages.accessDenied());
       return false;
     }
-
-    // Validate linked account if required
-    if (options.requireAccount && !virtualAccount.linkedTelegramId) {
-      if (options.answerCallback && ctx.callbackQuery) {
-        await ctx.answerCbQuery('Account not linked');
-      }
-      await ctx.reply(Messages.accessDenied());
-      return false;
-    }
-
-    // Attach user data to context
+    this.logger.log(`User ${telegramUser.id} validated`);
     ctx.virtualAccount = virtualAccount;
 
     return true;

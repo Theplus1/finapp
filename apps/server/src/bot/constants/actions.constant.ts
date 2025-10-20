@@ -27,6 +27,8 @@ export const Actions = {
   cards: {
     first: 'cards.action.first',
     next: 'cards.action.next',
+    list: 'cards.action.list',
+    detail: 'cards.action.detail',
   },
   feedback: {
     start: 'feedback.action.start',

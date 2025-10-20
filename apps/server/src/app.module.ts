@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TelegrafModule } from 'nestjs-telegraf';
+import { BullModule } from '@nestjs/bull';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { BotModule } from './bot/bot.module';
@@ -15,6 +17,8 @@ import { DatabaseModule } from './database/database.module';
 import { CardsModule } from './domain/cards/cards.module';
 import { TransactionsModule } from './domain/transactions/transactions.module';
 import { AccountsModule } from './domain/accounts/accounts.module';
+import { ExportsModule } from './domain/exports/exports.module';
+import { UserValidationMiddleware } from './bot/middleware/user-validation.middleware';
 
 @Module({
   imports: [
@@ -35,6 +39,25 @@ import { AccountsModule } from './domain/accounts/accounts.module';
 
     // Scheduling
     ScheduleModule.forRoot(),
+
+    // Bull Queue (Redis)
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        redis: {
+          host: configService.get<string>('redis.host'),
+          port: configService.get<number>('redis.port'),
+          password: configService.get<string>('redis.password'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
+
+    // Rate Limiting
+    ThrottlerModule.forRoot([{
+      ttl: 60000, // 1 minute
+      limit: 5, // 5 requests per minute
+    }]),
 
     // Telegraf Bot
     TelegrafModule.forRootAsync({
@@ -77,6 +100,7 @@ import { AccountsModule } from './domain/accounts/accounts.module';
     CardsModule,
     TransactionsModule,
     AccountsModule,
+    ExportsModule,  // Export functionality
     
     // Integration Modules
     SlashIntegrationModule,  // Slash API integration
