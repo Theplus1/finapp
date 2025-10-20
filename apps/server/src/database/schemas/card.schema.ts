@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { CardStatus } from 'src/integrations/slash/types';
 
 export type CardDocument = Card & Document;
 
@@ -33,7 +34,7 @@ export class Card {
   expiryYear?: string;
 
   @Prop({ required: true, index: true })
-  status: string; // ACTIVE, PAUSED, INACTIVE, CLOSED
+  status: CardStatus; // ACTIVE, PAUSED, INACTIVE, CLOSED
 
   @Prop({ default: false })
   isPhysical: boolean;

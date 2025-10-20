@@ -8,7 +8,7 @@ on:
       - 'apps/server/**'
       - 'packages/**'
       - '.github/workflows/deploy-server.yml'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   deploy-server:
@@ -27,7 +27,7 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -58,14 +58,28 @@ jobs:
           RESOURCE_BASE_URL=${{ vars.RESOURCE_BASE_URL }}
           EOF
 
+      # 👇 Ensure fresh build (clean dist and disable cache)
+      - name: Clean old dist
+        run: rm -rf apps/server/dist
+
       - name: Build server
-        run: npm run build:server
+        run: |
+          # Disable Turbo cache to ensure full rebuild
+          TURBO_FORCE=true npm run build:server
+
+      # 👇 Verify build actually produced files
+      - name: Debug build output
+        run: |
+          echo "Listing apps/server/dist folder:"
+          ls -R apps/server/dist || echo "❌ dist folder missing"
 
       - name: Sync server files to VPS
+        if: success()
         run: |
           rsync -avz --delete \
             --exclude 'node_modules' \
             --exclude 'src' \
+            --exclude 'public' \
             --exclude 'test' \
             --exclude '.turbo' \
             --exclude 'coverage' \
@@ -84,16 +98,16 @@ jobs:
           SERVER_APP_DIR: ${{ vars.SERVER_APP_DIR }}
         run: |
           ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
-            set -e
+            set -ex
             cd ${{ vars.SERVER_APP_DIR }}
-            
+
             echo "📦 Installing dependencies..."
             npm install --omit=dev --legacy-peer-deps
-            
+
             echo "🔄 Restarting server..."
-            pm2 restart server || pm2 start dist/src/main.js --name server --cwd ${{ vars.SERVER_APP_DIR }}
+            pm2 reload server --update-env || pm2 start dist/main.js --name server --cwd ${{ vars.SERVER_APP_DIR }}
             pm2 save
-            
+
             echo "✅ Deployment complete"
             pm2 status
           ENDSSH
