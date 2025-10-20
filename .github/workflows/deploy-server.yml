@@ -26,7 +26,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --workspace=server
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
