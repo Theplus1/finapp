@@ -5,7 +5,7 @@ export type AdminUserDocument = AdminUser & Document;
 
 @Schema({ timestamps: true, collection: 'admin_users' })
 export class AdminUser {
-  @Prop({ required: true, unique: true, index: true })
+  @Prop({ required: true })
   username: string;
 
   @Prop({ required: true })
