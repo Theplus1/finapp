@@ -31,6 +31,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/schedule": "^6.0.1",
     "@nestjs/swagger": "^8.1.1",
+    "@nestjs/throttler": "^6.4.0",
     "@scalar/nestjs-api-reference": "^1.0.4",
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
