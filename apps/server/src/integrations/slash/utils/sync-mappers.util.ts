@@ -44,7 +44,6 @@ export function mapTransactionDtoToEntity(
   syncSource: SyncSource,
 ): Partial<Transaction> {
   const entity = plainToInstance(TransactionEntity, transactionDto, {
-    excludeExtraneousValues: true,
     enableImplicitConversion: true,
   });
   
