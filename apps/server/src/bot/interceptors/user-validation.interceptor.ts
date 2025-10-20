@@ -56,7 +56,7 @@ export class UserValidationInterceptor implements NestInterceptor {
       if (options.answerCallback && ctx.callbackQuery) {
         await ctx.answerCbQuery('Please use /start first');
       }
-      await ctx.reply(Messages.userNotFound);
+      await ctx.reply(Messages.accessDenied(`User with Telegram ID ${telegramUser.id} not found.`));
       throw new Error('User not found');
     }
 
