@@ -80,38 +80,30 @@ jobs:
             docker stop finapp-server || true
             docker rm finapp-server || true
 
-            # Create env file with proper escaping
-            cat > /tmp/finapp.env << 'ENVEOF'
-BOT_TOKEN=${{ secrets.BOT_TOKEN }}
-MODE=${{ vars.MODE }}
-WEBHOOK_URL=${{ vars.WEBHOOK_URL }}
-PORT=${{ vars.PORT }}
-MONGO_URI=${{ secrets.MONGO_URI }}
-NOTIFICATION_CRON=${{ vars.NOTIFICATION_CRON }}
-SLASH_API_KEY=${{ secrets.SLASH_API_KEY }}
-SLASH_BASE_URL=${{ vars.SLASH_BASE_URL }}
-SLASH_TIMEOUT=${{ vars.SLASH_TIMEOUT }}
-SLASH_WEBHOOK_SECRET=${{ secrets.SLASH_WEBHOOK_SECRET }}
-SUPER_ADMIN_TOKEN=${{ secrets.SUPER_ADMIN_TOKEN }}
-REDIS_HOST=${{ vars.REDIS_HOST }}
-REDIS_PORT=${{ vars.REDIS_PORT }}
-EXPORT_SECRET=${{ secrets.EXPORT_SECRET }}
-RESOURCE_BASE_URL=${{ vars.RESOURCE_BASE_URL }}
-NODE_ENV=production
-ENVEOF
-
-            # Run new container
+            # Run new container with environment variables
             docker run -d \
               --name finapp-server \
               --restart unless-stopped \
               -p 3000:3000 \
               -v ${{ vars.SERVER_APP_DIR }}/logs:/app/logs \
               -v ${{ vars.SERVER_APP_DIR }}/public/exports:/app/public/exports \
-              --env-file /tmp/finapp.env \
+              -e "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" \
+              -e "MODE=${{ vars.MODE }}" \
+              -e "WEBHOOK_URL=${{ vars.WEBHOOK_URL }}" \
+              -e "PORT=${{ vars.PORT }}" \
+              -e "MONGO_URI=${{ secrets.MONGO_URI }}" \
+              -e "NOTIFICATION_CRON=${{ vars.NOTIFICATION_CRON }}" \
+              -e "SLASH_API_KEY=${{ secrets.SLASH_API_KEY }}" \
+              -e "SLASH_BASE_URL=${{ vars.SLASH_BASE_URL }}" \
+              -e "SLASH_TIMEOUT=${{ vars.SLASH_TIMEOUT }}" \
+              -e "SLASH_WEBHOOK_SECRET=${{ secrets.SLASH_WEBHOOK_SECRET }}" \
+              -e "SUPER_ADMIN_TOKEN=${{ secrets.SUPER_ADMIN_TOKEN }}" \
+              -e "REDIS_HOST=${{ vars.REDIS_HOST }}" \
+              -e "REDIS_PORT=${{ vars.REDIS_PORT }}" \
+              -e "EXPORT_SECRET=${{ secrets.EXPORT_SECRET }}" \
+              -e "RESOURCE_BASE_URL=${{ vars.RESOURCE_BASE_URL }}" \
+              -e "NODE_ENV=production" \
               ${IMAGE_NAME}
-            
-            # Clean up env file
-            rm -f /tmp/finapp.env
 
             # Clean up old images (keep last 3)
             docker image prune -af --filter "until=72h"
