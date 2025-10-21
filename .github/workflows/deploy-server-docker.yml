@@ -33,7 +33,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/finapp-server
+          images: ghcr.io/${{ github.repository_owner | lower }}/finapp-server
           tags: |
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
@@ -61,7 +61,7 @@ jobs:
 
       - name: Deploy to VPS
         env:
-          IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/finapp-server:latest
+          IMAGE_NAME: ghcr.io/theplus1/finapp-server:latest
         run: |
           ssh ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} << ENDSSH
             set -e
