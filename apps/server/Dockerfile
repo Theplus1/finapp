@@ -35,8 +35,15 @@ COPY apps/server/package*.json ./apps/server/
 # Copy workspace packages (needed for dependencies)
 COPY packages/ ./packages/
 
-# Install only production dependencies
+# Install root dependencies first
 RUN npm ci --only=production --legacy-peer-deps
+
+# Install server-specific dependencies
+WORKDIR /app/apps/server
+RUN npm ci --only=production --legacy-peer-deps
+
+# Go back to app root
+WORKDIR /app
 
 # Copy built application from builder
 COPY --from=builder /app/apps/server/dist ./dist
