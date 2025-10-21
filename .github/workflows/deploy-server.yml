@@ -28,9 +28,52 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Create .env file for server
+      - name: Build server
+        run: npm run build:server
+
+      - name: Prepare deployment package
         run: |
-          cat > apps/server/.env << EOF
+          cd apps/server
+          
+          # Install production dependencies
+          rm -rf node_modules
+          npm ci --omit=dev --legacy-peer-deps
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy built artifacts to VPS
+        run: |
+          rsync -avz --delete \
+            --include 'dist/***' \
+            --include 'node_modules/***' \
+            --include 'package*.json' \
+            --include 'public/***' \
+            --exclude '*' \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            apps/server/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.SERVER_APP_DIR }}/
+
+      - name: Create .env and restart on VPS
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          SERVER_APP_DIR: ${{ vars.SERVER_APP_DIR }}
+        run: |
+          ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
+            set -e
+            cd ${{ vars.SERVER_APP_DIR }}
+
+            # Create .env if it doesn't exist
+            if [ ! -f .env ]; then
+              echo "📝 Creating .env file..."
+              cat > .env << 'EOF'
           BOT_TOKEN=${{ secrets.BOT_TOKEN }}
           MODE=${{ vars.MODE }}
           WEBHOOK_URL=${{ vars.WEBHOOK_URL }}
@@ -47,54 +90,10 @@ jobs:
           EXPORT_SECRET=${{ secrets.EXPORT_SECRET }}
           RESOURCE_BASE_URL=${{ vars.RESOURCE_BASE_URL }}
           EOF
-
-      - name: Build server
-        run: |
-          npm run build:server
-
-      - name: Install production dependencies for server
-        run: |
-          cd apps/server
-          npm ci --omit=dev --legacy-peer-deps
-
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
-
-      - name: Add VPS to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Sync server files to VPS
-        run: |
-          rsync -avz --delete \
-            --exclude 'src' \
-            --exclude 'test' \
-            --exclude '.turbo' \
-            --exclude 'coverage' \
-            --exclude 'tsconfig*.json' \
-            --exclude 'nest-cli.json' \
-            --exclude 'jest.config.js' \
-            --exclude '*.spec.ts' \
-            --exclude '.eslintrc.js' \
-            -e "ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=10" \
-            apps/server/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.SERVER_APP_DIR }}/
-
-      # 9️⃣ Restart PM2 app
-      - name: Restart server on VPS
-        env:
-          VPS_HOST: ${{ vars.VPS_HOST }}
-          VPS_USER: ${{ vars.VPS_USER }}
-          SERVER_APP_DIR: ${{ vars.SERVER_APP_DIR }}
-        run: |
-          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=10 $VPS_USER@$VPS_HOST << 'ENDSSH'
-            set -e
-            cd ${{ vars.SERVER_APP_DIR }}
+            fi
 
             echo "🔄 Restarting server..."
-            pm2 restart server || pm2 start dist/main.js --name server --cwd ${{ vars.SERVER_APP_DIR }}
+            pm2 restart server || pm2 start dist/main.js --name server
             pm2 save
 
             echo "✅ Deployment complete"
