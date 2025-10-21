@@ -49,9 +49,10 @@ jobs:
       - name: Deploy built artifacts to VPS
         run: |
           rsync -avz --delete \
+            --include 'package.json' \
+            --include 'package-lock.json' \
             --include 'dist/***' \
             --include 'node_modules/***' \
-            --include 'package*.json' \
             --include 'public/***' \
             --exclude '*' \
             -e "ssh -o StrictHostKeyChecking=no" \
