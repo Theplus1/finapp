@@ -70,6 +70,9 @@ jobs:
             set -e
             cd ${{ vars.SERVER_APP_DIR }}
 
+            # Ensure directories exist for volume mounts (Docker will create them as root otherwise)
+            mkdir -p logs public/exports
+
             # Log in to GitHub Container Registry
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
