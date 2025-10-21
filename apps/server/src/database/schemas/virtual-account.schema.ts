@@ -49,7 +49,7 @@ export class VirtualAccount {
   commissionRule: CommissionRuleDto;
 
   // User Linking (Simple approach)
-  @Prop({ index: true })
+  @Prop()
   linkedTelegramId?: number; // Telegram ID of linked user
 
   @Prop()
