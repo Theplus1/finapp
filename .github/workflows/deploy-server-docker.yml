@@ -84,7 +84,7 @@ jobs:
             docker run -d \
               --name finapp-server \
               --restart unless-stopped \
-              -p 3000:3000 \
+              --network host \
               -v ${{ vars.SERVER_APP_DIR }}/logs:/app/logs \
               -v ${{ vars.SERVER_APP_DIR }}/public/exports:/app/public/exports \
               -e "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" \
