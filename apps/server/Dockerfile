@@ -24,26 +24,19 @@ RUN npm run build:server
 # Production stage
 FROM node:20-alpine
 
-WORKDIR /app
-
-# Copy root package files
-COPY package*.json ./
+WORKDIR /app/apps/server
 
 # Copy server package files
-COPY apps/server/package*.json ./apps/server/
+COPY apps/server/package*.json ./
 
-# Copy workspace packages (needed for dependencies)
-COPY packages/ ./packages/
+# Copy workspace packages (needed for workspace dependencies)
+COPY packages/ ../../packages/
 
-# Install root dependencies first
+# Copy root package files for workspace resolution
+COPY package*.json ../../
+
+# Install production dependencies (this installs in /app/apps/server/node_modules)
 RUN npm ci --only=production --legacy-peer-deps
-
-# Install server-specific dependencies
-WORKDIR /app/apps/server
-RUN npm ci --only=production --legacy-peer-deps
-
-# Go back to app root
-WORKDIR /app
 
 # Copy built application from builder
 COPY --from=builder /app/apps/server/dist ./dist
