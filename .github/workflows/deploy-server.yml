@@ -70,7 +70,6 @@ jobs:
       - name: Sync server files to VPS
         run: |
           rsync -avz --delete \
-            --exclude '.env' \
             --exclude 'src' \
             --exclude 'test' \
             --exclude '.turbo' \
