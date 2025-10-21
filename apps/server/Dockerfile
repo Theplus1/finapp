@@ -2,6 +2,7 @@
 FROM node:20-alpine AS builder
 
 WORKDIR /app
+# Force rebuild with fs-extra dependency
 
 # Copy root package files (monorepo)
 COPY package*.json ./
