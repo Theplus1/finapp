@@ -1,13 +1,14 @@
 name: Deploy Server to VPS (Docker)
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'apps/server/**'
-      - 'packages/**'
-      - '.github/workflows/deploy-server-docker.yml'
+  # Temporarily disabled - using PM2 deployment instead
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'apps/server/**'
+  #     - 'packages/**'
+  #     - '.github/workflows/deploy-server-docker.yml'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
@@ -85,6 +86,8 @@ jobs:
               --name finapp-server \
               --restart unless-stopped \
               --network host \
+              --dns 8.8.8.8 \
+              --dns 1.1.1.1 \
               -v ${{ vars.SERVER_APP_DIR }}/logs:/app/logs \
               -v ${{ vars.SERVER_APP_DIR }}/public/exports:/app/public/exports \
               -e "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" \
