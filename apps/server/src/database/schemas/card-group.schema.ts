@@ -24,7 +24,7 @@ export class CardGroup {
   updatedAt: Date;
 
   // Sync metadata
-  @Prop({ default: Date.now, index: true })
+  @Prop({ default: Date.now })
   lastSyncedAt: Date;
 
   @Prop({ default: 'webhook' })

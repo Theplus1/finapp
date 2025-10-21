@@ -33,10 +33,7 @@ jobs:
 
       - name: Prepare deployment package
         run: |
-          cd apps/server
-          
-          # Install production dependencies
-          rm -rf node_modules
+          # Install production dependencies for the entire monorepo
           npm ci --omit=dev --legacy-peer-deps
 
       - name: Setup SSH
@@ -92,6 +89,9 @@ jobs:
           EOF
             fi
 
+            # Install dependencies
+            npm ci --omit=dev --legacy-peer-deps
+            
             echo "🔄 Restarting server..."
             pm2 restart server || pm2 start dist/main.js --name server
             pm2 save
