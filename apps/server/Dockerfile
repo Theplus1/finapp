@@ -40,11 +40,8 @@ RUN npm ci --only=production --legacy-peer-deps
 # Copy built application from builder
 COPY --from=builder /app/apps/server/dist ./dist
 
-# Copy public folder if exists
-COPY --from=builder /app/apps/server/public ./public
-
-# Create logs directory
-RUN mkdir -p logs
+# Create necessary directories (app will populate them at runtime)
+RUN mkdir -p logs public/exports
 
 # Expose port
 EXPOSE 3000
