@@ -3,31 +3,45 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy root package files (monorepo)
 COPY package*.json ./
+COPY turbo.json ./
 
-# Install dependencies
+# Copy workspace package files
+COPY apps/server/package*.json ./apps/server/
+COPY packages/ ./packages/
+
+# Install all dependencies
 RUN npm ci --legacy-peer-deps
 
-# Copy source code
-COPY . .
+# Copy server source code
+COPY apps/server/ ./apps/server/
 
 # Build the application
-RUN npm run build
+RUN npm run build:server
 
 # Production stage
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copy root package files
 COPY package*.json ./
+
+# Copy server package files
+COPY apps/server/package*.json ./apps/server/
+
+# Copy workspace packages (needed for dependencies)
+COPY packages/ ./packages/
 
 # Install only production dependencies
 RUN npm ci --only=production --legacy-peer-deps
 
 # Copy built application from builder
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/apps/server/dist ./dist
+
+# Copy public folder if exists
+COPY --from=builder /app/apps/server/public ./public
 
 # Create logs directory
 RUN mkdir -p logs

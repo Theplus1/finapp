@@ -1,14 +1,15 @@
-name: Deploy Server to VPS
+name: Deploy Server to VPS (DEPRECATED - Use deploy-server-docker.yml)
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'apps/server/**'
-      - 'packages/**'
-      - '.github/workflows/deploy-server.yml'
-  workflow_dispatch: # Allow manual trigger
+  # Disabled - using Docker deployment instead
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'apps/server/**'
+  #     - 'packages/**'
+  #     - '.github/workflows/deploy-server.yml'
+  workflow_dispatch: # Allow manual trigger only
 
 jobs:
   deploy-server:
@@ -35,6 +36,9 @@ jobs:
         run: |
           # Install production dependencies for the entire monorepo
           npm ci --omit=dev --legacy-peer-deps
+          
+          # Copy root package-lock.json to server directory for VPS deployment
+          cp package-lock.json apps/server/
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
