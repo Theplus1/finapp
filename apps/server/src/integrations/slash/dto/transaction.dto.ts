@@ -1,3 +1,4 @@
+import { FeeInfoDto } from './fee-info.dto';
 import type { MerchantDTO } from './merchant.dto';
 import { OriginalCurrencyDto } from './original-currency.dto';
 
@@ -29,6 +30,7 @@ export interface TransactionDto {
   merchantDescription: string;
   merchantData: MerchantDTO;
   status: TransactionStatus;
+  detailedStatus: TransactionDetailedStatus;
   type: TransactionType;
   description?: string;
   merchantName?: string;
@@ -36,6 +38,8 @@ export interface TransactionDto {
   createdAt: string;
   settledAt?: string;
   metadata?: Record<string, any>;
+  authorizedAt?: string;
+  feeInfo?: FeeInfoDto;
 }
 
 export interface ListTransactionsQuery {

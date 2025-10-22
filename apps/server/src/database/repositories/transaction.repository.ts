@@ -7,6 +7,7 @@ export interface TransactionFilters {
   virtualAccountId?: string;
   cardId?: string;
   status?: string;
+  detailedStatus?: string;
   type?: string;
   startDate?: Date;
   endDate?: Date;
@@ -26,32 +27,12 @@ export class TransactionRepository {
     private transactionModel: Model<TransactionDocument>,
   ) {}
 
-  async create(transactionData: Partial<Transaction>): Promise<TransactionDocument> {
-    const transaction = new this.transactionModel(transactionData);
-    return transaction.save();
-  }
-
-  async upsert(
-    slashId: string,
-    transactionData: Partial<Transaction>,
-  ): Promise<TransactionDocument> {
-    return this.transactionModel.findOneAndUpdate(
-      { slashId },
-      {
-        ...transactionData,
-        lastSyncedAt: new Date(),
-      },
-      { upsert: true, new: true },
-    ).exec();
-  }
-
-  async findBySlashId(slashId: string): Promise<TransactionDocument | null> {
-    return this.transactionModel
-      .findOne({ slashId, isDeleted: false })
-      .exec();
-  }
-
-  async find(filters: TransactionFilters): Promise<TransactionDocument[]> {
+  /**
+   * Builds a MongoDB filter query from TransactionFilters
+   * @param filters - The transaction filters to apply
+   * @returns FilterQuery object for MongoDB
+   */
+  private buildFilterQuery(filters: Omit<TransactionFilters, 'limit' | 'skip'>): FilterQuery<TransactionDocument> {
     const query: FilterQuery<TransactionDocument> = {
       isDeleted: false,
     };
@@ -62,6 +43,10 @@ export class TransactionRepository {
 
     if (filters.cardId) {
       query.cardId = filters.cardId;
+    }
+
+    if (filters.detailedStatus) {
+      query.detailedStatus = filters.detailedStatus;
     }
 
     if (filters.status) {
@@ -96,6 +81,37 @@ export class TransactionRepository {
       query['merchantData.category'] = filters.merchantCategory;
     }
 
+    return query;
+  }
+
+  async create(transactionData: Partial<Transaction>): Promise<TransactionDocument> {
+    const transaction = new this.transactionModel(transactionData);
+    return transaction.save();
+  }
+
+  async upsert(
+    slashId: string,
+    transactionData: Partial<Transaction>,
+  ): Promise<TransactionDocument> {
+    return this.transactionModel.findOneAndUpdate(
+      { slashId },
+      {
+        ...transactionData,
+        lastSyncedAt: new Date(),
+      },
+      { upsert: true, new: true },
+    ).exec();
+  }
+
+  async findBySlashId(slashId: string): Promise<TransactionDocument | null> {
+    return this.transactionModel
+      .findOne({ slashId, isDeleted: false })
+      .exec();
+  }
+
+  async find(filters: TransactionFilters): Promise<TransactionDocument[]> {
+    const query = this.buildFilterQuery(filters);
+
     let queryBuilder = this.transactionModel.find(query).sort({ date: -1 });
 
     if (filters.skip) {
@@ -110,36 +126,7 @@ export class TransactionRepository {
   }
 
   async count(filters: Omit<TransactionFilters, 'limit' | 'skip'>): Promise<number> {
-    const query: FilterQuery<TransactionDocument> = {
-      isDeleted: false,
-    };
-
-    if (filters.virtualAccountId) {
-      query.virtualAccountId = filters.virtualAccountId;
-    }
-
-    if (filters.cardId) {
-      query.cardId = filters.cardId;
-    }
-
-    if (filters.status) {
-      query.status = filters.status;
-    }
-
-    if (filters.type) {
-      query.type = filters.type;
-    }
-
-    if (filters.startDate || filters.endDate) {
-      query.date = {};
-      if (filters.startDate) {
-        query.date.$gte = filters.startDate;
-      }
-      if (filters.endDate) {
-        query.date.$lte = filters.endDate;
-      }
-    }
-
+    const query = this.buildFilterQuery(filters);
     return this.transactionModel.countDocuments(query).exec();
   }
 

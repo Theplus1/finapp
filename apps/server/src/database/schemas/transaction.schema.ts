@@ -1,5 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { MerchantDTO } from 'src/integrations/slash/dto/merchant.dto';
+import { TransactionDetailedStatus, TransactionStatus } from 'src/integrations/slash/types';
+import { FeeInfoDto } from 'src/integrations/slash/dto/fee-info.dto';
 
 export type TransactionDocument = Transaction & Document;
 
@@ -35,27 +38,29 @@ export class Transaction {
   @Prop()
   note?: string;
 
-  @Prop({ required: true, index: true })
-  status: string; // COMPLETED, PENDING, FAILED, DECLINED
+  @Prop({ required: true })
+  status: TransactionStatus;
 
-  @Prop({ required: true, index: true })
-  type: string; // DEBIT, CREDIT, etc.
+  @Prop({ required: true })
+  detailedStatus: TransactionDetailedStatus;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
+  type: string;
+
+  @Prop({ required: true })
   date: Date;
 
   @Prop({ type: Object })
-  merchantData?: {
-    name?: string;
-    category?: string;
-    location?: {
-      country?: string;
-      city?: string;
-    };
-  };
+  merchantData?: MerchantDTO;
 
   @Prop({ type: Object })
   metadata?: any;
+
+  @Prop()
+  authorizedAt?: Date;
+
+  @Prop({ type: Object })
+  feeInfo?: FeeInfoDto;
 
   @Prop()
   createdAt: Date;

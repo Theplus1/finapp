@@ -16,6 +16,9 @@ export class MerchantLocationDTO {
 
 export class MerchantDTO {
   @Expose()
+  name: string;
+
+  @Expose()
   categoryCode: string;
 
   @Expose()

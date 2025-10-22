@@ -8,6 +8,7 @@ import { Messages } from 'src/bot/constants/messages.constant';
 import { Keyboards } from 'src/bot/constants/keyboards.constant';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
 import {
+  TransactionDetailedStatus,
   TransactionDto,
   TransactionStatus,
 } from 'src/integrations/slash/dto/transaction.dto';
@@ -131,7 +132,7 @@ export class TransactionsHandler {
     const callbackQuery = ctx.callbackQuery;
     if (!callbackQuery || !('data' in callbackQuery)) return;
 
-    const now = new Date();
+    const now = new Date().toUTCString();
     const dateFrom = new Date(now);
     const dateTo = new Date(now);
     dateFrom.setHours(0, 0, 0, 0);
@@ -161,6 +162,7 @@ export class TransactionsHandler {
           type: ExportType.TRANSACTIONS,
           filters: {
             virtualAccountId: ctx.virtualAccount?.slashId,
+            detailedStatus: TransactionDetailedStatus.SETTLED,
             startDate: dateFrom.toISOString(),
             endDate: dateTo.toISOString(),
           },

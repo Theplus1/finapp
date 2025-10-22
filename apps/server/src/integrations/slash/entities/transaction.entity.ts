@@ -6,6 +6,7 @@ import { Expose, Transform, Type } from 'class-transformer';
 import { MerchantDTO } from '../dto/merchant.dto';
 import { SYNC_CONSTANTS, SyncSource } from '../constants/sync.constants';
 import { OriginalCurrencyDto } from '../dto/original-currency.dto';
+import { TransactionDetailedStatus, TransactionStatus } from '../dto/transaction.dto';
 
 export class TransactionEntity {
   @Expose({ name: 'id' })
@@ -38,7 +39,10 @@ export class TransactionEntity {
   note: string;
 
   @Expose()
-  status: string;
+  status: TransactionStatus;
+
+  @Expose()
+  detailedStatus: TransactionDetailedStatus;
 
   @Expose()
   type: string;
@@ -54,6 +58,11 @@ export class TransactionEntity {
 
   @Expose()
   metadata?: Record<string, any>;
+
+  @Expose()
+  @Type(() => Date)
+  @Transform(({ value }) => new Date(value), { toClassOnly: true })
+  authorizedAt?: Date;
 
   @Expose()
   @Type(() => Date)

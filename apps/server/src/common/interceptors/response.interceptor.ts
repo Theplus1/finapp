@@ -15,6 +15,12 @@ import { ApiResponseDto } from '../dto/api-response.dto';
 @Injectable()
 export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponseDto<T>> {
   intercept(context: ExecutionContext, next: CallHandler): Observable<ApiResponseDto<T>> {
+    // Skip transformation for Telegraf bot handlers
+    const contextType = context.getType();
+    if (contextType !== 'http') {
+      return next.handle();
+    }
+
     return next.handle().pipe(
       map((data) => {
         // Check if response has pagination metadata

@@ -1,6 +1,7 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
+import { format } from 'date-fns';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { InjectBot } from 'nestjs-telegraf';
@@ -35,7 +36,7 @@ export class ExportsProcessor {
     private readonly cardsService: CardsService,
     private readonly exportsService: ExportsService,
     @InjectBot() private readonly bot: Telegraf<BotContext>,
-  ) {}
+  ) { }
 
   @Process('generate')
   async handleExportGeneration(job: Job<ExportJobData>) {
@@ -92,10 +93,10 @@ export class ExportsProcessor {
         await this.bot.telegram.sendMessage(
           chatId,
           `✅ *Export Ready!*\n\n` +
-            `📊 Records: ${result.recordCount}\n` +
-            `📁 File: \`${result.fileName}\`\n` +
-            `💾 Size: ${this.formatFileSize(stats.size)}\n` +
-            `⏰ Expires: 24 hours`,
+          `📊 Records: ${result.recordCount}\n` +
+          `📁 File: \`${result.fileName}\`\n` +
+          `💾 Size: ${this.formatFileSize(stats.size)}\n` +
+          `⏰ Expires: 24 hours`,
           {
             parse_mode: 'Markdown',
             reply_markup: {
@@ -143,36 +144,63 @@ export class ExportsProcessor {
     recordCount: number;
   }> {
     // Fetch transactions using existing service
-    const transactions = await this.transactionsService.find({
+    const transactions = await this.transactionsService.findAllWithFilters({
       virtualAccountId: filters.virtualAccountId,
-      startDate: filters.startDate ? new Date(filters.startDate) : undefined,
-      endDate: filters.endDate ? new Date(filters.endDate) : undefined,
+      detailedStatus: filters.detailedStatus,
+      startDate: filters.startDate,
+      endDate: filters.endDate,
     });
 
     // Generate CSV using existing utility
     const csvData = toCsvFromObjects(transactions, [
-      { key: 'id', header: 'id' },
-      { key: 'date', header: 'date' },
-      { key: 'status', header: 'status' },
-      { key: 'type', header: 'type' },
-      { key: 'amountCents', header: 'amountCents' },
+      { key: 'slashId', header: 'ID' },
       {
-        key: 'currency',
-        header: 'currency',
-        map: (t) => t.originalCurrency?.code ?? '',
-      },
-      { key: 'merchantDescription', header: 'merchantDescription' },
-      { key: 'merchantName', header: 'merchantName' },
-      { key: 'merchantCategory', header: 'merchantCategory' },
-      {
-        key: 'country',
-        header: 'country',
-        map: (t) => t.merchantData?.location?.country ?? '',
+        key: 'date',
+        header: 'Date',
+        map: (t) => this.formatDate(t.date)
       },
       {
-        key: 'city',
-        header: 'city',
-        map: (t) => t.merchantData?.location?.city ?? '',
+        key: 'authorizedAt',
+        header: 'Authorized',
+        map: (t) => this.formatDate(t.authorizedAt),
+      },
+      {
+        key: 'merchant',
+        header: 'Merchant',
+        map: (t) => t.merchantData?.description
+      },
+      {
+        key: 'amount',
+        header: 'Amount',
+        map: (t) => this.formatActualAmount(t.amountCents, '$'),
+      },
+      {
+        key: 'card',
+        header: 'Card',
+        map: (t) => t.card?.name,
+      },
+      {
+        key: 'detailedStatus',
+        header: 'Status',
+        map: (t) => t.detailedStatus.toUpperCase()
+      },
+      {
+        key: 'originalAmount', header: 'Original',
+        map: (t) => this.formatAmount(t.originalCurrency?.amountCents!)
+      },
+      { key: 'originalCurrency', header: 'Currency', map: (t) => t.originalCurrency?.code },
+      {
+        key: 'fee',
+        header: 'Fee',
+        map: (t) => t.feeInfo ? this.formatAmount(t.feeInfo?.relatedTransaction.amount!) : '',
+      },
+      {
+        key: 'groupMonth',
+        header: 'Group Month'
+      },
+      {
+        key: 'groupDay',
+        header: 'Group Day'
       },
     ]);
 
@@ -196,6 +224,12 @@ export class ExportsProcessor {
     };
   }
 
+  // 2025-10-16 23:51:41
+  private formatDate(date: Date | undefined): string {
+    if (!date) return '';
+    return format(date, 'yyyy-MM-dd HH:mm:ss');
+  }
+
   private async generateCardsExport(filters: Record<string, any>): Promise<{
     filePath: string;
     fileName: string;
@@ -208,12 +242,14 @@ export class ExportsProcessor {
 
     // Generate CSV using existing utility
     const csvData = toCsvFromObjects(cards, [
-      { key: 'slashId', header: 'id' },
-      { key: 'name', header: 'name' },
-      { key: 'status', header: 'status' },
-      { key: 'last4', header: 'last4' },
-      { key: 'expiryMonth', header: 'expiryMonth' },
-      { key: 'expiryYear', header: 'expiryYear' }
+      { key: 'name', header: 'Name' },
+      { key: 'type', header: 'Type', map: () => 'Visa' },
+      { key: 'last4', header: 'Card' },
+      { key: 'expiryDate', header: 'Exp Date', map: (c) => '' },
+      { key: 'cvv', header: 'CVV', map: (c) => '' },
+      { key: 'status', header: 'Status', map: (c) => c.status.toUpperCase() },
+      { key: 'slashId', header: 'Card ID' },
+      { key: 'note', header: 'Note', map: (c) => '' },
     ]);
 
     // Generate filename
@@ -240,5 +276,14 @@ export class ExportsProcessor {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  private formatAmount(amountCents: number): string {
+    return (Math.abs(amountCents) / 100).toFixed(2);
+  }
+
+  //Convert amount cents to decimal and add currency code (-5700 -> -$57.00)
+  private formatActualAmount(amountCents: number, currencyCode: string): string {
+    return amountCents < 0 ? `-${currencyCode}${this.formatAmount(amountCents)}` : `${currencyCode}${this.formatAmount(amountCents)}`;
   }
 }

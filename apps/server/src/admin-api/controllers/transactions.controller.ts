@@ -34,7 +34,7 @@ export class TransactionsController {
   async list(@Query() query: TransactionQueryDto) {
     this.logger.log('Listing transactions');
     
-    const [data, total] = await this.transactionsService.findAllWithFilters(
+    const [data, total] = await this.transactionsService.findAllWithFiltersAndPagination(
       {
         virtualAccountId: query.virtualAccountId,
         cardId: query.cardId,

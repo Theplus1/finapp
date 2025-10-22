@@ -36,11 +36,12 @@ export class TransactionsService {
   /**
    * Find transactions with filters and pagination
    */
-  async findAllWithFilters(
+  async findAllWithFiltersAndPagination(
     filters: {
       virtualAccountId?: string;
       cardId?: string;
       status?: string;
+      detailedStatus?: string;
       startDate?: string;
       endDate?: string;
       sortBy?: string;
@@ -52,6 +53,7 @@ export class TransactionsService {
     if (filters.virtualAccountId) dbFilters.virtualAccountId = filters.virtualAccountId;
     if (filters.cardId) dbFilters.cardId = filters.cardId;
     if (filters.status) dbFilters.status = filters.status;
+    if (filters.detailedStatus) dbFilters.detailedStatus = filters.detailedStatus;
     if (filters.startDate) dbFilters.startDate = new Date(filters.startDate);
     if (filters.endDate) dbFilters.endDate = new Date(filters.endDate);
     
@@ -70,6 +72,34 @@ export class TransactionsService {
     
     const enrichedData = await this.enrichTransactions(data);
     return [enrichedData, total];
+  }
+
+
+  /**
+   * Find transactions with filters and pagination
+   */
+  async findAllWithFilters(
+    filters: {
+      virtualAccountId?: string;
+      cardId?: string;
+      status?: string;
+      detailedStatus?: string;
+      startDate?: string;
+      endDate?: string;
+      sortBy?: string;
+      sortOrder?: SortOrder;
+    },
+  ): Promise<TransactionWithRelations[]> {
+    const dbFilters: any = {};
+    if (filters.virtualAccountId) dbFilters.virtualAccountId = filters.virtualAccountId;
+    if (filters.cardId) dbFilters.cardId = filters.cardId;
+    if (filters.status) dbFilters.status = filters.status;
+    if (filters.detailedStatus) dbFilters.detailedStatus = filters.detailedStatus;
+    if (filters.startDate) dbFilters.startDate = new Date(filters.startDate);
+    if (filters.endDate) dbFilters.endDate = new Date(filters.endDate);
+    const data = await this.find(dbFilters);
+    const enrichedData = await this.enrichTransactions(data);
+    return enrichedData;
   }
 
   /**

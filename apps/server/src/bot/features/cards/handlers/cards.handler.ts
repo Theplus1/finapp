@@ -104,6 +104,12 @@ export class CardsHandler {
 
   async exportCardsList(ctx: BotContext) {
     try {
+      await ctx.reply(
+        '⏳ *Generating your export...*\n\n' +
+        'This may take a moment. You\'ll receive a download link when it\'s ready.',
+        { parse_mode: 'Markdown' },
+      );
+
       // Create async export job
       const exportJob = await this.exportsService.createExport(
         ctx.from!.id,
@@ -114,12 +120,6 @@ export class CardsHandler {
             virtualAccountId: ctx.virtualAccount?.slashId,
           },
         },
-      );
-
-      await ctx.reply(
-        '⏳ *Generating your export...*\n\n' +
-        'This may take a moment. You\'ll receive a download link when it\'s ready.',
-        { parse_mode: 'Markdown' },
       );
 
       this.logger.log(`Export job ${exportJob.id} created for user ${ctx.from!.id}`);
@@ -155,13 +155,13 @@ export class CardsHandler {
   }
 
   async handleCardDetail(ctx: BotContext, cardId: string) {
-    const userData = ctx.userData!;
+    const virtualAccount = ctx.virtualAccount!;
 
     try {
       const card = await this.slashApiService.getCard(cardId, false, true);
 
       // Verify the card belongs to the user's virtual account
-      if (card.virtualAccountId !== userData.virtualAccountId) {
+      if (card.virtualAccountId !== virtualAccount.slashId) {
         await ctx.reply(Messages.cardNotFound);
         return;
       }
