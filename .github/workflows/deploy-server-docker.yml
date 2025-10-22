@@ -1,14 +1,13 @@
 name: Deploy Server to VPS (Docker)
 
 on:
-  # Temporarily disabled - using PM2 deployment instead
-  # push:
-  #   branches:
-  #     - main
-  #   paths:
-  #     - 'apps/server/**'
-  #     - 'packages/**'
-  #     - '.github/workflows/deploy-server-docker.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/server/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-server-docker.yml'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
