@@ -15,6 +15,7 @@ import FilterCard from "./components/filter";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { ClientPagination } from "@/components/ui/client-pagination";
+import CardNameCol from "@/components/ui/card-name-col";
 
 const initFilter = {
   cardGroupId: "",
@@ -93,11 +94,7 @@ export default function Cards() {
     {
       header: "Card Name",
       cell: ({ row }: CellContext<Card, string>) => {
-        return isLoading ? (
-          <Skeleton />
-        ) : (
-          `${row.original.name} ${row.original.last4}`
-        );
+        return isLoading ? <Skeleton /> : <CardNameCol card={row.original} />;
       },
     },
     {

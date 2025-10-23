@@ -1,6 +1,12 @@
 import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
 
+export interface CardShort {
+  slashId: string;
+  name: string;
+  last4: string;
+}
+
 export interface Transaction {
   _id: string;
   slashId: string;
@@ -28,11 +34,7 @@ export interface Transaction {
     };
     name: string;
   };
-  card: {
-    slashId: string;
-    name: string;
-    last4: string;
-  };
+  card: CardShort;
   virtualAccount: {
     slashId: string;
     name: string;
