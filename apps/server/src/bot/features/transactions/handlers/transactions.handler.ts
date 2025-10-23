@@ -27,7 +27,7 @@ export class TransactionsHandler {
     private readonly transactionsService: TransactionsService,
     private readonly exportsService: ExportsService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async handleTransactionListAction(ctx: BotContext) {
     await ctx.answerCbQuery();
@@ -39,7 +39,7 @@ export class TransactionsHandler {
 
   async handleSubscribeTransactionsAction(ctx: BotContext) {
     await ctx.answerCbQuery('Subscribing...');
-    await this.usersService.updateSubscription(ctx.from!.id, true);
+    await this.usersService.addNotificationDestination(ctx.from!.id, ctx.chat?.id ?? ctx.from!.id);
     await ctx.editMessageText(Messages.subscribeTransactionsSuccess, {
       parse_mode: 'Markdown',
       ...Keyboards.backToTransaction(),
@@ -48,7 +48,7 @@ export class TransactionsHandler {
 
   async handleUnsubscribeTransactionsAction(ctx: BotContext) {
     await ctx.answerCbQuery('Unsubscribing...');
-    await this.usersService.updateSubscription(ctx.from!.id, false);
+    await this.usersService.removeNotificationDestination(ctx.from!.id, ctx.chat?.id ?? ctx.from!.id);
     await ctx.editMessageText(Messages.unsubscribeTransactionsSuccess, {
       parse_mode: 'Markdown',
       ...Keyboards.backToTransaction(),
@@ -161,8 +161,8 @@ export class TransactionsHandler {
         {
           type: ExportType.TRANSACTIONS,
           filters: {
-            virtualAccountId: ctx.virtualAccount?.slashId,
-            detailedStatus: TransactionDetailedStatus.SETTLED,
+            virtualAccountId: ctx.userData?.virtualAccountId,
+            detailedStatus: { $in: [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING] },
             startDate: dateFrom.toISOString(),
             endDate: dateTo.toISOString(),
           },
@@ -171,7 +171,7 @@ export class TransactionsHandler {
 
       await ctx.reply(
         '⏳ *Generating your export...*\n\n' +
-          'This may take a moment. You\'ll receive a download link when it\'s ready.',
+        'This may take a moment. You\'ll receive a download link when it\'s ready.',
         { parse_mode: 'Markdown' },
       );
 

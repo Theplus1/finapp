@@ -1,9 +1,9 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AccountsService } from '../../domain/accounts/accounts.service';
 import { BotContext } from '../interfaces/bot-context.interface';
 import { Messages } from '../constants/messages.constant';
 import { Logger } from '@nestjs/common';
+import { UsersService } from 'src/users/users.service';
 
 export const VALIDATE_USER_KEY = 'validateUser';
 
@@ -22,7 +22,7 @@ export class UserValidationGuard implements CanActivate {
   
   constructor(
     private readonly reflector: Reflector,
-    private readonly accountsService: AccountsService,
+    private readonly usersService: UsersService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -50,9 +50,9 @@ export class UserValidationGuard implements CanActivate {
     }
 
     // Find user by telegram ID
-    const virtualAccount = await this.accountsService.findByTelegramId(telegramUser.id);
+    const user = await this.usersService.findByTelegramId(telegramUser.id);
     
-    if (!virtualAccount) {
+    if (!user) {
       if (options.answerCallback && ctx.callbackQuery) {
         await ctx.answerCbQuery('Please use /start first');
       }
@@ -60,7 +60,7 @@ export class UserValidationGuard implements CanActivate {
       return false;
     }
     this.logger.log(`User ${telegramUser.id} validated`);
-    ctx.virtualAccount = virtualAccount;
+    ctx.userData = user;
 
     return true;
   }

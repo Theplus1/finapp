@@ -52,6 +52,7 @@ export interface TransactionDataDTO {
   };
   referenceNumber?: string;
   authorizedAt?: string;
+  virtualAccountId?: string;
 }
 
 export interface AuthorizationWebhookPayload {

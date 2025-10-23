@@ -26,12 +26,18 @@ export const Messages = {
 
   help:
     `📚 *Available Commands:*\n\n` +
+    `*General:*\n` +
     `/start - Start the bot\n` +
     `/help - Show this help message\n` +
     `/menu - Show main menu\n` +
+    `/status - Check your subscription status\n\n` +
+    `*Notifications:*\n` +
     `/subscribe - Subscribe to notifications\n` +
     `/unsubscribe - Unsubscribe from notifications\n` +
-    `/status - Check your subscription status\n` +
+    `/connect - Connect group/channel for notifications\n` +
+    `/disconnect - Disconnect current group/channel\n` +
+    `/destinations - List all connected chats\n\n` +
+    `*Other:*\n` +
     `/feedback - Send feedback (multi-step conversation)`,
 
   // Menu
@@ -242,4 +248,46 @@ export const Messages = {
     `• ✅ Approved: ${statusCounts.approved}\n` +
     `• 🚫 Denied: ${statusCounts.denied}\n` +
     `• ⛔ Revoked: ${statusCounts.revoked}`,
+
+  // ==================== Notification Destinations Messages ====================
+  
+  connectPrivateChatError:
+    '⚠️ *Cannot Connect Private Chat*\n\n' +
+    'This command can only be used in groups or channels.',
+
+  connectNotAdminError:
+    '🚫 *Admin Rights Required*\n\n' +
+    'You must be an administrator of this group/channel to connect it for notifications.',
+
+  connectSuccess: (chatTitle: string) =>
+    `✅ *Connected Successfully!*\n\n` +
+    `This chat (*${chatTitle}*) will now receive transaction notifications.`,
+
+  disconnectPrivateChatError:
+    '⚠️ *Cannot Disconnect Private Chat*\n\n' +
+    'This command can only be used in groups or channels.',
+
+  disconnectSuccess: (chatTitle: string) =>
+    `✅ *Disconnected Successfully!*\n\n` +
+    `This chat (*${chatTitle}*) will no longer receive transaction notifications.`,
+
+  noDestinations:
+    '📭 *No Connected Chats*\n\n' +
+    'You have not connected any groups or channels for notifications.\n\n' +
+    'To connect a chat:\n' +
+    '1. Add this bot to your group/channel\n' +
+    '2. Make sure you are an admin\n' +
+    '3. Run /connect in that chat',
+
+  destinationsList: (chats: Array<{ id: number; title: string; type: string }>) =>
+    `📋 *Connected Notification Destinations*\n\n` +
+    `Notifications will be sent to:\n\n` +
+    chats.map((chat, index) => 
+      `${index + 1}. *${chat.title}*\n` +
+      `   Type: ${chat.type}\n` +
+      `   ID: \`${chat.id}\``
+    ).join('\n\n') +
+    `\n\n💡 To disconnect a chat, run /disconnect in that chat.`,
+
+  errorGeneric: '❌ An error occurred. Please try again later.',
 };

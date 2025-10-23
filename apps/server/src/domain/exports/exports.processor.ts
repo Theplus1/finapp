@@ -196,11 +196,13 @@ export class ExportsProcessor {
       },
       {
         key: 'groupMonth',
-        header: 'Group Month'
+        header: 'Group Month',
+        map: (t) => this.formatGroupMonth(t.authorizedAt)
       },
       {
         key: 'groupDay',
-        header: 'Group Day'
+        header: 'Group Day',
+        map: (t) => this.formatGroupDay(t.authorizedAt)
       },
     ]);
 
@@ -228,6 +230,16 @@ export class ExportsProcessor {
   private formatDate(date: Date | undefined): string {
     if (!date) return '';
     return format(date, 'yyyy-MM-dd HH:mm:ss');
+  }
+
+  private formatGroupMonth(date: Date | undefined): string {
+    if (!date) return '';
+    return format(date, 'yyyy-MM');
+  }
+
+  private formatGroupDay(date: Date | undefined): string {
+    if (!date) return '';
+    return format(date, 'yyyy-MM-dd');
   }
 
   private async generateCardsExport(filters: Record<string, any>): Promise<{

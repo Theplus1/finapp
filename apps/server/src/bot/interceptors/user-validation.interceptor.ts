@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
+import { UsersService } from '../../users/users.service';
 import { AccountsService } from '../../domain/accounts/accounts.service';
 import { BotContext } from '../interfaces/bot-context.interface';
 import { Messages } from '../constants/messages.constant';
@@ -19,7 +20,7 @@ import { VALIDATE_USER_KEY, ValidateUserOptions } from '../guards/user-validatio
 export class UserValidationInterceptor implements NestInterceptor {
   constructor(
     private readonly reflector: Reflector,
-    private readonly virtualAccountsService: AccountsService,
+    private readonly usersService: UsersService,
   ) {}
 
   async intercept(
@@ -50,9 +51,9 @@ export class UserValidationInterceptor implements NestInterceptor {
     }
 
     // Find user by telegram ID
-    const virtualAccount = await this.virtualAccountsService.findByTelegramId(telegramUser.id);
+    const user = await this.usersService.findByTelegramId(telegramUser.id);
     
-    if (!virtualAccount) {
+    if (!user || !user.virtualAccountId) {
       if (options.answerCallback && ctx.callbackQuery) {
         await ctx.answerCbQuery('Please use /start first');
       }
@@ -60,17 +61,8 @@ export class UserValidationInterceptor implements NestInterceptor {
       throw new Error('User not found');
     }
 
-    // Validate linked account if required
-    if (options.requireAccount && !virtualAccount.linkedTelegramId) {
-      if (options.answerCallback && ctx.callbackQuery) {
-        await ctx.answerCbQuery('Account not linked');
-      }
-      await ctx.reply(Messages.accountNotLinked);
-      throw new Error('Account not linked');
-    }
-
     // Attach user data to context
-    ctx.virtualAccount = virtualAccount;
+    ctx.userData = user;
 
     return next.handle();
   }

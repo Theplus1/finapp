@@ -51,13 +51,13 @@ export class MenuHandler {
 
   async handleTransactionNotificationAction(ctx: BotContext) {
     const userData = ctx.userData!;
-
+    const isSubscribed = userData.notificationChatIds.includes(ctx.chat!.id);
     await ctx.answerCbQuery();
     await ctx.reply(
-      Messages.transactionNotificationMenu(userData.isSubscribed),
+      Messages.transactionNotificationMenu(isSubscribed),
       {
         parse_mode: 'Markdown',
-        ...Keyboards.transactionNotificationMenu(userData.isSubscribed),
+        ...Keyboards.transactionNotificationMenu(isSubscribed),
       },
     );
   }

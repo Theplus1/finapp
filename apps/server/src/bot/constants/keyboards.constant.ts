@@ -22,10 +22,10 @@ export const Keyboards = {
 
   transactionMenu: () =>
     Markup.inlineKeyboard([
-      [Markup.button.callback('List Transactions', Actions.transaction.list)],
+      [Markup.button.callback('Transactions History', Actions.transaction.list)],
       [
         Markup.button.callback(
-          'Detail Transaction',
+          'Transaction Detail',
           Actions.transaction.detail,
         ),
       ],
@@ -43,7 +43,7 @@ export const Keyboards = {
       [Markup.button.callback('Yesterday', Actions.transaction.listYesterday)],
       [Markup.button.callback('This Week', Actions.transaction.listThisWeek)],
       [Markup.button.callback('This Month', Actions.transaction.listThisMonth)],
-      [Markup.button.callback('« Back to Menu', Actions.menu.transaction)],
+      [Markup.button.callback('« Back', Actions.menu.transaction)],
     ]),
   transactionNotificationMenu: (isSubscribed: boolean) =>
     Markup.inlineKeyboard([
@@ -130,7 +130,7 @@ export const Keyboards = {
   cardDetail: (cardId: string, isActive: boolean) =>
     Markup.inlineKeyboard([
       // [Markup.button.callback(isActive ? '🔒 Lock' : '🔓 Unlock', `card_${cardId}_${isActive ? 'lock' : 'unlock'}`)],
-      [Markup.button.callback('« Back to Cards', Actions.menu.cards)],
+      [Markup.button.callback('« Back', Actions.menu.cards)],
       [Markup.button.callback('« Back to Menu', Actions.menu.main)],
     ]),
 

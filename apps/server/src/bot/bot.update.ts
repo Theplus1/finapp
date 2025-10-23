@@ -3,8 +3,8 @@ import { Context, Markup } from 'telegraf';
 import { Logger, UseInterceptors } from '@nestjs/common';
 import { BotContext } from './interfaces/bot-context.interface';
 import { MenuHandler } from './features/menu/handlers/menu.handler';
-import { SubscriptionHandler } from './features/subscription/handlers/subscription.handler';
 import { OnboardingHandler } from './features/onboarding/handlers/onboarding.handler';
+import { NotificationsHandler } from './features/notifications/handlers/notifications.handler';
 import { Messages } from './constants/messages.constant';
 import { Keyboards } from './constants/keyboards.constant';
 import { SessionSteps } from './constants/session-steps.constant';
@@ -21,10 +21,10 @@ export class BotUpdate {
 
   constructor(
     private readonly menuHandler: MenuHandler,
-    private readonly subscriptionHandler: SubscriptionHandler,
     private readonly onboardingHandler: OnboardingHandler,
     private readonly cardHandler: CardsHandler,
     private readonly transactionsHandler: TransactionsHandler,
+    private readonly notificationsHandler: NotificationsHandler,
   ) {}
 
   @ValidateUser({ answerCallback: true })
@@ -150,19 +150,7 @@ export class BotUpdate {
   async onTransactionDetailAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleTransactionDetailAction(ctx);
   }
-
-  @ValidateUser({ answerCallback: true })
-  @Action('subscribe')
-  async onSubscribeAction(@Ctx() ctx: BotContext) {
-    return this.subscriptionHandler.handleSubscribeAction(ctx);
-  }
-
-  @ValidateUser({ answerCallback: true })
-  @Action('unsubscribe')
-  async onUnsubscribeAction(@Ctx() ctx: BotContext) {
-    return this.subscriptionHandler.handleUnsubscribeAction(ctx);
-  }
-
+  
   @ValidateUser({ answerCallback: true })
   @Action(Actions.menu.about)
   async onAboutAction(@Ctx() ctx: BotContext) {
@@ -173,6 +161,26 @@ export class BotUpdate {
   async onStartFeedbackAction(@Ctx() ctx: BotContext) {
     await ctx.answerCbQuery();
     await this.startFeedback(ctx);
+  }
+
+  // ==================== Notification Destination Commands ====================
+  
+  @Command('connect')
+  async onConnectCommand(@Ctx() ctx: BotContext) {
+    await ctx.sendChatAction('typing');
+    return this.notificationsHandler.handleConnectCommand(ctx);
+  }
+
+  @Command('disconnect')
+  async onDisconnectCommand(@Ctx() ctx: BotContext) {
+    await ctx.sendChatAction('typing');
+    return this.notificationsHandler.handleDisconnectCommand(ctx);
+  }
+
+  @Command('destinations')
+  async onDestinationsCommand(@Ctx() ctx: BotContext) {
+    await ctx.sendChatAction('typing');
+    return this.notificationsHandler.handleDestinationsCommand(ctx);
   }
 
   // ==================== Admin Actions ====================

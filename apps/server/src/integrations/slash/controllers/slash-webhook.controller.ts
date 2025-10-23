@@ -261,10 +261,10 @@ export class SlashWebhookController {
       
       // Send notification to user
       const data = event.data as TransactionDataDTO;
-      const user = await this.usersService.findByAccountNumber(data.accountId || '');
+      const user = await this.usersService.findByVirtualAccountId(data.virtualAccountId || '');
       if (!user) {
         this.logger.warn(
-          `User not found for virtual account ID: ${data.accountId}`,
+          `User not found for virtual account ID: ${data.virtualAccountId}`,
         );
         return;
       }
@@ -272,12 +272,14 @@ export class SlashWebhookController {
         this.logger.warn(`User ${user.id} does not have a Telegram ID`);
         return;
       }
-      if (user.isSubscribed) {
-        await this.botService.sendMessage(
-          user.telegramId,
-          Messages.transactionCreated(data),
-        );
-      }
+        // Send to notification destinations (groups/channels only)
+        const destinations = user.notificationChatIds;
+        if (destinations.length > 0) {
+          await this.botService.sendMessageToMultiple(
+            destinations,
+            Messages.transactionCreated(data),
+          );
+        }
     } catch (error) {
       this.logger.error(`Error handling transaction created event for ${event.entityId}:`, error);
     }
@@ -297,10 +299,10 @@ export class SlashWebhookController {
       
       // Send notification to user
       const data = event.data as TransactionDataDTO;
-      const user = await this.usersService.findByAccountNumber(data.accountId || '');
+      const user = await this.usersService.findByVirtualAccountId(data.virtualAccountId || '');
       if (!user) {
         this.logger.warn(
-          `User not found for virtual account ID: ${data.accountId}`,
+          `User not found for virtual account ID: ${data.virtualAccountId}`,
         );
         return;
       }
@@ -308,9 +310,11 @@ export class SlashWebhookController {
         this.logger.warn(`User ${user.id} does not have a Telegram ID`);
         return;
       }
-      if (user.isSubscribed) {
-        await this.botService.sendMessage(
-          user.telegramId,
+      // Send to notification destinations (groups/channels only)
+      const destinations = await this.usersService.getNotificationDestinations(user.telegramId);
+      if (destinations.length > 0) {
+        await this.botService.sendMessageToMultiple(
+          destinations,
           Messages.transactionUpdated(data),
         );
       }

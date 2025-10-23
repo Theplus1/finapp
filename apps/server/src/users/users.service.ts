@@ -33,22 +33,22 @@ export class UsersService {
 
   async updateSubscription(
     telegramId: number,
-    isSubscribed: boolean,
+    chatId: number,
   ): Promise<UserDocument | null> {
     const user = await this.userModel.findOneAndUpdate(
       { telegramId },
-      { isSubscribed },
+      { notificationChatIds: { $addToSet: chatId } },
       { new: true },
     );
 
     this.logger.log(
-      `User ${telegramId} subscription updated to: ${isSubscribed}`,
+      `User ${telegramId} subscription updated to: ${chatId}`,
     );
     return user;
   }
 
   async getSubscribedUsers(): Promise<UserDocument[]> {
-    return this.userModel.find({ isSubscribed: true });
+    return this.userModel.find({ notificationChatIds: { $ne: [] } });
   }
 
   async getAllUsers(): Promise<UserDocument[]> {
@@ -66,13 +66,39 @@ export class UsersService {
     );
 
     this.logger.log(
-      `User ${telegramId} linked to account number: ${virtualAccountId}`,
+      `User ${telegramId} linked to virtual account: ${virtualAccountId}`,
     );
     return user;
   }
 
+  async unlinkAccount(virtualAccountId: string): Promise<UserDocument | null> {
+    const user = await this.userModel.findOneAndUpdate(
+      { virtualAccountId },
+      { $unset: { virtualAccountId: '' } },
+      { new: true },
+    );
+
+    this.logger.log(`User ${user?.telegramId} unlinked from virtual account`);
+    return user;
+  }
+
+  async findByVirtualAccountId(virtualAccountId: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ virtualAccountId });
+  }
+
   async findByAccountNumber(virtualAccountId: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ virtualAccountId });
+  }
+
+  async findByAccountNumbers(virtualAccountIds: string[]): Promise<UserDocument[]> {
+    return this.userModel.find({ 
+      virtualAccountId: { $in: virtualAccountIds } 
+    });
+  }
+
+  async hasLinkedAccount(telegramId: number): Promise<boolean> {
+    const user = await this.findByTelegramId(telegramId);
+    return !!user?.virtualAccountId;
   }
 
   // ==================== Access Control Methods ====================
@@ -180,5 +206,52 @@ export class UsersService {
    */
   async getApprovedUsers(): Promise<UserDocument[]> {
     return this.userModel.find({ accessStatus: AccessStatus.APPROVED });
+  }
+
+  // ==================== Notification Destination Methods ====================
+
+  /**
+   * Add a notification destination (group/channel) for a user
+   */
+  async addNotificationDestination(
+    telegramId: number,
+    chatId: number,
+  ): Promise<UserDocument | null> {
+    const user = await this.userModel.findOneAndUpdate(
+      { telegramId },
+      { $addToSet: { notificationChatIds: chatId } },
+      { new: true },
+    );
+
+    this.logger.log(`User ${telegramId} added notification destination: ${chatId}`);
+    return user;
+  }
+
+  /**
+   * Remove a notification destination for a user
+   */
+  async removeNotificationDestination(
+    telegramId: number,
+    chatId: number,
+  ): Promise<UserDocument | null> {
+    const user = await this.userModel.findOneAndUpdate(
+      { telegramId },
+      { $pull: { notificationChatIds: chatId } },
+      { new: true },
+    );
+
+    this.logger.log(`User ${telegramId} removed notification destination: ${chatId}`);
+    return user;
+  }
+
+  /**
+   * Get all notification destinations for a user (groups/channels only)
+   */
+  async getNotificationDestinations(telegramId: number): Promise<number[]> {
+    const user = await this.findByTelegramId(telegramId);
+    if (!user) return [];
+    
+    // Return only additional destinations (groups/channels), not personal chat
+    return user.notificationChatIds || [];
   }
 }

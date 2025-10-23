@@ -1,32 +1,14 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { VirtualAccountRepository } from '../../database/repositories/virtual-account.repository';
 import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
 import { PaginationOptions, RepositoryQuery } from '../../common/types/repository-query.types';
 import { SortOrder } from '../../common/constants/pagination.constants';
-
-export interface AccountStats {
-  total: number;
-  byStatus: Record<string, number>;
-  totalBalance: number;
-  totalAvailableBalance: number;
-}
-
-export interface LinkAccountResult {
-  slashId: string;
-  name: string;
-  linkedTelegramId: number;
-  linkedUserId?: string;
-  linkedAt: Date;
-  linkedBy?: string;
-}
-
-export interface AccountFilters {
-  accountId?: string;
-  status?: string;
-  search?: string;
-  sortBy?: string;
-  sortOrder?: SortOrder;
-}
+import { UsersService } from '../../users/users.service';
+import { 
+  VirtualAccountDetail, 
+  AccountStats, 
+  AccountFilters 
+} from './types/account.types';
 
 @Injectable()
 export class AccountsService {
@@ -34,6 +16,7 @@ export class AccountsService {
 
   constructor(
     private readonly virtualAccountRepository: VirtualAccountRepository,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -46,11 +29,12 @@ export class AccountsService {
   /**
    * Find all virtual accounts with filters and pagination
    * Optimized: Filters and paginates at database level
+   * Enriched: Includes linked user information
    */
   async findAllWithFilters(
     filters: AccountFilters,
     pagination: PaginationOptions,
-  ): Promise<[VirtualAccountDocument[], number]> {
+  ): Promise<[VirtualAccountDetail[], number]> {
     // Build MongoDB filter
     const mongoFilter = this.buildMongoFilter(filters);
     
@@ -67,10 +51,15 @@ export class AccountsService {
     };
 
     // Execute at DB level
-    return Promise.all([
+    const [accounts, total] = await Promise.all([
       this.virtualAccountRepository.find(query),
       this.virtualAccountRepository.count(mongoFilter),
     ]);
+
+    // Enrich accounts with linked user data
+    const enrichedAccounts = await this.enrichAccounts(accounts);
+
+    return [enrichedAccounts, total];
   }
 
   /**
@@ -128,26 +117,6 @@ export class AccountsService {
     return account;
   }
 
-  /**
-   * Find virtual account by Telegram ID
-   */
-  async findByTelegramId(telegramId: number): Promise<VirtualAccountDocument | null> {
-    return this.virtualAccountRepository.findByLinkedTelegramId(telegramId);
-  }
-
-  /**
-   * Find all linked accounts
-   */
-  async findLinked(): Promise<VirtualAccountDocument[]> {
-    return this.virtualAccountRepository.findLinked();
-  }
-
-  /**
-   * Find all unlinked accounts
-   */
-  async findUnlinked(): Promise<VirtualAccountDocument[]> {
-    return this.virtualAccountRepository.findUnlinked();
-  }
 
   /**
    * Get account statistics
@@ -172,88 +141,17 @@ export class AccountsService {
   }
 
   /**
-   * Link virtual account to user
+   * Validate that a virtual account exists
+   * Used before linking in UsersService
    */
-  async linkToUser(
-    id: string,
-    telegramId: number,
-    userId?: string,
-    linkedBy?: string,
-  ): Promise<LinkAccountResult> {
-    // Check if account exists
+  async validateAccountExists(id: string): Promise<VirtualAccountDocument> {
     const account = await this.virtualAccountRepository.findById(id);
-    if (!account) {
-      throw new NotFoundException(`Virtual account ${id} not found`);
-    }
-
-    // Check if account is already linked
-    // if (account.linkedTelegramId) {
-    //   throw new BadRequestException(
-    //     `Virtual account is already linked to telegram ID ${account.linkedTelegramId}`
-    //   );
-    // }
-
-    // Check if user already has a linked account
-    const userHasAccount = await this.virtualAccountRepository.hasLinkedAccount(telegramId);
-    if (userHasAccount) {
-      throw new BadRequestException(
-        `Telegram ID ${telegramId} already has a linked virtual account`
-      );
-    }
-
-    // Link the account
-    const linkedAccount = await this.virtualAccountRepository.linkToUser(
-      id,
-      telegramId,
-      userId,
-      linkedBy,
-    );
-
-    if (!linkedAccount) {
-      throw new NotFoundException(`Failed to link virtual account ${id}`);
-    }
-
-    this.logger.log(`Linked virtual account ${id} to telegram ID ${telegramId}`);
-
-    return {
-      slashId: linkedAccount.slashId,
-      name: linkedAccount.name,
-      linkedTelegramId: linkedAccount.linkedTelegramId!,
-      linkedUserId: linkedAccount.linkedUserId,
-      linkedAt: linkedAccount.linkedAt!,
-      linkedBy: linkedAccount.linkedBy,
-    };
-  }
-
-  /**
-   * Unlink virtual account from user
-   */
-  async unlinkFromUser(id: string): Promise<VirtualAccountDocument> {
-    const account = await this.virtualAccountRepository.findById(id);
-    if (!account) {
-      throw new NotFoundException(`Virtual account ${id} not found`);
-    }
-
-    if (!account.linkedTelegramId) {
-      throw new BadRequestException('Virtual account is not linked to any user');
-    }
-
-    const unlinkedAccount = await this.virtualAccountRepository.unlinkFromUser(id);
     
-    if (!unlinkedAccount) {
-      throw new NotFoundException(`Failed to unlink virtual account ${id}`);
+    if (!account) {
+      throw new NotFoundException(`Virtual account ${id} not found`);
     }
 
-    this.logger.log(`Unlinked virtual account ${id}`);
-
-    return unlinkedAccount;
-  }
-
-  /**
-   * Check if user has linked account
-   */
-  async hasLinkedAccount(telegramId: number): Promise<boolean> {
-    return this.virtualAccountRepository.hasLinkedAccount(telegramId);
+    return account;
   }
 
   /**
@@ -275,5 +173,46 @@ export class AccountsService {
     this.logger.log(`Virtual account updated successfully: ${accountId}`);
     
     return updatedAccount;
+  }
+
+  /**
+   * Enrich virtual accounts with linked user information
+   * Follows the same pattern as transaction enrichment
+   */
+  private async enrichAccounts(
+    accounts: VirtualAccountDocument[],
+  ): Promise<VirtualAccountDetail[]> {
+    if (accounts.length === 0) {
+      return [];
+    }
+
+    // Extract unique account IDs
+    const accountIds = [...new Set(accounts.map(a => a.slashId).filter(Boolean))];
+
+    // Batch fetch users who have these accounts linked
+    const users = accountIds.length > 0
+      ? await this.usersService.findByAccountNumbers(accountIds)
+      : [];
+
+    // Build lookup map for O(1) access
+    const userMap = new Map();
+    users.forEach(user => {
+      if (user.virtualAccountId) {
+        userMap.set(user.virtualAccountId, user);
+      }
+    });
+
+    // Enrich each account with user data
+    return accounts.map(account => {
+      const accountData = account.toObject();
+      const user = userMap.get(account.slashId);
+
+      const enriched: VirtualAccountDetail = {
+        ...accountData,
+        linkedTelegramId: user?.telegramId,
+      };
+
+      return enriched;
+    });
   }
 }

@@ -37,6 +37,10 @@ export class User {
   @Prop({ default: false })
   isSubscribed: boolean;
 
+  // Notification Destinations
+  @Prop({ type: [Number], default: [] })
+  notificationChatIds: number[];
+
   // Access Control Fields
   @Prop({ 
     type: String, 

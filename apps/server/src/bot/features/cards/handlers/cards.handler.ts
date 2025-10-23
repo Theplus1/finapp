@@ -23,8 +23,6 @@ export class CardsHandler {
   ) { }
 
   async handleCardMenu(ctx: BotContext) {
-    const virtualAccount = ctx.virtualAccount!;
-
     try {
       await ctx.sendChatAction('typing');
       await ctx.reply(Messages.cardsMenu, {
@@ -117,7 +115,7 @@ export class CardsHandler {
         {
           type: ExportType.CARDS,
           filters: {
-            virtualAccountId: ctx.virtualAccount?.slashId,
+            virtualAccountId: ctx.userData!.virtualAccountId,
           },
         },
       );
@@ -129,39 +127,12 @@ export class CardsHandler {
     }
   }
 
-  private formatCardsList(cards: CardDto[], count: number, currentCursor?: string, nextCursor?: string): string {
-    let message = `💳 *Your Cards (${count})*\n\n`;
-
-    cards.forEach((card, index) => {
-      const statusEmoji = this.getStatusEmoji(card.status);
-      message += `${index + 1}. *${card.name}* \n`;
-      message += `   •••• ${card.last4} | Exp: ${card.expiryMonth}/${card.expiryYear}\n`;
-      message += `   Status: ${statusEmoji} ${card.status}\n\n`;
-    });
-
-    message += `\n_`;
-    if (currentCursor) {
-      const pageId = currentCursor.substring(0, 8);
-      message += `📄 Page (${pageId})`;
-    } else {
-      message += `📄 Page 1`;
-    }
-    if (nextCursor) {
-      message += ` • More available ➡️`;
-    }
-    message += `_`;
-
-    return message;
-  }
-
   async handleCardDetail(ctx: BotContext, cardId: string) {
-    const virtualAccount = ctx.virtualAccount!;
-
     try {
       const card = await this.slashApiService.getCard(cardId, false, true);
 
       // Verify the card belongs to the user's virtual account
-      if (card.virtualAccountId !== virtualAccount.slashId) {
+      if (card.virtualAccountId !== ctx.userData!.virtualAccountId) {
         await ctx.reply(Messages.cardNotFound);
         return;
       }
