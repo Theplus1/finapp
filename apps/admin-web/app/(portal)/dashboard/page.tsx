@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import FilterTransaction from "./components/filter";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { ClientPagination } from "@/components/ui/client-pagination";
+import CardNameCol from "@/components/ui/card-name-col";
 
 const initFilter = {
   cardId: "",
@@ -93,7 +94,7 @@ export default function Dashboard() {
           return isLoading ? (
             <Skeleton />
           ) : row.original.card?.name ? (
-            `${row.original.card.name} ${row.original.card.last4}`
+            <CardNameCol card={row.original.card} />
           ) : (
             EMPTY_LABEL
           );
@@ -147,7 +148,7 @@ export default function Dashboard() {
           return isLoading ? (
             <Skeleton />
           ) : (
-            (row.original.merchantData?.name ?? EMPTY_LABEL)
+            (row.original.merchantData?.description ?? EMPTY_LABEL)
           );
         },
       },
