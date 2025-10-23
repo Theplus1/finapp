@@ -15,6 +15,7 @@ import {
   AuthorizationWebhookPayload,
   AuthorizationWebhookResponse,
   TransactionDataDTO,
+  WebhookEventType,
 } from '../dto/webhook.dto';
 import { BotService } from '../../../bot/bot.service';
 import { UsersService } from '../../../users/users.service';
@@ -162,19 +163,19 @@ export class SlashWebhookController {
    */
   private async processWebhookEvent(event: WebhookEventDto): Promise<void> {
     switch (event.type) {
-      case 'card.created':
+      case WebhookEventType.CARD_CREATED:
         await this.handleCardCreated(event);
         break;
-      case 'card.updated':
+      case WebhookEventType.CARD_UPDATED:
         await this.handleCardUpdated(event);
         break;
-      case 'card.closed':
+      case WebhookEventType.CARD_CLOSED:
         await this.handleCardClosed(event);
         break;
-      case 'transaction.created':
+      case WebhookEventType.TRANSACTION_CREATED:
         await this.handleTransactionCreated(event);
         break;
-      case 'transaction.updated':
+      case WebhookEventType.TRANSACTION_UPDATED:
         await this.handleTransactionUpdated(event);
         break;
       default:

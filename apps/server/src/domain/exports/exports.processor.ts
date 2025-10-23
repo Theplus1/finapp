@@ -256,7 +256,7 @@ export class ExportsProcessor {
     const csvData = toCsvFromObjects(cards, [
       { key: 'name', header: 'Name' },
       { key: 'type', header: 'Type', map: () => 'Visa' },
-      { key: 'last4', header: 'Card' },
+      { key: 'pan', header: 'Card' },
       { key: 'expiryDate', header: 'Exp Date', map: (c) => '' },
       { key: 'cvv', header: 'CVV', map: (c) => '' },
       { key: 'status', header: 'Status', map: (c) => c.status.toUpperCase() },

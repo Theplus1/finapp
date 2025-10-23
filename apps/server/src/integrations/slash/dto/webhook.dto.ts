@@ -1,12 +1,11 @@
 import type { MerchantDTO } from "./merchant.dto";
 
 export enum WebhookEventType {
-  CARD_CREATED = 'card.created',
-  CARD_UPDATED = 'card.updated',
-  CARD_CLOSED = 'card.closed',
-  TRANSACTION_CREATED = 'transaction.created',
-  TRANSACTION_UPDATED = 'transaction.updated',
-  AUTHORIZATION_REQUEST = 'authorization.request',
+  CARD_CREATED = 'card_creation.event',
+  CARD_UPDATED = 'card.update',
+  CARD_CLOSED = 'card.delete',
+  TRANSACTION_CREATED = 'aggregated_transaction.create',
+  TRANSACTION_UPDATED = 'aggregated_transaction.update',
 }
 
 export interface WebhookDto {

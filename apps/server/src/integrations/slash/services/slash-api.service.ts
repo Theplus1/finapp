@@ -216,6 +216,37 @@ export class SlashApiService {
     });
   }
 
+  /**
+   * Get card with decrypted sensitive data (PAN and CVV) from vault endpoint
+   * This uses the vault.joinslash.com endpoint to retrieve decrypted card information
+   */
+  async getCardDecrypted(cardId: string, includePan = true, includeCvv = true): Promise<CardDto> {
+    const vaultUrl = this.configService.get<string>('slash.vaultUrl', 'https://vault.joinslash.com');
+    
+    try {
+      const response = await axios.request<CardDto>({
+        method: 'GET',
+        baseURL: vaultUrl,
+        url: `/card/${cardId}`,
+        params: { 
+          include_pan: includePan, 
+          include_cvv: includeCvv 
+        },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey,
+        },
+        timeout: this.configService.get<number>('slash.timeout', 30000),
+      });
+      
+      this.logger.debug(`Retrieved decrypted card data for ${cardId} from vault`);
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Error retrieving decrypted card ${cardId} from vault:`, error);
+      throw error;
+    }
+  }
+
   async createCard(data: CreateCardDto): Promise<CardDto> {
     return this.request<CardDto>({
       method: 'POST',

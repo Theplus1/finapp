@@ -42,6 +42,12 @@ export class CardEntity {
   isSingleUse: boolean;
 
   @Expose()
+  pan?: string;
+
+  @Expose()
+  cvv?: string;
+
+  @Expose()
   cardGroupId?: string;
 
   @Transform(() => SYNC_CONSTANTS.DEFAULT_CARD_GROUP_NAME)

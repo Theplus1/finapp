@@ -7,7 +7,7 @@ export type CardDocument = Card & Document;
 @Schema({ timestamps: true, collection: 'slash_cards' })
 export class Card {
   @Prop({ required: true, unique: true, index: true })
-  slashId: string; // Original ID from Slash API
+  slashId: string;
 
   @Prop({ required: true, index: true })
   virtualAccountId: string;
@@ -34,13 +34,16 @@ export class Card {
   expiryYear?: string;
 
   @Prop({ required: true, index: true })
-  status: CardStatus; // ACTIVE, PAUSED, INACTIVE, CLOSED
+  status: CardStatus;
 
   @Prop({ default: false })
   isPhysical: boolean;
 
   @Prop({ default: false })
   isSingleUse: boolean;
+
+  @Prop()
+  pan?: string;
 
   @Prop()
   cardGroupName?: string;

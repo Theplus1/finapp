@@ -129,7 +129,7 @@ export class CardsHandler {
 
   async handleCardDetail(ctx: BotContext, cardId: string) {
     try {
-      const card = await this.slashApiService.getCard(cardId, false, true);
+      const card = await this.slashApiService.getCardDecrypted(cardId, true, true);
 
       // Verify the card belongs to the user's virtual account
       if (card.virtualAccountId !== ctx.userData!.virtualAccountId) {
@@ -160,31 +160,17 @@ export class CardsHandler {
   }
   private formatCardDetail(card: CardDto, detailTimeout: number): string {
     const statusEmoji = this.getStatusEmoji(card.status);
-    const cardType = card.isPhysical ? '💳 Physical Card' : '🌐 Virtual Card';
-    const singleUse = card.isSingleUse ? ' (Single Use)' : '';
 
     let message = `💳 *Card Details*\n\n`;
     message += `*${MarkdownUtil.escapse(card.name)}*\n`;
-    message += `${cardType}${singleUse}\n\n`;
 
-    message += `📋 *Information*\n`;
-    message += `Card Number: •••• ${card.last4}\n`;
+    message += `Card Number: ${card.pan}\n`;
     if (card.cvv) {
       message += `CVV: ||${MarkdownUtil.escapse(card.cvv)}||\n`;
     }
     message += `Expiry: ${card.expiryMonth}\\-${card.expiryYear}\n`;
     message += `Status: ${statusEmoji} ${MarkdownUtil.escapse(card.status)}\n`;
-
-    if (card.spendingConstraint) {
-      message += `\n💰 *Spending Limits*\n`;
-
-      // The API returns a complex nested structure for spending constraints
-      message += `Spending limits configured\n`;
-    }
-
-    const createdDate = new Date(card.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    message += `\n📅 Created: ${MarkdownUtil.escapse(createdDate)}`;
-    message += `\n\n *Card detail will be removed after ${detailTimeout / 60000} min for security*`;
+    message += `\n\n *Card detail will be removed after ${detailTimeout / 60000} min*`;
     return message;
   }
 
