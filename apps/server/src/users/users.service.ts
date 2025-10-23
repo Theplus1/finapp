@@ -33,7 +33,7 @@ export class UsersService {
 
   async updateSubscription(
     telegramId: number,
-    chatId: number,
+    chatId: string,
   ): Promise<UserDocument | null> {
     const user = await this.userModel.findOneAndUpdate(
       { telegramId },
@@ -48,7 +48,7 @@ export class UsersService {
   }
 
   async getSubscribedUsers(): Promise<UserDocument[]> {
-    return this.userModel.find({ notificationChatIds: { $ne: [] } });
+    return this.userModel.find({ isSubscribed: true });
   }
 
   async getAllUsers(): Promise<UserDocument[]> {
@@ -62,7 +62,7 @@ export class UsersService {
     const user = await this.userModel.findOneAndUpdate(
       { telegramId },
       { virtualAccountId },
-      { new: true },
+      { upsert: true, new: true },
     );
 
     this.logger.log(
@@ -83,10 +83,6 @@ export class UsersService {
   }
 
   async findByVirtualAccountId(virtualAccountId: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ virtualAccountId });
-  }
-
-  async findByAccountNumber(virtualAccountId: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ virtualAccountId });
   }
 
