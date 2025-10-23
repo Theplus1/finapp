@@ -84,6 +84,7 @@ export class TransactionsService {
       cardId?: string;
       status?: string;
       detailedStatus?: string;
+      amountCents?: number;
       startDate?: string;
       endDate?: string;
       sortBy?: string;
@@ -95,6 +96,7 @@ export class TransactionsService {
     if (filters.cardId) dbFilters.cardId = filters.cardId;
     if (filters.status) dbFilters.status = filters.status;
     if (filters.detailedStatus) dbFilters.detailedStatus = filters.detailedStatus;
+    if (filters.amountCents) dbFilters.amountCents = filters.amountCents;
     if (filters.startDate) dbFilters.startDate = new Date(filters.startDate);
     if (filters.endDate) dbFilters.endDate = new Date(filters.endDate);
     const data = await this.find(dbFilters);

@@ -68,7 +68,7 @@ export class ExportsController {
       const fileBuffer = await fs.readFile(job.filePath);
 
       // Set headers for file download
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="${job.fileName}"`);
       res.setHeader('Content-Length', fileBuffer.length.toString());
       res.setHeader('Cache-Control', 'no-cache');

@@ -162,7 +162,8 @@ export class TransactionsHandler {
           type: ExportType.TRANSACTIONS,
           filters: {
             virtualAccountId: ctx.userData?.virtualAccountId,
-            detailedStatus: { $in: [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING] },
+            detailedStatus: { $in: [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING, TransactionDetailedStatus.REVERSED] },
+            amountCents: { $lt: 0 },
             startDate: dateFrom.toISOString(),
             endDate: dateTo.toISOString(),
           },

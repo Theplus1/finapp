@@ -56,7 +56,7 @@ export class ExportsService {
         attempts: 3,
         backoff: {
           type: 'exponential',
-          delay: 2000,
+          delay: 5000,
         },
         removeOnComplete: true,
         removeOnFail: false,
