@@ -12,6 +12,7 @@ import { UsersModule } from './users/users.module';
 import configuration from './common/config/configuration';
 import { session } from 'telegraf';
 import { SlashIntegrationModule } from './integrations/slash/slash-integration.module';
+const rateLimit = require('telegraf-ratelimit');
 import { AdminApiModule } from './admin-api/admin-api.module';
 import { DatabaseModule } from './database/database.module';
 import { CardsModule } from './domain/cards/cards.module';
@@ -69,9 +70,27 @@ import { UserValidationMiddleware } from './bot/middleware/user-validation.middl
           throw new Error('BOT_TOKEN is not defined in environment variables');
         }
 
+        // Configure rate limiting
+        const rateLimitWindow = configService.get<number>('bot.rateLimit.window') || 60000;
+        const rateLimitMax = configService.get<number>('bot.rateLimit.limit') || 10;
+        
+        const rateLimitConfig = {
+          window: rateLimitWindow,
+          limit: rateLimitMax,
+          onLimitExceeded: async (ctx: any) => {
+            const minutes = Math.floor(rateLimitWindow / 60000);
+            const timeStr = minutes > 0 ? `${minutes} minute${minutes > 1 ? 's' : ''}` : `${Math.floor(rateLimitWindow / 1000)} seconds`;
+            
+            await ctx.reply(
+              `⚠️ *Rate limit exceeded*\n\nYou can send up to ${rateLimitMax} messages per ${timeStr}. Please wait a moment and try again.`,
+              { parse_mode: 'Markdown' }
+            );
+          },
+        };
+
         const config: any = {
           token,
-          middlewares: [session()],
+          middlewares: [session(), rateLimit(rateLimitConfig)],
         };
 
         if (mode === 'webhook') {
