@@ -13,6 +13,7 @@ import configuration from './common/config/configuration';
 import { session } from 'telegraf';
 import { SlashIntegrationModule } from './integrations/slash/slash-integration.module';
 const rateLimit = require('telegraf-ratelimit');
+import { Agent as HttpsAgent } from 'https';
 import { AdminApiModule } from './admin-api/admin-api.module';
 import { DatabaseModule } from './database/database.module';
 import { CardsModule } from './domain/cards/cards.module';
@@ -88,9 +89,18 @@ import { UserValidationMiddleware } from './bot/middleware/user-validation.middl
           },
         };
 
+        // Create custom HTTPS agent that forces IPv4 to fix DNS resolution issues
+        const agent = new HttpsAgent({
+          family: 4, // Force IPv4
+          keepAlive: true,
+        });
+
         const config: any = {
           token,
           middlewares: [session(), rateLimit(rateLimitConfig)],
+          telegram: {
+            agent,
+          },
         };
 
         if (mode === 'webhook') {
