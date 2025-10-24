@@ -23,16 +23,17 @@ export class WinstonLogger implements LoggerService {
       ],
     });
 
-    if (process.env.NODE_ENV !== 'production') {
-      this.logger.add(
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple(),
-          ),
-        }),
-      );
-    }
+    // Always add console transport for Docker logs
+    this.logger.add(
+      new winston.transports.Console({
+        format: winston.format.combine(
+          process.env.NODE_ENV !== 'production'
+            ? winston.format.colorize()
+            : winston.format.uncolorize(),
+          winston.format.simple(),
+        ),
+      }),
+    );
   }
 
   log(message: string, context?: string) {
