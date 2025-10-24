@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 # Force rebuild with fs-extra dependency
@@ -22,7 +22,7 @@ COPY apps/server/ ./apps/server/
 RUN npm run build:server
 
 # Production stage
-FROM node:20-alpine
+FROM node:18-alpine
 
 WORKDIR /app
 
