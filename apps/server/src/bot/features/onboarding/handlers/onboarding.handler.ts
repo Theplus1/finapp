@@ -19,6 +19,7 @@ export class OnboardingHandler {
     ctx.session = { step: SessionSteps.AWAITING_ACCOUNT_NUMBER, data: {} };
     await ctx.reply(Messages.requestAccountNumber(firstName), {
       parse_mode: 'Markdown',
+      reply_markup: { force_reply: true, selective: true },
     });
   }
 

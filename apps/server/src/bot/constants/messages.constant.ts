@@ -103,7 +103,7 @@ export const Messages = {
   cardNotFound: '❌ Card not found or you do not have access to this card.',
   errorFetchingCards: '❌ Error fetching cards. Please try again later.',
   cardDetailStart: '💬 *Card Detail Form*\n\n' +
-    'Please send the card ID you want to look up.\n\n(Send /cancel to cancel)',
+    'Reply to this message with the card ID you want to look up.\n\n(Send /cancel to cancel)',
 
   // Transactions
   transactionsMenu: '📋 *Transactions Menu*\n\nChoose an option:',

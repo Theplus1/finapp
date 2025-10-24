@@ -61,6 +61,7 @@ export class TransactionsHandler {
     await ctx.answerCbQuery();
     await ctx.reply(Messages.transactionInfoPrompt, {
       parse_mode: 'Markdown',
+      reply_markup: { force_reply: true, selective: true },
     });
   }
 
