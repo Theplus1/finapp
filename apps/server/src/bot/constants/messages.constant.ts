@@ -1,4 +1,6 @@
+import { format } from "date-fns";
 import { TransactionDataDTO } from "src/integrations/slash/dto/webhook.dto";
+import { CardDto, TransactionDetailedStatus } from "src/integrations/slash/types";
 import { formatCurrency } from "src/shared/utils/formatCurrency.util";
 import type { UserDocument } from "src/users/users.schema";
 import type { AccessStatus } from "src/users/users.schema";
@@ -124,22 +126,30 @@ export const Messages = {
     `File: ${fileName}\n` +
     `Download: ${uri}`,
 
-  transactionCreated: (transaction: TransactionDataDTO) =>
-    `✅ *Transaction Created!*\n` +
-    `Amount: ${formatCurrency(transaction.amountCents || 0, transaction.originalCurrency?.code)}\n` +
-    `Status: ${transaction.status || 'N/A'}\n` +
-    `Description: ${transaction.description || 'N/A'}\n` +
-    `Country: ${transaction.merchantData.location.country}\n` +
-    `Created: ${new Date(transaction.date).toLocaleString()}\n` +
-    `Transaction ID: ${transaction.id || 'N/A'}`,
-  transactionUpdated: (transaction: TransactionDataDTO) =>
-    `✅ *Transaction Updated!*\n` +
-    `Amount: ${formatCurrency(transaction.amountCents || 0, transaction.originalCurrency?.code)}\n` +
-    `Status: ${transaction.status || 'N/A'}\n` +
-    `Description: ${transaction.description || 'N/A'}\n` +
-    `Country: ${transaction.merchantData.location.country}\n` +
-    `Created: ${new Date(transaction.date).toLocaleString()}\n` +
-    `Transaction ID: ${transaction.id || 'N/A'}`,
+  transactionCreated: (transaction: TransactionDataDTO, card: CardDto | undefined) => {
+    // Helper function to escape Markdown special characters
+    const escapeMarkdown = (text: string): string => {
+      return text.replace(/([*_`\[\]])/g, '\\$1');
+    };
+
+    const isDeclined = transaction.detailedStatus === TransactionDetailedStatus.DECLINED;
+    const title = isDeclined ? '⚠️Giao dịch thẻ bị từ chối (Card Declined)' : '✅ Giao dịch thành công (Card Authorization)';
+    const status = isDeclined ? 'bị từ chối' : 'thành công';
+    const cardInfo = card ? `${card.name} (••••${card.last4})` : 'N/A';
+    const formattedDate = format(new Date(transaction.date), 'dd-MM-yy HH:mm:ss');
+    const description = transaction.merchantData?.description || 'N/A';
+    const declineReason = transaction.declineReason || 'No reason provided';
+    
+    let message = `*${title}*\n\n` +
+      `Thẻ ${escapeMarkdown(cardInfo)} có giao dịch ${status}\n` +
+      `Amount: ${formatCurrency(Math.abs(transaction.amountCents || 0), transaction.originalCurrency?.code)}\n` +
+      `Description: ${escapeMarkdown(description)}\n`;
+    if (isDeclined) {
+      message += `Declined Reason: ${escapeMarkdown(declineReason)}\n`;
+    }
+    message += `Transaction Date: ${formattedDate}`;
+    return message;
+  },
 
   replyCancelled: '❌ Reply cancelled.',
 

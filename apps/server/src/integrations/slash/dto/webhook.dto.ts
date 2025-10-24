@@ -26,12 +26,9 @@ export interface CreateWebhookDto {
 }
 
 export interface WebhookEventDto {
-  id: string;
-  type: WebhookEventType;
+  event: WebhookEventType;
   entityId: string;
-  entityType: string;
-  createdAt: string;
-  data: Record<string, any>;
+  eventId: string;
 }
 
 export interface TransactionDataDTO {
@@ -44,6 +41,7 @@ export interface TransactionDataDTO {
   description?: string;
   merchantDescription?: string;
   accountId?: string;
+  cardId?: string;
   originalCurrency?: {
     code?: string;
     amountCents?: number;
@@ -52,6 +50,7 @@ export interface TransactionDataDTO {
   referenceNumber?: string;
   authorizedAt?: string;
   virtualAccountId?: string;
+  declineReason?: string;
 }
 
 export interface AuthorizationWebhookPayload {
