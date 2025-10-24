@@ -22,7 +22,7 @@ import { UsersService } from '../../../users/users.service';
 import { Messages } from '../../../bot/constants/messages.constant';
 import { SlashSyncService } from '../services/slash-sync.service';
 import { SlashApiService } from '../services/slash-api.service';
-import { CardDto } from '../types';
+import { CardDto, TransactionDetailedStatus, TransactionDto } from '../types';
 
 /**
  * Slash Webhook Controller
@@ -283,30 +283,9 @@ export class SlashWebhookController {
       const transactionData = await this.slashApiService.getTransaction(event.entityId);
       await this.slashSyncService.syncTransactionFromWebhook(transactionData);
 
-      let card: CardDto | undefined;
-      if (transactionData.cardId) {
-        try {
-          const cardData = await this.slashApiService.getCard(transactionData.cardId, false, false);
-          card = cardData;
-        } catch (error) {
-          this.logger.warn(`Failed to fetch card data for ${transactionData.cardId}:`, error);
-        }
-      }
-
-      const user = await this.usersService.findByVirtualAccountId(transactionData.virtualAccountId || '');
-      if (!user || !user.telegramId) {
-        this.logger.warn(
-          `User not found for virtual account ID: ${transactionData.virtualAccountId}`,
-        );
-        return;
-      }
-
-      const destinations = user.notificationChatIds;
-      if (destinations.length > 0) {
-        await this.botService.sendMessageToMultiple(
-          destinations,
-          Messages.transactionCreated(transactionData, card),
-        );
+      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED ||
+        transactionData.detailedStatus === TransactionDetailedStatus.DECLINED)) {
+        await this.notifyUserAboutTransaction(transactionData);
       }
     } catch (error) {
       this.logger.error(`Error handling transaction created event for ${event.entityId}:`, error);
@@ -321,8 +300,43 @@ export class SlashWebhookController {
     try {
       const transactionData = await this.slashApiService.getTransaction(event.entityId);
       await this.slashSyncService.syncTransactionFromWebhook(transactionData);
+
+      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED ||
+        transactionData.detailedStatus === TransactionDetailedStatus.DECLINED)) {
+        await this.notifyUserAboutTransaction(transactionData);
+      }
     } catch (error) {
       this.logger.error(`Error handling transaction updated event for ${event.entityId}:`, error);
+    }
+  }
+
+  private async notifyUserAboutTransaction(transactionData: TransactionDto): Promise<void> {
+    this.logger.log(`Notifying user about transaction: ${transactionData.id}`);
+    const user = await this.usersService.findByVirtualAccountId(transactionData.virtualAccountId || '');
+    if (!user || !user.telegramId) {
+      this.logger.warn(
+        `User not found for virtual account ID: ${transactionData.virtualAccountId}`,
+      );
+      return;
+    }
+
+    const destinations = user.notificationChatIds;
+    if (destinations.length > 0) {
+
+      let card: CardDto | undefined;
+      if (transactionData.cardId) {
+        try {
+          const cardData = await this.slashApiService.getCard(transactionData.cardId, false, false);
+          card = cardData;
+        } catch (error) {
+          this.logger.warn(`Failed to fetch card data for ${transactionData.cardId}:`, error);
+        }
+      }
+
+      await this.botService.sendMessageToMultiple(
+        destinations,
+        Messages.transactionCreated(transactionData, card),
+      );
     }
   }
 }
