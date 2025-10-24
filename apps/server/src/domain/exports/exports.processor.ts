@@ -173,12 +173,11 @@ export class ExportsProcessor {
       { key: 'date', header: 'Date', map: (t) => this.formatDate(t.date) },
       { key: 'authorizedAt', header: 'Authorized', map: (t) => this.formatDate(t.authorizedAt) },
       { key: 'merchant', header: 'Merchant', map: (t) => t.merchantData?.description },
-      { key: 'amount', header: 'Amount', map: (t) => this.formatActualAmount(Math.abs(t.amountCents), '$') },
+      { key: 'amount', header: 'Amount', map: (t) => this.formatActualAmount(t.amountCents, '$') },
       { key: 'card', header: 'Card', map: (t) => t.card ? `${t.card.name} ${t.card.last4}` : '' },
       { key: 'detailedStatus', header: 'Status', map: (t) => t.detailedStatus.toUpperCase() },
       { key: 'originalAmount', header: 'Original', map: (t) => t.originalCurrency ? this.formatAmount(t.originalCurrency?.amountCents!) : '' },
       { key: 'originalCurrency', header: 'Currency', map: (t) => t.originalCurrency?.code },
-      { key: 'fee', header: 'Fee', map: (t) => t.feeInfo ? this.formatAmount(t.feeInfo?.relatedTransaction.amount!) : '' },
       { key: 'groupMonth', header: 'Group Month', map: (t) => this.formatGroupMonth(t.authorizedAt) },
       { key: 'groupDay', header: 'Group Day', map: (t) => this.formatGroupDay(t.authorizedAt) },
     ];
