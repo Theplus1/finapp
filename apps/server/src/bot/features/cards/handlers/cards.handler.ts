@@ -129,11 +129,15 @@ export class CardsHandler {
 
   async handleCardDetail(ctx: BotContext, cardId: string) {
     try {
+      this.logger.log(`Fetching card details for card ${cardId}`);
       const card = await this.slashApiService.getCardDecrypted(cardId, true, true);
 
       // Verify the card belongs to the user's virtual account
       if (card.virtualAccountId !== ctx.userData!.virtualAccountId) {
+        this.logger.warn(`Card ${cardId} does not belong to user ${ctx.userData!.virtualAccountId}`);
         await ctx.reply(Messages.cardNotFound);
+        // Clear session after error response
+        ctx.session = undefined;
         return;
       }
 
@@ -143,6 +147,10 @@ export class CardsHandler {
         parse_mode: 'MarkdownV2',
         ...Keyboards.cardDetail(cardId, card.status === CardStatus.ACTIVE),
       });
+
+      // Clear session after successful response
+      ctx.session = undefined;
+      this.logger.log(`Card details sent successfully for card ${cardId}`);
 
       setTimeout(async () => {
         try {
@@ -155,7 +163,18 @@ export class CardsHandler {
       }, cardDetailTimeout);
     } catch (error) {
       this.logger.error(`Error fetching card details for card ${cardId}:`, error);
-      await ctx.reply(Messages.errorFetchingCards);
+      
+      // Clear session on error to prevent stuck state
+      ctx.session = undefined;
+      
+      // Provide more specific error message
+      if (error.response?.status === 404) {
+        await ctx.reply(Messages.cardNotFound);
+      } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+        await ctx.reply('❌ Request timed out. Please try again later.');
+      } else {
+        await ctx.reply(Messages.errorFetchingCards);
+      }
     }
   }
   private formatCardDetail(card: CardDto, detailTimeout: number): string {

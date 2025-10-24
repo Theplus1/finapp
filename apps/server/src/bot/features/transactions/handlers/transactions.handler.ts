@@ -71,18 +71,24 @@ export class TransactionsHandler {
     const trimmed = (transactionId || '').trim();
     if (!trimmed) {
       await ctx.reply(Messages.noTransactionsFound);
+      // Clear session after error response
+      ctx.session = undefined;
       return;
     }
 
     await ctx.sendChatAction('typing');
     try {
+      this.logger.log(`Fetching transaction details for transaction ${trimmed}`);
       const transactionDetail =
         await this.slashApiService.getTransaction(trimmed);
       if (
         !transactionDetail ||
         transactionDetail.virtualAccountId !== userData.virtualAccountId
       ) {
+        this.logger.warn(`Transaction ${trimmed} not found or does not belong to user ${userData.virtualAccountId}`);
         await ctx.reply(Messages.noTransactionsFound);
+        // Clear session after error response
+        ctx.session = undefined;
         return;
       }
 
@@ -91,9 +97,24 @@ export class TransactionsHandler {
         parse_mode: 'Markdown',
         ...Keyboards.backToTransaction(),
       });
+      
+      // Clear session after successful response
+      ctx.session = undefined;
+      this.logger.log(`Transaction details sent successfully for transaction ${trimmed}`);
     } catch (error) {
       this.logger.error(`Error fetching transaction ${trimmed}:`, error);
-      await ctx.reply(Messages.errorFetchingTransactions);
+      
+      // Clear session on error to prevent stuck state
+      ctx.session = undefined;
+      
+      // Provide more specific error message
+      if (error.response?.status === 404) {
+        await ctx.reply(Messages.noTransactionsFound);
+      } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+        await ctx.reply('❌ Request timed out. Please try again later.');
+      } else {
+        await ctx.reply(Messages.errorFetchingTransactions);
+      }
     }
   }
 
