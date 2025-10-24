@@ -8,6 +8,7 @@ export interface TransactionFilters {
   cardId?: string;
   status?: string;
   detailedStatus?: string;
+  amountCents?: number;
   type?: string;
   startDate?: Date;
   endDate?: Date;
@@ -49,6 +50,10 @@ export class TransactionRepository {
       query.detailedStatus = filters.detailedStatus;
     }
 
+    if (filters.amountCents) {
+      query.amountCents = filters.amountCents;
+    }
+    
     if (filters.status) {
       query.status = filters.status;
     }
