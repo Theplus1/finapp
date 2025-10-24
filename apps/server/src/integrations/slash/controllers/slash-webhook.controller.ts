@@ -283,7 +283,8 @@ export class SlashWebhookController {
       const transactionData = await this.slashApiService.getTransaction(event.entityId);
       await this.slashSyncService.syncTransactionFromWebhook(transactionData);
 
-      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED ||
+      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED || 
+        transactionData.detailedStatus === TransactionDetailedStatus.PENDING ||
         transactionData.detailedStatus === TransactionDetailedStatus.DECLINED)) {
         await this.notifyUserAboutTransaction(transactionData);
       }
@@ -301,7 +302,8 @@ export class SlashWebhookController {
       const transactionData = await this.slashApiService.getTransaction(event.entityId);
       await this.slashSyncService.syncTransactionFromWebhook(transactionData);
 
-      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED ||
+      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED || 
+        transactionData.detailedStatus === TransactionDetailedStatus.PENDING ||
         transactionData.detailedStatus === TransactionDetailedStatus.DECLINED)) {
         await this.notifyUserAboutTransaction(transactionData);
       }
