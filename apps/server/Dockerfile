@@ -22,7 +22,7 @@ COPY apps/server/ ./apps/server/
 RUN npm run build:server
 
 # Production stage
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
