@@ -25,7 +25,7 @@ import FilterTransaction from "./components/filter";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { ClientPagination } from "@/components/ui/client-pagination";
 import CardNameCol from "@/components/ui/card-name-col";
-
+import { cn } from "@/lib/utils";
 const initFilter = {
   cardId: "",
   virtualAccountId: "",
@@ -113,20 +113,22 @@ export default function Dashboard() {
         },
       },
       {
-        header: "Amount",
+        header: <p className={isLoading ? "" : "text-end"}>Amount</p>,
+        id: "amount",
         cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? (
             <Skeleton />
           ) : (
-            <span
-              className={
+            <p
+              className={cn(
                 row.original.amountCents >= 0
                   ? "text-green-700"
-                  : "text-red-500"
-              }
+                  : "text-red-500",
+                "text-end"
+              )}
             >
               {formatDollarByCent(row.original.amountCents)}
-            </span>
+            </p>
           );
         },
       },

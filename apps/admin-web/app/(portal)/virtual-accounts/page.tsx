@@ -113,17 +113,27 @@ export default function VirtualAccount() {
       },
     },
     {
-      header: "Balance",
+      header: <p className={isLoading ? "" : "text-end"}>Balance</p>,
+      id: "balance",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
         const balance = row.original.balance?.amountCents ?? 0;
-        return isLoading ? <Skeleton /> : formatDollarByCent(balance);
+        return isLoading ? (
+          <Skeleton />
+        ) : (
+          <p className={"text-end"}>{formatDollarByCent(balance)}</p>
+        );
       },
     },
     {
-      header: "Spend",
+      header: <p className={isLoading ? "" : "text-end"}>Spend</p>,
+      id: "spend",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
         const spend = row.original.spend?.amountCents ?? 0;
-        return isLoading ? <Skeleton /> : formatDollarByCent(spend);
+        return isLoading ? (
+          <Skeleton />
+        ) : (
+          <p className={"text-end"}>{formatDollarByCent(spend)}</p>
+        );
       },
     },
     {

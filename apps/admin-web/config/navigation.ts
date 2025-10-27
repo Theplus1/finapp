@@ -30,46 +30,22 @@ export const teams: Team[] = [
 export const navMain: NavSection[] = [
   {
     title: "Dashboard",
-    url: "#",
+    url: "/dashboard",
     icon: SquareTerminal,
-    items: [
-      {
-        title: "Dashboard",
-        url: "/dashboard",
-      },
-    ],
   },
   {
     title: "Virtual accounts",
-    url: "#",
+    url: "/virtual-accounts",
     icon: User,
-    items: [
-      {
-        title: "Virtual accounts",
-        url: "/virtual-accounts",
-      },
-    ],
   },
   {
     title: "Group cards",
-    url: "#",
+    url: "/group-cards",
     icon: Group,
-    items: [
-      {
-        title: "Group cards",
-        url: "/group-cards",
-      },
-    ],
   },
   {
     title: "Cards",
-    url: "#",
+    url: "/cards",
     icon: IdCard,
-    items: [
-      {
-        title: "Cards",
-        url: "/cards",
-      },
-    ],
   },
 ];
