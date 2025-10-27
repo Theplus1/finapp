@@ -8,6 +8,9 @@ export interface VirtualAccount {
   accountId: string;
   availableBalanceCents: number;
   balanceCents: number;
+  balance: {
+    amountCents: number;
+  };
   createdAt: string;
   currency: string;
   description: string;
@@ -16,6 +19,9 @@ export interface VirtualAccount {
   legalEntityId: string;
   name: string;
   pendingBalanceCents: number;
+  spend: {
+    amountCents: number;
+  };
   status: string;
   syncSource: string;
   updatedAt: string;

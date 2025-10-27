@@ -40,13 +40,13 @@ export const navMain: NavSection[] = [
     ],
   },
   {
-    title: "Cards",
+    title: "Virtual accounts",
     url: "#",
-    icon: IdCard,
+    icon: User,
     items: [
       {
-        title: "Cards",
-        url: "/cards",
+        title: "Virtual accounts",
+        url: "/virtual-accounts",
       },
     ],
   },
@@ -62,13 +62,13 @@ export const navMain: NavSection[] = [
     ],
   },
   {
-    title: "Virtual accounts",
+    title: "Cards",
     url: "#",
-    icon: User,
+    icon: IdCard,
     items: [
       {
-        title: "Virtual accounts",
-        url: "/virtual-accounts",
+        title: "Cards",
+        url: "/cards",
       },
     ],
   },
