@@ -105,8 +105,8 @@ export default function Dashboard() {
         cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? (
             <Skeleton />
-          ) : row.original.virtualAccount.name ? (
-            row.original.virtualAccount.name
+          ) : row.original.virtualAccount?.name ? (
+            row.original.virtualAccount?.name
           ) : (
             EMPTY_LABEL
           );
