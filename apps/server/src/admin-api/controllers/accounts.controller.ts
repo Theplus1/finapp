@@ -170,7 +170,7 @@ export class AccountsController {
     const virtualAccount = await this.accountsService.validateAccountExists(id);
     
     // Link account to user (single source of truth)
-    await this.usersService.unlinkAccount(virtualAccount.slashId);
+    await this.usersService.unlinkAllAccount(virtualAccount.slashId);
     await this.usersService.linkAccountNumber(dto.telegramId, virtualAccount.slashId);
     
     this.logger.log(`Successfully linked account ${id} to telegram ID ${dto.telegramId}`);

@@ -43,7 +43,7 @@ export class SlashSyncJob {
   /**
    * Sync recent transactions every hour
    */
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async syncRecentTransactions() {
     if (!this.enableScheduledSync) {
       return;

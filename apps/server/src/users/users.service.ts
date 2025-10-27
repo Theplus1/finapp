@@ -72,7 +72,7 @@ export class UsersService {
   }
 
   async unlinkAccount(virtualAccountId: string): Promise<UserDocument | null> {
-    const user = await this.userModel.findOneAndUpdate(
+    const user = await this.userModel.findByIdAndUpdate(
       { virtualAccountId },
       { $unset: { virtualAccountId: '' } },
       { new: true },
@@ -80,6 +80,16 @@ export class UsersService {
 
     this.logger.log(`User ${user?.telegramId} unlinked from virtual account`);
     return user;
+  }
+
+    async unlinkAllAccount(virtualAccountId: string): Promise<boolean> {
+    const result = await this.userModel.updateMany(
+      { virtualAccountId },
+      { $unset: { virtualAccountId: '' } },
+    );
+
+    this.logger.log(`Unlinked ${result.modifiedCount} users from virtual account`);
+    return result.acknowledged && result.modifiedCount > 0;
   }
 
   async findByVirtualAccountId(virtualAccountId: string): Promise<UserDocument | null> {
