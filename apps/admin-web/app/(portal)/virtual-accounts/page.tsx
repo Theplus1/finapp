@@ -120,7 +120,7 @@ export default function VirtualAccount() {
       },
     },
     {
-      header: "Spend (30d)",
+      header: "Spend",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
         const spend = row.original.pendingBalanceCents;
         return isLoading ? <Skeleton /> : formatDollarByCent(spend);
