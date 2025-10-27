@@ -115,14 +115,14 @@ export default function VirtualAccount() {
     {
       header: "Balance",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        const balance = row.original.balance.amountCents;
+        const balance = row.original.balance?.amountCents ?? 0;
         return isLoading ? <Skeleton /> : formatDollarByCent(balance);
       },
     },
     {
       header: "Spend",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        const spend = row.original.spend.amountCents;
+        const spend = row.original.spend?.amountCents ?? 0;
         return isLoading ? <Skeleton /> : formatDollarByCent(spend);
       },
     },
