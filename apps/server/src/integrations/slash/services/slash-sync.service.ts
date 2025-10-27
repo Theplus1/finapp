@@ -10,7 +10,7 @@ import { SyncLog, SyncLogDocument } from '../../../database/schemas/sync-log.sch
 import { CardDto } from '../dto/card.dto';
 import { CardGroupDto } from '../dto/card-group.dto';
 import { TransactionDto } from '../dto/transaction.dto';
-import { VirtualAccountDto } from '../dto/account.dto';
+import { VirtualAccountDto, VirtualAccountWithDetailsDto } from '../dto/account.dto';
 import {
   SYNC_CONSTANTS,
   EntityType,
@@ -494,7 +494,7 @@ export class SlashSyncService {
    * Sync a single virtual account
    */
   private async syncSingleVirtualAccount(
-    item: any,
+    item: VirtualAccountWithDetailsDto,
   ): Promise<{ created: boolean; updated: boolean; failed: boolean }> {
     try {
       const va = item.virtualAccount;

@@ -9,6 +9,7 @@ import { MarkdownUtil } from 'src/shared/utils/markdown.util';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
 import { ExportType } from 'src/database/schemas/export-job.schema';
 import { ExportsService } from 'src/domain/exports/exports.service';
+import { User } from '@telegraf/types';
 
 @Injectable()
 export class CardsHandler {
@@ -141,8 +142,7 @@ export class CardsHandler {
         return;
       }
 
-      const cardDetailTimeout = this.configService.get<number>('cardDetailTimeout', 60000);
-      const cardDetail = this.formatCardDetail(card, cardDetailTimeout);
+      const cardDetail = this.formatCardDetail(card, ctx.from!);
       const sentMessage = await ctx.reply(cardDetail, {
         parse_mode: 'MarkdownV2',
         ...Keyboards.cardDetail(cardId, card.status === CardStatus.ACTIVE),
@@ -151,16 +151,6 @@ export class CardsHandler {
       // Clear session after successful response
       ctx.session = undefined;
       this.logger.log(`Card details sent successfully for card ${cardId}`);
-
-      setTimeout(async () => {
-        try {
-          await ctx.deleteMessage(sentMessage.message_id);
-          this.logger.debug(`Auto-deleted card detail message for card ${cardId}`);
-        } catch (error) {
-          // Message might already be deleted by user or bot lacks permission
-          this.logger.debug(`Could not auto-delete message for card ${cardId}:`, error);
-        }
-      }, cardDetailTimeout);
     } catch (error) {
       this.logger.error(`Error fetching card details for card ${cardId}:`, error);
       
@@ -177,19 +167,14 @@ export class CardsHandler {
       }
     }
   }
-  private formatCardDetail(card: CardDto, detailTimeout: number): string {
-    const statusEmoji = this.getStatusEmoji(card.status);
-
-    let message = `💳 *Card Details*\n\n`;
-    message += `*${MarkdownUtil.escapse(card.name)}*\n`;
-
-    message += `Card Number: ${card.pan}\n`;
-    if (card.cvv) {
+  private formatCardDetail(card: CardDto, userInfo: User): string {
+    let message = `💳 *Lấy thông tin mã CVV thẻ*\n\n`;
+    message += `Thẻ ${MarkdownUtil.escapse(card.name)} \\(•${card.last4}\\)\n`;
+    message += `Exp Date: ${card.expiryMonth}\\-${card.expiryYear}\n`;
+     if (card.cvv) {
       message += `CVV: ||${MarkdownUtil.escapse(card.cvv)}||\n`;
     }
-    message += `Expiry: ${card.expiryMonth}\\-${card.expiryYear}\n`;
-    message += `Status: ${statusEmoji} ${MarkdownUtil.escapse(card.status)}\n`;
-    message += `\n\n *Card detail will be removed after ${detailTimeout / 60000} min*`;
+    message += `Người thực hiện: ${userInfo.username || userInfo.id}\n`;
     return message;
   }
 

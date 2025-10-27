@@ -2,8 +2,8 @@
  * Virtual Account entity for transformation from Slash API DTO
  */
 
-import { Expose, Transform, Type } from 'class-transformer';
-import { CommissionRuleDto, VirtualAccountDto, VirtualAccountWithDetailsDto } from '../dto/account.dto';
+import { Expose, Transform } from 'class-transformer';
+import { CommissionRuleDto, VirtualAccountBalanceDto, VirtualAccountSpendDto } from '../dto/account.dto';
 import { SYNC_CONSTANTS, SyncSource } from '../constants/sync.constants';
 
 export class VirtualAccountEntity {
@@ -87,16 +87,6 @@ export class VirtualAccountWithDetailsEntity {
   @Transform(() => SYNC_CONSTANTS.DEFAULT_CURRENCY)
   currency: string;
 
-  @Expose({ name: 'balance.amountCents' })
-  @Transform(({ obj }) => obj.balance?.amountCents || 0, { toClassOnly: true })
-  balanceCents: number;
-
-  @Transform(({ obj }) => obj.balance?.amountCents || 0, { toClassOnly: true })
-  availableBalanceCents: number;
-
-  @Transform(() => 0)
-  pendingBalanceCents: number;
-
   @Transform(({ obj }) => obj.virtualAccount?.closedAt ? 'closed' : SYNC_CONSTANTS.DEFAULT_STATUS, { toClassOnly: true })
   status: string;
 
@@ -112,6 +102,12 @@ export class VirtualAccountWithDetailsEntity {
   routingNumber: string;
 
   commissionRule: CommissionRuleDto;
+
+  @Transform(({ obj }) => obj.spend, { toClassOnly: true })
+  spend: VirtualAccountSpendDto;
+
+  @Transform(({ obj }) => obj.balance, { toClassOnly: true })
+  balance: VirtualAccountBalanceDto;
 
   @Transform(() => new Date())
   createdAt: Date;

@@ -10,6 +10,7 @@ import { ExportsController } from './exports.controller';
 import { ExportsScheduler } from './exports.scheduler';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { CardsModule } from '../cards/cards.module';
+import { AccountsModule } from '../accounts/accounts.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { CardsModule } from '../cards/cards.module';
     }),
     TransactionsModule,
     CardsModule,
+    AccountsModule,
   ],
   controllers: [ExportsController],
   providers: [ExportsService, ExportsProcessor, ExportsScheduler],

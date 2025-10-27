@@ -17,6 +17,9 @@ import { ExportsService } from './exports.service';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
 import { CardsService } from '../cards/cards.service';
 import { TransactionDetailedStatus } from 'src/integrations/slash/types';
+import { AccountsService } from '../accounts/accounts.service';
+import { formatCurrency } from 'src/shared/utils/formatCurrency.util';
+import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
 
 interface ExportJobData {
   jobId: string;
@@ -36,6 +39,7 @@ export class ExportsProcessor {
     private readonly transactionsService: TransactionsService,
     private readonly cardsService: CardsService,
     private readonly exportsService: ExportsService,
+    private readonly virtualAccountService: AccountsService,
     @InjectBot() private readonly bot: Telegraf<BotContext>,
   ) { }
 
@@ -144,8 +148,15 @@ export class ExportsProcessor {
     const transactions = await this.transactionsService.findAllWithFilters(filters);
     const settledTransactions = transactions.filter(t => t.detailedStatus !== TransactionDetailedStatus.REVERSED);
     const reversedTransactions = transactions.filter(t => t.detailedStatus === TransactionDetailedStatus.REVERSED);
+    const virtualAccount = await this.virtualAccountService.findBySlashId(filters.virtualAccountId);
 
     const excelBuffer = await toExcelFromSheets([
+      {
+        name: 'Payment',
+        data: [virtualAccount],
+        columns: this.getPaymentColumns(),
+        customBuilder: (sheet, data, columns) => this.buildPaymentSheet(sheet, columns, virtualAccount),
+      },
       {
         name: 'Transactions History',
         data: settledTransactions,
@@ -195,6 +206,55 @@ export class ExportsProcessor {
       { key: 'originalAmount', header: 'Original', map: (t) => t.originalCurrency ? this.formatAmount(t.originalCurrency?.amountCents!) : '' },
       { key: 'originalCurrency', header: 'Currency', map: (t) => t.originalCurrency?.code },
     ];
+  }
+
+  private getPaymentColumns(): ExcelColumn<any>[] {
+    return [
+      { key: 'date', header: 'Date' },
+      { key: 'totalDeposit', header: 'Tổng nạp' },
+      { key: 'totalSpendNonUS', header: 'Tổng tiêu non US' },
+      { key: 'totalSpendUS', header: 'Tổng tiêu trong US' },
+      { key: 'empty', header: '' },
+      { key: 'accountBalance', header: 'Account Balance' },
+    ];
+  }
+
+  private buildPaymentSheet(sheet: any, columns: ExcelColumn<any>[], virtualAccount: VirtualAccountDocument): void {
+    // Row 1: Headers
+    columns.forEach((column, colIndex) => {
+      sheet.cell(1, colIndex + 1).value(column.header);
+    });
+
+    // Generate all dates for current month
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const currentMonthDates: string[] = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      currentMonthDates.push(format(date, 'M/d/yyyy'));
+    }
+
+    // Row 2: Summary row (to be calculated)
+    sheet.cell(2, 1).value('');
+    sheet.cell(2, 2).value('');
+    sheet.cell(2, 3).value('');
+    sheet.cell(2, 4).value('');
+    sheet.cell(2, 5).value('');
+    sheet.cell(2, 6).value(virtualAccount.balanceCents ? formatCurrency(virtualAccount.balanceCents, virtualAccount.currency) : '');
+
+    // Row 3+: Daily transaction data for all dates in current month
+    const dataStartRow = 3;
+    currentMonthDates.forEach((date, index) => {
+      const rowIndex = dataStartRow + index;
+      
+      sheet.cell(rowIndex, 1).value(date);
+      sheet.cell(rowIndex, 2).value(''); // Tổng nạp - to be filled
+      sheet.cell(rowIndex, 3).value(''); // Tổng tiêu non US - to be filled
+      sheet.cell(rowIndex, 4).value(''); // Tổng tiêu trong US - to be filled
+    });
   }
 
   private getCardColumns(): ExcelColumn<any>[] {

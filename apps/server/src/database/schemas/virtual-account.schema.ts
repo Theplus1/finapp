@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { CommissionRuleDto } from 'src/integrations/slash/dto/account.dto';
+import { CommissionRuleDto, VirtualAccountBalanceDto, VirtualAccountSpendDto } from 'src/integrations/slash/dto/account.dto';
 
 export type VirtualAccountDocument = VirtualAccount & Document;
 
@@ -47,6 +47,12 @@ export class VirtualAccount {
 
   @Prop({ type: Object })
   commissionRule: CommissionRuleDto;
+
+  @Prop({ type: Object })
+  spend: VirtualAccountSpendDto;
+
+  @Prop({ type: Object })
+  balance: VirtualAccountBalanceDto;
 
   @Prop()
   createdAt: Date;
