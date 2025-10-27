@@ -5,6 +5,10 @@ export default () => ({
     token: process.env.BOT_TOKEN,
     mode: process.env.MODE || 'polling',
     webhookUrl: process.env.WEBHOOK_URL,
+    rateLimit: {
+      window: parseInt(process.env.BOT_RATE_LIMIT_WINDOW || '60000', 10),
+      limit: parseInt(process.env.BOT_RATE_LIMIT_MAX || '10', 10),
+    },
   },
   database: {
     uri: process.env.MONGO_URI || 'mongodb://localhost:27017/telegram-bot',

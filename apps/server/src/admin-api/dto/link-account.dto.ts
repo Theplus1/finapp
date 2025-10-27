@@ -8,14 +8,6 @@ export class LinkAccountDto {
   })
   @IsNumber()
   telegramId: number;
-
-  @ApiPropertyOptional({ 
-    description: 'MongoDB User ID (optional)',
-    example: '507f1f77bcf86cd799439011' 
-  })
-  @IsString()
-  @IsOptional()
-  userId?: string;
 }
 
 export class LinkAccountResponseDto {

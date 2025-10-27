@@ -23,9 +23,9 @@ export class SlashSyncJob {
   }
 
   /**
-   * Sync cards every 30 minutes
+   * Sync cards daily at midnight
    */
-  @Cron(CronExpression.EVERY_30_MINUTES)
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async syncCards() {
     if (!this.enableScheduledSync) {
       return;
@@ -41,9 +41,9 @@ export class SlashSyncJob {
   }
 
   /**
-   * Sync recent transactions every 15 minutes
+   * Sync recent transactions every hour
    */
-  @Cron(CronExpression.EVERY_10_MINUTES)
+  @Cron(CronExpression.EVERY_HOUR)
   async syncRecentTransactions() {
     if (!this.enableScheduledSync) {
       return;
@@ -62,29 +62,29 @@ export class SlashSyncJob {
   /**
    * Full transaction sync daily at 2 AM
    */
-  @Cron('0 2 * * *')
-  async syncAllTransactions() {
-    if (!this.enableScheduledSync) {
-      return;
-    }
+  // @Cron('0 2 * * *')
+  // async syncAllTransactions() {
+  //   if (!this.enableScheduledSync) {
+  //     return;
+  //   }
 
-    this.logger.log('Starting scheduled full transaction sync...');
-    try {
-      // Sync all transactions from last 90 days
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 90);
+  //   this.logger.log('Starting scheduled full transaction sync...');
+  //   try {
+  //     // Sync all transactions from last 90 days
+  //     const startDate = new Date();
+  //     startDate.setDate(startDate.getDate() - 90);
       
-      await this.slashSyncService.syncAllTransactions(startDate);
-      this.logger.log('Scheduled full transaction sync completed successfully');
-    } catch (error) {
-      this.logger.error('Scheduled full transaction sync failed:', error);
-    }
-  }
+  //     await this.slashSyncService.syncAllTransactions(startDate);
+  //     this.logger.log('Scheduled full transaction sync completed successfully');
+  //   } catch (error) {
+  //     this.logger.error('Scheduled full transaction sync failed:', error);
+  //   }
+  // }
 
   /**
-   * Sync virtual accounts every hour
+   * Sync virtual accounts daily at midnight
    */
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async syncVirtualAccounts() {
     if (!this.enableScheduledSync) {
       return;

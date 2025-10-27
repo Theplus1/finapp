@@ -49,7 +49,7 @@ export class TransactionEntity {
 
   @Expose()
   @Type(() => Date)
-  @Transform(({ value }) => new Date(value), { toClassOnly: true })
+  @Transform(({ value }) => value ? new Date(value) : undefined, { toClassOnly: true })
   date: Date;
 
   @Expose()
@@ -61,12 +61,12 @@ export class TransactionEntity {
 
   @Expose()
   @Type(() => Date)
-  @Transform(({ value }) => new Date(value), { toClassOnly: true })
+  @Transform(({ value }) => value ? new Date(value) : undefined, { toClassOnly: true })
   authorizedAt?: Date;
 
   @Expose()
   @Type(() => Date)
-  @Transform(({ value }) => new Date(value), { toClassOnly: true })
+  @Transform(({ value }) => value ? new Date(value) : undefined, { toClassOnly: true })
   createdAt: Date;
 
   @Transform(({ obj }) => new Date(obj.settledAt || obj.createdAt), { toClassOnly: true })

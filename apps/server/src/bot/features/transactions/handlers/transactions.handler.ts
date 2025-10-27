@@ -27,7 +27,7 @@ export class TransactionsHandler {
     private readonly transactionsService: TransactionsService,
     private readonly exportsService: ExportsService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async handleTransactionListAction(ctx: BotContext) {
     await ctx.answerCbQuery();
@@ -39,7 +39,7 @@ export class TransactionsHandler {
 
   async handleSubscribeTransactionsAction(ctx: BotContext) {
     await ctx.answerCbQuery('Subscribing...');
-    await this.usersService.updateSubscription(ctx.from!.id, true);
+    await this.usersService.addNotificationDestination(ctx.userData!.telegramId, ctx.chat?.id ?? ctx.from!.id);
     await ctx.editMessageText(Messages.subscribeTransactionsSuccess, {
       parse_mode: 'Markdown',
       ...Keyboards.backToTransaction(),
@@ -48,7 +48,7 @@ export class TransactionsHandler {
 
   async handleUnsubscribeTransactionsAction(ctx: BotContext) {
     await ctx.answerCbQuery('Unsubscribing...');
-    await this.usersService.updateSubscription(ctx.from!.id, false);
+    await this.usersService.removeNotificationDestination(ctx.userData!.telegramId, ctx.chat?.id ?? ctx.from!.id);
     await ctx.editMessageText(Messages.unsubscribeTransactionsSuccess, {
       parse_mode: 'Markdown',
       ...Keyboards.backToTransaction(),
@@ -61,6 +61,7 @@ export class TransactionsHandler {
     await ctx.answerCbQuery();
     await ctx.reply(Messages.transactionInfoPrompt, {
       parse_mode: 'Markdown',
+      reply_markup: { force_reply: true, selective: true },
     });
   }
 
@@ -71,18 +72,24 @@ export class TransactionsHandler {
     const trimmed = (transactionId || '').trim();
     if (!trimmed) {
       await ctx.reply(Messages.noTransactionsFound);
+      // Clear session after error response
+      ctx.session = undefined;
       return;
     }
 
     await ctx.sendChatAction('typing');
     try {
+      this.logger.log(`Fetching transaction details for transaction ${trimmed}`);
       const transactionDetail =
         await this.slashApiService.getTransaction(trimmed);
       if (
         !transactionDetail ||
         transactionDetail.virtualAccountId !== userData.virtualAccountId
       ) {
+        this.logger.warn(`Transaction ${trimmed} not found or does not belong to user ${userData.virtualAccountId}`);
         await ctx.reply(Messages.noTransactionsFound);
+        // Clear session after error response
+        ctx.session = undefined;
         return;
       }
 
@@ -91,9 +98,24 @@ export class TransactionsHandler {
         parse_mode: 'Markdown',
         ...Keyboards.backToTransaction(),
       });
+      
+      // Clear session after successful response
+      ctx.session = undefined;
+      this.logger.log(`Transaction details sent successfully for transaction ${trimmed}`);
     } catch (error) {
       this.logger.error(`Error fetching transaction ${trimmed}:`, error);
-      await ctx.reply(Messages.errorFetchingTransactions);
+      
+      // Clear session on error to prevent stuck state
+      ctx.session = undefined;
+      
+      // Provide more specific error message
+      if (error.response?.status === 404) {
+        await ctx.reply(Messages.noTransactionsFound);
+      } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+        await ctx.reply('❌ Request timed out. Please try again later.');
+      } else {
+        await ctx.reply(Messages.errorFetchingTransactions);
+      }
     }
   }
 
@@ -161,8 +183,9 @@ export class TransactionsHandler {
         {
           type: ExportType.TRANSACTIONS,
           filters: {
-            virtualAccountId: ctx.virtualAccount?.slashId,
-            detailedStatus: TransactionDetailedStatus.SETTLED,
+            virtualAccountId: ctx.userData?.virtualAccountId,
+            detailedStatus: { $in: [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING, TransactionDetailedStatus.REVERSED] },
+            amountCents: { $lt: 0 },
             startDate: dateFrom.toISOString(),
             endDate: dateTo.toISOString(),
           },
@@ -171,7 +194,7 @@ export class TransactionsHandler {
 
       await ctx.reply(
         '⏳ *Generating your export...*\n\n' +
-          'This may take a moment. You\'ll receive a download link when it\'s ready.',
+        'This may take a moment. You\'ll receive a download link when it\'s ready.',
         { parse_mode: 'Markdown' },
       );
 

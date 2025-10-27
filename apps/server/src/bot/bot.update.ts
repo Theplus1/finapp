@@ -3,8 +3,8 @@ import { Context, Markup } from 'telegraf';
 import { Logger, UseInterceptors } from '@nestjs/common';
 import { BotContext } from './interfaces/bot-context.interface';
 import { MenuHandler } from './features/menu/handlers/menu.handler';
-import { SubscriptionHandler } from './features/subscription/handlers/subscription.handler';
 import { OnboardingHandler } from './features/onboarding/handlers/onboarding.handler';
+import { NotificationsHandler } from './features/notifications/handlers/notifications.handler';
 import { Messages } from './constants/messages.constant';
 import { Keyboards } from './constants/keyboards.constant';
 import { SessionSteps } from './constants/session-steps.constant';
@@ -21,10 +21,10 @@ export class BotUpdate {
 
   constructor(
     private readonly menuHandler: MenuHandler,
-    private readonly subscriptionHandler: SubscriptionHandler,
     private readonly onboardingHandler: OnboardingHandler,
     private readonly cardHandler: CardsHandler,
     private readonly transactionsHandler: TransactionsHandler,
+    private readonly notificationsHandler: NotificationsHandler,
   ) {}
 
   @ValidateUser({ answerCallback: true })
@@ -51,7 +51,10 @@ export class BotUpdate {
   async startFeedback(@Ctx() ctx: BotContext) {
     await ctx.sendChatAction('typing');
     ctx.session = { step: SessionSteps.AWAITING_FEEDBACK, data: {} };
-    await ctx.reply(Messages.feedbackStart, { parse_mode: 'Markdown' });
+    await ctx.reply(Messages.feedbackStart, { 
+      parse_mode: 'Markdown',
+      reply_markup: { force_reply: true, selective: true }
+    });
   }
 
   @ValidateUser({ answerCallback: true })
@@ -79,7 +82,10 @@ export class BotUpdate {
   @Action(Actions.cards.detail)
   async onCardDetailAction(@Ctx() ctx: BotContext) {
     ctx.session = { step: SessionSteps.AWAITING_CARD_ID, data: {} };
-    await ctx.reply(Messages.cardDetailStart, { parse_mode: 'Markdown' });
+    await ctx.reply(Messages.cardDetailStart, { 
+      parse_mode: 'Markdown',
+      reply_markup: { force_reply: true, selective: true }
+    });
   }
 
   // @Action('card.action.lock')
@@ -150,19 +156,7 @@ export class BotUpdate {
   async onTransactionDetailAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleTransactionDetailAction(ctx);
   }
-
-  @ValidateUser({ answerCallback: true })
-  @Action('subscribe')
-  async onSubscribeAction(@Ctx() ctx: BotContext) {
-    return this.subscriptionHandler.handleSubscribeAction(ctx);
-  }
-
-  @ValidateUser({ answerCallback: true })
-  @Action('unsubscribe')
-  async onUnsubscribeAction(@Ctx() ctx: BotContext) {
-    return this.subscriptionHandler.handleUnsubscribeAction(ctx);
-  }
-
+  
   @ValidateUser({ answerCallback: true })
   @Action(Actions.menu.about)
   async onAboutAction(@Ctx() ctx: BotContext) {
@@ -175,15 +169,43 @@ export class BotUpdate {
     await this.startFeedback(ctx);
   }
 
+  // ==================== Notification Destination Commands ====================
+  
+  @Command('connect')
+  async onConnectCommand(@Ctx() ctx: BotContext) {
+    await ctx.sendChatAction('typing');
+    return this.notificationsHandler.handleConnectCommand(ctx);
+  }
+
+  @Command('disconnect')
+  async onDisconnectCommand(@Ctx() ctx: BotContext) {
+    await ctx.sendChatAction('typing');
+    return this.notificationsHandler.handleDisconnectCommand(ctx);
+  }
+
+  @Command('destinations')
+  async onDestinationsCommand(@Ctx() ctx: BotContext) {
+    await ctx.sendChatAction('typing');
+    return this.notificationsHandler.handleDestinationsCommand(ctx);
+  }
+
   // ==================== Admin Actions ====================
   // Note: Admin operations are now handled via REST API
   // See /admin endpoints in AdminController
 
-
-  // TODO: Move to FeedbackHandler
   @ValidateUser({ answerCallback: true })
   @On('text')
   async onText(@Ctx() ctx: BotContext) {
+    // In groups, only process if user is replying to bot's message
+    const isPrivate = ctx.chat?.type === 'private';
+    if (!isPrivate) {
+      const replyTo = (ctx.message as any)?.reply_to_message;
+      const isReplyToBot = replyTo?.from?.id === ctx.botInfo?.id;
+      
+      // Ignore messages that aren't replies to the bot
+      if (!isReplyToBot) return;
+    }
+
     if (!this.isValidTextMessage(ctx)) return;
 
     // Type guard ensures these are defined
@@ -264,7 +286,9 @@ export class BotUpdate {
     const rating = parseInt(text, 10);
 
     if (!this.isValidRating(rating)) {
-      await ctx.reply(Messages.feedbackInvalidRating);
+      await ctx.reply(Messages.feedbackInvalidRating, {
+        reply_markup: { force_reply: true, selective: true }
+      });
       return;
     }
 
@@ -290,7 +314,10 @@ export class BotUpdate {
     const trimmedVitualAccountId = vitualAccountId.trim();
 
     if (!this.isValidAccountNumber(trimmedVitualAccountId)) {
-      await ctx.reply(Messages.accountNumberInvalid, { parse_mode: 'Markdown' });
+      await ctx.reply(Messages.accountNumberInvalid, { 
+        parse_mode: 'Markdown',
+        reply_markup: { force_reply: true, selective: true }
+      });
       return;
     }
 

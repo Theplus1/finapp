@@ -23,8 +23,6 @@ export class CardsHandler {
   ) { }
 
   async handleCardMenu(ctx: BotContext) {
-    const virtualAccount = ctx.virtualAccount!;
-
     try {
       await ctx.sendChatAction('typing');
       await ctx.reply(Messages.cardsMenu, {
@@ -117,7 +115,7 @@ export class CardsHandler {
         {
           type: ExportType.CARDS,
           filters: {
-            virtualAccountId: ctx.virtualAccount?.slashId,
+            virtualAccountId: ctx.userData!.virtualAccountId,
           },
         },
       );
@@ -129,40 +127,17 @@ export class CardsHandler {
     }
   }
 
-  private formatCardsList(cards: CardDto[], count: number, currentCursor?: string, nextCursor?: string): string {
-    let message = `💳 *Your Cards (${count})*\n\n`;
-
-    cards.forEach((card, index) => {
-      const statusEmoji = this.getStatusEmoji(card.status);
-      message += `${index + 1}. *${card.name}* \n`;
-      message += `   •••• ${card.last4} | Exp: ${card.expiryMonth}/${card.expiryYear}\n`;
-      message += `   Status: ${statusEmoji} ${card.status}\n\n`;
-    });
-
-    message += `\n_`;
-    if (currentCursor) {
-      const pageId = currentCursor.substring(0, 8);
-      message += `📄 Page (${pageId})`;
-    } else {
-      message += `📄 Page 1`;
-    }
-    if (nextCursor) {
-      message += ` • More available ➡️`;
-    }
-    message += `_`;
-
-    return message;
-  }
-
   async handleCardDetail(ctx: BotContext, cardId: string) {
-    const virtualAccount = ctx.virtualAccount!;
-
     try {
-      const card = await this.slashApiService.getCard(cardId, false, true);
+      this.logger.log(`Fetching card details for card ${cardId}`);
+      const card = await this.slashApiService.getCardDecrypted(cardId, true, true);
 
       // Verify the card belongs to the user's virtual account
-      if (card.virtualAccountId !== virtualAccount.slashId) {
+      if (card.virtualAccountId !== ctx.userData!.virtualAccountId) {
+        this.logger.warn(`Card ${cardId} does not belong to user ${ctx.userData!.virtualAccountId}`);
         await ctx.reply(Messages.cardNotFound);
+        // Clear session after error response
+        ctx.session = undefined;
         return;
       }
 
@@ -172,6 +147,10 @@ export class CardsHandler {
         parse_mode: 'MarkdownV2',
         ...Keyboards.cardDetail(cardId, card.status === CardStatus.ACTIVE),
       });
+
+      // Clear session after successful response
+      ctx.session = undefined;
+      this.logger.log(`Card details sent successfully for card ${cardId}`);
 
       setTimeout(async () => {
         try {
@@ -184,36 +163,33 @@ export class CardsHandler {
       }, cardDetailTimeout);
     } catch (error) {
       this.logger.error(`Error fetching card details for card ${cardId}:`, error);
-      await ctx.reply(Messages.errorFetchingCards);
+      
+      // Clear session on error to prevent stuck state
+      ctx.session = undefined;
+      
+      // Provide more specific error message
+      if (error.response?.status === 404) {
+        await ctx.reply(Messages.cardNotFound);
+      } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+        await ctx.reply('❌ Request timed out. Please try again later.');
+      } else {
+        await ctx.reply(Messages.errorFetchingCards);
+      }
     }
   }
   private formatCardDetail(card: CardDto, detailTimeout: number): string {
     const statusEmoji = this.getStatusEmoji(card.status);
-    const cardType = card.isPhysical ? '💳 Physical Card' : '🌐 Virtual Card';
-    const singleUse = card.isSingleUse ? ' (Single Use)' : '';
 
     let message = `💳 *Card Details*\n\n`;
     message += `*${MarkdownUtil.escapse(card.name)}*\n`;
-    message += `${cardType}${singleUse}\n\n`;
 
-    message += `📋 *Information*\n`;
-    message += `Card Number: •••• ${card.last4}\n`;
+    message += `Card Number: ${card.pan}\n`;
     if (card.cvv) {
       message += `CVV: ||${MarkdownUtil.escapse(card.cvv)}||\n`;
     }
     message += `Expiry: ${card.expiryMonth}\\-${card.expiryYear}\n`;
     message += `Status: ${statusEmoji} ${MarkdownUtil.escapse(card.status)}\n`;
-
-    if (card.spendingConstraint) {
-      message += `\n💰 *Spending Limits*\n`;
-
-      // The API returns a complex nested structure for spending constraints
-      message += `Spending limits configured\n`;
-    }
-
-    const createdDate = new Date(card.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    message += `\n📅 Created: ${MarkdownUtil.escapse(createdDate)}`;
-    message += `\n\n *Card detail will be removed after ${detailTimeout / 60000} min for security*`;
+    message += `\n\n *Card detail will be removed after ${detailTimeout / 60000} min*`;
     return message;
   }
 

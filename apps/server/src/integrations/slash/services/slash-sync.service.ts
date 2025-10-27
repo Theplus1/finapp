@@ -190,6 +190,105 @@ export class SlashSyncService {
   }
 
   /**
+   * Sync full card details (PAN and CVV) for all cards
+   * This retrieves sensitive card information one by one
+   */
+  async syncAllCardDetails(): Promise<void> {
+    const syncLog = await this.createSyncLog(
+      SYNC_CONSTANTS.ENTITY_TYPE.CARD,
+      SYNC_CONSTANTS.SYNC_TYPE.SCHEDULED_FULL,
+    );
+
+    try {
+      const result = await this.syncCardDetailsForAllCards();
+      
+      await this.completeSyncLog(syncLog._id as Types.ObjectId, SYNC_CONSTANTS.SYNC_STATUS.COMPLETED, {
+        recordsProcessed: result.totalProcessed,
+        recordsCreated: 0,
+        recordsUpdated: result.totalUpdated,
+        recordsFailed: result.totalFailed,
+      });
+
+      this.logger.log(
+        `Completed card details sync: ${result.totalProcessed} processed, ` +
+        `${result.totalUpdated} updated, ${result.totalFailed} failed`,
+      );
+    } catch (error) {
+      await this.failSyncLog(syncLog._id as Types.ObjectId, error.message);
+      this.logger.error('Error during card details sync:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync card details for all cards in the database
+   */
+  private async syncCardDetailsForAllCards(): Promise<SyncResult> {
+    const result: SyncResult = {
+      totalProcessed: 0,
+      totalCreated: 0,
+      totalUpdated: 0,
+      totalFailed: 0,
+    };
+
+    // Get all cards from local database
+    const cards = await this.cardRepository.find({
+      filter: { isDeleted: false },
+      sort: { createdAt: -1 },
+    });
+
+    this.logger.log(`Found ${cards.length} cards to sync details for`);
+
+    // Process each card one by one to retrieve full details
+    for (const card of cards) {
+      const itemResult = await this.syncSingleCardDetails(card.slashId);
+      result.totalProcessed++;
+      if (itemResult.updated) result.totalUpdated++;
+      if (itemResult.failed) result.totalFailed++;
+
+      // Add a small delay to avoid rate limiting
+      await this.delay(100);
+    }
+
+    return result;
+  }
+
+  /**
+   * Sync full details (PAN and CVV) for a single card
+   */
+  private async syncSingleCardDetails(
+    cardId: string,
+  ): Promise<{ created: boolean; updated: boolean; failed: boolean }> {
+    try {
+      // Fetch card with decrypted PAN and CVV from Slash Vault API
+      const cardWithDetails = await this.slashApiService.getCardDecrypted(cardId, true, true);
+      
+      // Map and update the card with decrypted PAN and CVV fields
+      const entityData = mapCardDtoToEntity(cardWithDetails, SYNC_CONSTANTS.SYNC_SOURCE.SCHEDULED);
+      
+      await this.cardRepository.upsert(cardId, entityData);
+      
+      this.logger.debug(`Synced decrypted details for card ${cardId}`);
+      
+      return {
+        created: false,
+        updated: true,
+        failed: false,
+      };
+    } catch (error) {
+      this.logger.error(`Error syncing card details for ${cardId}:`, error);
+      return { created: false, updated: false, failed: true };
+    }
+  }
+
+  /**
+   * Utility method to add delay between API calls
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
    * Full sync of all transactions
    */
   async syncAllTransactions(startDate?: Date, endDate?: Date): Promise<void> {

@@ -10,12 +10,13 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import { TransactionsService } from '../transactions/transactions.service';
 import { ExportJob, ExportJobDoc, ExportStatus, ExportType } from 'src/database/schemas/export-job.schema';
-import { toCsvFromObjects } from 'src/shared/utils/csv.util';
+import { toExcelFromObjects, toExcelFromSheets, ExcelColumn } from 'src/shared/utils/excel.util';
 import { buildTimestampedName } from 'src/shared/utils/naming.util';
 import { publicPath } from 'src/shared/utils/file.util';
 import { ExportsService } from './exports.service';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
 import { CardsService } from '../cards/cards.service';
+import { TransactionDetailedStatus } from 'src/integrations/slash/types';
 
 interface ExportJobData {
   jobId: string;
@@ -74,8 +75,7 @@ export class ExportsProcessor {
       await this.exportsService.updateJobStatus(jobId, ExportStatus.COMPLETED, {
         fileName: result.fileName,
         filePath: result.filePath,
-        fileSize: stats.size,
-        recordCount: result.recordCount,
+        fileSize: stats.size
       });
 
       this.logger.log(`Export job ${jobId} completed successfully`);
@@ -85,7 +85,6 @@ export class ExportsProcessor {
 
       // Try to notify user via bot (don't fail if this doesn't work)
       try {
-
         if (result.recordCount === 0) {
           await this.bot.telegram.sendMessage(chatId, 'No records found for your export request');
           return;
@@ -93,7 +92,6 @@ export class ExportsProcessor {
         await this.bot.telegram.sendMessage(
           chatId,
           `✅ *Export Ready!*\n\n` +
-          `📊 Records: ${result.recordCount}\n` +
           `📁 File: \`${result.fileName}\`\n` +
           `💾 Size: ${this.formatFileSize(stats.size)}\n` +
           `⏰ Expires: 24 hours`,
@@ -143,79 +141,24 @@ export class ExportsProcessor {
     fileName: string;
     recordCount: number;
   }> {
-    // Fetch transactions using existing service
-    const transactions = await this.transactionsService.findAllWithFilters({
-      virtualAccountId: filters.virtualAccountId,
-      detailedStatus: filters.detailedStatus,
-      startDate: filters.startDate,
-      endDate: filters.endDate,
-    });
+    const transactions = await this.transactionsService.findAllWithFilters(filters);
+    const settledTransactions = transactions.filter(t => t.detailedStatus !== TransactionDetailedStatus.REVERSED);
+    const reversedTransactions = transactions.filter(t => t.detailedStatus === TransactionDetailedStatus.REVERSED);
 
-    // Generate CSV using existing utility
-    const csvData = toCsvFromObjects(transactions, [
-      { key: 'slashId', header: 'ID' },
+    const excelBuffer = await toExcelFromSheets([
       {
-        key: 'date',
-        header: 'Date',
-        map: (t) => this.formatDate(t.date)
+        name: 'Transactions History',
+        data: settledTransactions,
+        columns: this.getTransactionColumns(),
       },
       {
-        key: 'authorizedAt',
-        header: 'Authorized',
-        map: (t) => this.formatDate(t.authorizedAt),
-      },
-      {
-        key: 'merchant',
-        header: 'Merchant',
-        map: (t) => t.merchantData?.description
-      },
-      {
-        key: 'amount',
-        header: 'Amount',
-        map: (t) => this.formatActualAmount(t.amountCents, '$'),
-      },
-      {
-        key: 'card',
-        header: 'Card',
-        map: (t) => t.card?.name,
-      },
-      {
-        key: 'detailedStatus',
-        header: 'Status',
-        map: (t) => t.detailedStatus.toUpperCase()
-      },
-      {
-        key: 'originalAmount', header: 'Original',
-        map: (t) => this.formatAmount(t.originalCurrency?.amountCents!)
-      },
-      { key: 'originalCurrency', header: 'Currency', map: (t) => t.originalCurrency?.code },
-      {
-        key: 'fee',
-        header: 'Fee',
-        map: (t) => t.feeInfo ? this.formatAmount(t.feeInfo?.relatedTransaction.amount!) : '',
-      },
-      {
-        key: 'groupMonth',
-        header: 'Group Month'
-      },
-      {
-        key: 'groupDay',
-        header: 'Group Day'
+        name: 'Reversed',
+        data: reversedTransactions,
+        columns: this.getReversedTransactionColumns(),
       },
     ]);
 
-    // Generate filename
-    const fileName = buildTimestampedName(new Date(), {
-      prefix: 'transactions',
-      ext: 'csv',
-    });
-
-    // Save to exports directory (separate from public transaction data)
-    const outDir = publicPath('exports');
-    await fs.ensureDir(outDir);
-
-    const filePath = path.join(outDir, fileName);
-    await fs.writeFile(filePath, csvData, 'utf8');
+    const { filePath, fileName } = await this.saveExportFile(excelBuffer, 'transactions');
 
     return {
       filePath,
@@ -224,10 +167,77 @@ export class ExportsProcessor {
     };
   }
 
-  // 2025-10-16 23:51:41
+  private getTransactionColumns(): ExcelColumn<any>[] {
+    return [
+      { key: 'slashId', header: 'ID' },
+      { key: 'date', header: 'Date', map: (t) => this.formatDate(t.date) },
+      { key: 'authorizedAt', header: 'Authorized', map: (t) => this.formatDate(t.authorizedAt) },
+      { key: 'merchant', header: 'Merchant', map: (t) => t.merchantData?.description },
+      { key: 'amount', header: 'Amount', map: (t) => this.formatActualAmount(t.amountCents, '$') },
+      { key: 'card', header: 'Card', map: (t) => t.card ? `${t.card.name} ${t.card.last4}` : '' },
+      { key: 'detailedStatus', header: 'Status', map: (t) => t.detailedStatus.toUpperCase() },
+      { key: 'originalAmount', header: 'Original', map: (t) => t.originalCurrency ? this.formatAmount(t.originalCurrency?.amountCents!) : '' },
+      { key: 'originalCurrency', header: 'Currency', map: (t) => t.originalCurrency?.code },
+      { key: 'groupMonth', header: 'Group Month', map: (t) => this.formatGroupMonth(t.authorizedAt) },
+      { key: 'groupDay', header: 'Group Day', map: (t) => this.formatGroupDay(t.authorizedAt) },
+    ];
+  }
+
+  private getReversedTransactionColumns(): ExcelColumn<any>[] {
+    return [
+      { key: 'slashId', header: 'ID' },
+      { key: 'date', header: 'Date', map: (t) => this.formatDate(t.date) },
+      { key: 'authorizedAt', header: 'Authorized', map: (t) => this.formatDate(t.authorizedAt) },
+      { key: 'merchant', header: 'Merchant', map: (t) => t.merchantData?.description },
+      { key: 'amount', header: 'Amount', map: (t) => this.formatActualAmount(t.amountCents, '$') },
+      { key: 'card', header: 'Card', map: (t) => t.card ? `${t.card.name} ${t.card.last4}` : '' },
+      { key: 'detailedStatus', header: 'Status', map: (t) => t.detailedStatus.toUpperCase() },
+      { key: 'originalAmount', header: 'Original', map: (t) => t.originalCurrency ? this.formatAmount(t.originalCurrency?.amountCents!) : '' },
+      { key: 'originalCurrency', header: 'Currency', map: (t) => t.originalCurrency?.code },
+    ];
+  }
+
+  private getCardColumns(): ExcelColumn<any>[] {
+    return [
+      { key: 'name', header: 'Name' },
+      { key: 'type', header: 'Type', map: () => 'Visa' },
+      { key: 'pan', header: 'Card' },
+      { key: 'expiryDate', header: 'Exp Date', map: () => '' },
+      { key: 'cvv', header: 'CVV', map: () => '' },
+      { key: 'status', header: 'Status', map: (c) => c.status.toUpperCase() },
+      { key: 'slashId', header: 'Card ID' },
+      { key: 'note', header: 'Note', map: () => '' },
+    ];
+  }
+
+  private async saveExportFile(buffer: Buffer, prefix: string): Promise<{ filePath: string; fileName: string }> {
+    const fileName = buildTimestampedName(new Date(), {
+      prefix,
+      ext: 'xlsx',
+    });
+
+    const outDir = publicPath('exports');
+    await fs.ensureDir(outDir);
+
+    const filePath = path.join(outDir, fileName);
+    await fs.writeFile(filePath, buffer);
+
+    return { filePath, fileName };
+  }
+
   private formatDate(date: Date | undefined): string {
     if (!date) return '';
     return format(date, 'yyyy-MM-dd HH:mm:ss');
+  }
+
+  private formatGroupMonth(date: Date | undefined): string {
+    if (!date) return '';
+    return format(date, 'yyyy-MM');
+  }
+
+  private formatGroupDay(date: Date | undefined): string {
+    if (!date) return '';
+    return format(date, 'yyyy-MM-dd');
   }
 
   private async generateCardsExport(filters: Record<string, any>): Promise<{
@@ -235,35 +245,13 @@ export class ExportsProcessor {
     fileName: string;
     recordCount: number;
   }> {
-    // Fetch transactions using existing service
     const [cards, total] = await this.cardsService.findAllWithFilters({
       virtualAccountId: filters.virtualAccountId,
     });
 
-    // Generate CSV using existing utility
-    const csvData = toCsvFromObjects(cards, [
-      { key: 'name', header: 'Name' },
-      { key: 'type', header: 'Type', map: () => 'Visa' },
-      { key: 'last4', header: 'Card' },
-      { key: 'expiryDate', header: 'Exp Date', map: (c) => '' },
-      { key: 'cvv', header: 'CVV', map: (c) => '' },
-      { key: 'status', header: 'Status', map: (c) => c.status.toUpperCase() },
-      { key: 'slashId', header: 'Card ID' },
-      { key: 'note', header: 'Note', map: (c) => '' },
-    ]);
-
-    // Generate filename
-    const fileName = buildTimestampedName(new Date(), {
-      prefix: 'cards',
-      ext: 'csv',
-    });
-
-    // Save to exports directory (separate from public transaction data)
-    const outDir = publicPath('exports');
-    await fs.ensureDir(outDir);
-
-    const filePath = path.join(outDir, fileName);
-    await fs.writeFile(filePath, csvData, 'utf8');
+    const columns = this.getCardColumns();
+    const excelBuffer = await toExcelFromObjects(cards, columns, 'Cards');
+    const { filePath, fileName } = await this.saveExportFile(excelBuffer, 'cards');
 
     return {
       filePath,

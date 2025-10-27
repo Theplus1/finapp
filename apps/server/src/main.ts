@@ -7,6 +7,11 @@ import { apiReference } from '@scalar/nestjs-api-reference';
 import { WinstonLogger } from './common/utils/logger';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { setDefaultResultOrder } from 'node:dns';
+
+// Fix for IPv6/IPv4 DNS resolution issues with Telegram API
+// Force IPv4 first to prevent connection timeouts
+setDefaultResultOrder('ipv4first');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {

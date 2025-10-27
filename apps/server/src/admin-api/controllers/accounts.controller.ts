@@ -28,6 +28,7 @@ import {
 } from '../dto/link-account.dto';
 import { AccountsService } from '../../domain/accounts/accounts.service';
 import { SlashApiService } from '../../integrations/slash/services/slash-api.service';
+import { UsersService } from '../../users/users.service';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 
 @ApiTags('Admin API - Virtual Accounts')
@@ -40,6 +41,7 @@ export class AccountsController {
   constructor(
     private readonly accountsService: AccountsService,
     private readonly slashApiService: SlashApiService,
+    private readonly usersService: UsersService,
   ) {}
 
   @Get()
@@ -140,7 +142,7 @@ export class AccountsController {
     summary: 'Link virtual account to user',
     description: 'Link a virtual account to a Telegram user',
   })
-  @ApiParam({ name: 'id', description: 'Virtual Account ID' })
+  @ApiParam({ name: 'id', description: 'Virtual Account Slash ID' })
   @ApiBody({ type: LinkAccountDto })
   @ApiResponse({
     status: 200,
@@ -155,17 +157,30 @@ export class AccountsController {
   async linkAccount(
     @Param('id') id: string,
     @Body() dto: LinkAccountDto,
-    @Request() req: any,
   ): Promise<LinkAccountResponseDto> {
     this.logger.log(
       `Linking virtual account ${id} to telegram ID ${dto.telegramId}`,
     );
-    return this.accountsService.linkToUser(
-      id,
-      dto.telegramId,
-      dto.userId,
-      req.user.username,
-    );
+    
+    // Check if user already has a linked account
+    const existingUser = await this.usersService.findByTelegramId(dto.telegramId);
+    if (existingUser?.virtualAccountId) {
+      throw new Error(`Telegram ID ${dto.telegramId} already has a linked virtual account: ${existingUser.virtualAccountId}`);
+    }
+    const virtualAccount = await this.accountsService.validateAccountExists(id);
+    
+    // Link account to user (single source of truth)
+    await this.usersService.unlinkAccount(virtualAccount.slashId);
+    await this.usersService.linkAccountNumber(dto.telegramId, virtualAccount.slashId);
+    
+    this.logger.log(`Successfully linked account ${id} to telegram ID ${dto.telegramId}`);
+    
+    return {
+      slashId: virtualAccount.slashId,
+      name: virtualAccount.name,
+      linkedTelegramId: dto.telegramId,
+      linkedAt: new Date(),
+    };
   }
 
   @Delete(':id/link')
@@ -175,9 +190,20 @@ export class AccountsController {
   })
   @ApiParam({ name: 'id', description: 'Virtual Account ID' })
   @ApiResponse({ status: 200, description: 'Account unlinked successfully' })
-  @ApiResponse({ status: 404, description: 'Virtual account not found' })
+  @ApiResponse({ status: 404, description: 'Virtual account or linked user not found' })
   async unlinkAccount(@Param('id') id: string) {
     this.logger.log(`Unlinking virtual account ${id}`);
-    return this.accountsService.unlinkFromUser(id);
+    
+    // Find user by virtual account ID
+    const virtualAccount = await this.accountsService.validateAccountExists(id);
+    if (!virtualAccount) {
+      throw new Error(`Virtual account ${id} not found`);
+    }
+    // Unlink account from user
+    await this.usersService.unlinkAccount(virtualAccount.slashId);
+    
+    this.logger.log(`Successfully unlinked account ${id} from virtual account ID ${virtualAccount.slashId}`);
+    
+    return true;
   }
 }

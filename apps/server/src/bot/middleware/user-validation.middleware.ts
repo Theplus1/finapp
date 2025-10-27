@@ -13,6 +13,7 @@ export class UserValidationMiddleware {
   private readonly logger = new Logger(UserValidationMiddleware.name);
 
   constructor(
+    private readonly usersService: UsersService,
     private readonly accountsService: AccountsService,
   ) {}
 
@@ -37,10 +38,10 @@ export class UserValidationMiddleware {
         return; // Block execution
       }
 
-      // Fetch and attach virtual account
-      const virtualAccount = await this.accountsService.findByTelegramId(telegramUser.id);
+      // Fetch user
+      const user = await this.usersService.findByTelegramId(telegramUser.id);
       
-      if (!virtualAccount) {
+      if (!user) {
         this.logger.warn(`User not found: ${telegramUser.id}`);
         
         // Answer callback query if it exists
@@ -52,8 +53,7 @@ export class UserValidationMiddleware {
         return; // Block execution
       }
 
-      ctx.virtualAccount = virtualAccount;
-
+      ctx.userData = user;
       return next();
     };
   }

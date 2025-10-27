@@ -149,7 +149,9 @@ export class CardsService {
       this.cardRepository.find(query),
       this.cardRepository.count(mongoFilter),
     ]);
-
+    if (total === 0) {
+      return [cards, total];
+    }
     const enrichedCards = await this.enrichCards(cards);
     return [enrichedCards, total];
   }

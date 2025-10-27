@@ -1,12 +1,11 @@
 import type { MerchantDTO } from "./merchant.dto";
 
 export enum WebhookEventType {
-  CARD_CREATED = 'card.created',
-  CARD_UPDATED = 'card.updated',
-  CARD_CLOSED = 'card.closed',
-  TRANSACTION_CREATED = 'transaction.created',
-  TRANSACTION_UPDATED = 'transaction.updated',
-  AUTHORIZATION_REQUEST = 'authorization.request',
+  CARD_CREATED = 'card_creation.event',
+  CARD_UPDATED = 'card.update',
+  CARD_CLOSED = 'card.delete',
+  TRANSACTION_CREATED = 'aggregated_transaction.create',
+  TRANSACTION_UPDATED = 'aggregated_transaction.update',
 }
 
 export interface WebhookDto {
@@ -27,12 +26,9 @@ export interface CreateWebhookDto {
 }
 
 export interface WebhookEventDto {
-  id: string;
-  type: WebhookEventType;
+  event: WebhookEventType;
   entityId: string;
-  entityType: string;
-  createdAt: string;
-  data: Record<string, any>;
+  eventId: string;
 }
 
 export interface TransactionDataDTO {
@@ -45,6 +41,7 @@ export interface TransactionDataDTO {
   description?: string;
   merchantDescription?: string;
   accountId?: string;
+  cardId?: string;
   originalCurrency?: {
     code?: string;
     amountCents?: number;
@@ -52,6 +49,8 @@ export interface TransactionDataDTO {
   };
   referenceNumber?: string;
   authorizedAt?: string;
+  virtualAccountId?: string;
+  declineReason?: string;
 }
 
 export interface AuthorizationWebhookPayload {

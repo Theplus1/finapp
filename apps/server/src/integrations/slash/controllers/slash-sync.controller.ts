@@ -26,6 +26,19 @@ export class SlashSyncController {
     return { message: 'Card sync started' };
   }
 
+  @Post('cards/details')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Manually trigger card details sync (PAN and CVV)' })
+  @ApiResponse({ status: 202, description: 'Card details sync started' })
+  async syncCardDetails() {
+    // Run async without waiting
+    this.slashSyncService.syncAllCardDetails().catch((error) => {
+      this.logger.error('Manual card details sync failed:', error);
+    });
+    
+    return { message: 'Card details sync started (retrieving full PAN and CVV)' };
+  }
+
   @Post('transactions')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Manually trigger transaction sync' })

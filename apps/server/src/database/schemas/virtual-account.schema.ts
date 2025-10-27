@@ -48,19 +48,6 @@ export class VirtualAccount {
   @Prop({ type: Object })
   commissionRule: CommissionRuleDto;
 
-  // User Linking (Simple approach)
-  @Prop()
-  linkedTelegramId?: number; // Telegram ID of linked user
-
-  @Prop()
-  linkedUserId?: string; // MongoDB User._id (optional reference)
-
-  @Prop()
-  linkedAt?: Date; // When the link was created
-
-  @Prop()
-  linkedBy?: string; // Admin who created the link
-
   @Prop()
   createdAt: Date;
 
@@ -83,5 +70,3 @@ export const VirtualAccountSchema = SchemaFactory.createForClass(VirtualAccount)
 // Indexes for efficient querying
 VirtualAccountSchema.index({ accountId: 1, status: 1 });
 VirtualAccountSchema.index({ lastSyncedAt: 1 });
-VirtualAccountSchema.index({ linkedTelegramId: 1 }); // For finding user's account
-VirtualAccountSchema.index({ linkedTelegramId: 1, status: 1 }); // For active user accounts
