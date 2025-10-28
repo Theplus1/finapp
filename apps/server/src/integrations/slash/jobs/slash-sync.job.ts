@@ -84,7 +84,7 @@ export class SlashSyncJob {
   /**
    * Sync virtual accounts daily at midnight
    */
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async syncVirtualAccounts() {
     if (!this.enableScheduledSync) {
       return;
