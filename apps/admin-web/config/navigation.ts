@@ -39,8 +39,8 @@ export const navMain: NavSection[] = [
     icon: User,
   },
   {
-    title: "Group cards",
-    url: "/group-cards",
+    title: "Card groups",
+    url: "/card-groups",
     icon: Group,
   },
   {

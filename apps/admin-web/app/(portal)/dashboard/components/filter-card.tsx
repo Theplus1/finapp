@@ -13,6 +13,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Card } from "@/lib/api/endpoints/card";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState } from "react";
+import { Label } from "@/components/ui/label";
 
 type Props = {
   onCardChange: (cardId: string) => void;
@@ -20,6 +21,7 @@ type Props = {
 const limitPerRequest = 100;
 
 const FilterCard = ({ onCardChange }: Props) => {
+  const [value, setValue] = useState("all");
   const [textSearch, setTextSearch] = useState("");
 
   const { data: cardInfos, isLoading: isLoadingCardInfos } = useQuery({
@@ -45,6 +47,7 @@ const FilterCard = ({ onCardChange }: Props) => {
   });
 
   const handleValueChange = (value: string) => {
+    setValue(value);
     onCardChange(value === "all" ? "" : value);
   };
 
@@ -55,39 +58,42 @@ const FilterCard = ({ onCardChange }: Props) => {
   }, [cardInfos, textSearch]);
 
   return (
-    <Select onValueChange={handleValueChange}>
-      <SelectTrigger className="w-[280px]">
-        {isLoadingCardInfos ? (
-          <Spinner />
-        ) : (
-          <SelectValue placeholder="Select a card" />
-        )}
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectLabel>Select a card</SelectLabel>
-          <Input
-            value={textSearch}
-            placeholder="Search card"
-            className="w-full sticky top-0 z-10 bg-background"
-            onKeyDown={(e) => {
-              e.stopPropagation();
-            }}
-            onChange={(e) => {
-              setTextSearch(e.target.value);
-            }}
-          />
-          <SelectItem key="all" value="all">
-            All
-          </SelectItem>
-          {cardInforsSelect?.map((card) => (
-            <SelectItem key={card._id} value={card.slashId}>
-              {card.name}
+    <>
+      <Label className="px-1">Card</Label>
+      <Select onValueChange={handleValueChange} value={value}>
+        <SelectTrigger className="w-[280px]">
+          {isLoadingCardInfos ? (
+            <Spinner />
+          ) : (
+            <SelectValue placeholder="Select a card" />
+          )}
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectLabel>Select a card</SelectLabel>
+            <Input
+              value={textSearch}
+              placeholder="Search card"
+              className="w-full sticky top-0 z-10 bg-background"
+              onKeyDown={(e) => {
+                e.stopPropagation();
+              }}
+              onChange={(e) => {
+                setTextSearch(e.target.value);
+              }}
+            />
+            <SelectItem key="all" value="all">
+              All
             </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+            {cardInforsSelect?.map((card) => (
+              <SelectItem key={card._id} value={card.slashId}>
+                {card.name}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </>
   );
 };
 

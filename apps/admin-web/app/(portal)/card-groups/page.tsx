@@ -28,7 +28,7 @@ export default function GroupCard() {
   useEffect(() => {
     setBreadcrumbs([
       { label: "Dashboard", href: "/dashboard" },
-      { label: "Group cards", href: "/group-card" },
+      { label: "Card groups", href: "/card-groups" },
     ]);
   }, [setBreadcrumbs]);
 
@@ -129,7 +129,7 @@ export default function GroupCard() {
   return (
     <PageLayout>
       <PageHeader>
-        <PageTitle>Group cards</PageTitle>
+        <PageTitle>Card groups</PageTitle>
       </PageHeader>
 
       <Section>

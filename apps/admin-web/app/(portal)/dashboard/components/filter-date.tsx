@@ -30,8 +30,8 @@ export function FilterDate({ onDateFromChange, onDateToChange }: Props) {
 
   return (
     <div className="flex gap-3">
-      <DatePicker onChange={(date) => handleChangeFrom(date)} label="From" />
-      <DatePicker onChange={(date) => handleChangeTo(date)} label="To" />
+      <DatePicker onChange={handleChangeFrom} label="From" />
+      <DatePicker onChange={handleChangeTo} label="To" />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -7,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useState } from "react";
 
 type Props = {
   onStatusChange: (status: string) => void;
@@ -22,29 +24,34 @@ const arrStatus: Record<Status, string> = {
 };
 
 const FilterStatus = ({ onStatusChange }: Props) => {
+  const [value, setValue] = useState("all");
   const handleValueChange = (value: string) => {
+    setValue(value);
     onStatusChange(value === "all" ? "" : value);
   };
 
   return (
-    <Select onValueChange={handleValueChange}>
-      <SelectTrigger className="w-[280px]">
-        <SelectValue placeholder="Select a status" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectLabel>Select a status</SelectLabel>
-          <SelectItem key="all" value="all">
-            All
-          </SelectItem>
-          {Object.keys(arrStatus).map((field) => (
-            <SelectItem key={field} value={arrStatus[field as Status]}>
-              {field}
+    <>
+      <Label className="px-1">Status</Label>
+      <Select onValueChange={handleValueChange} value={value}>
+        <SelectTrigger className="w-[280px]">
+          <SelectValue placeholder="Select a status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectLabel>Select a status</SelectLabel>
+            <SelectItem key="all" value="all">
+              All
             </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+            {Object.keys(arrStatus).map((field) => (
+              <SelectItem key={field} value={arrStatus[field as Status]}>
+                {field}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </>
   );
 };
 

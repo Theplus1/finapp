@@ -11,12 +11,15 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Spinner } from "@/components/ui/spinner";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
 
 type Props = {
   onVirtualAccountChange: (virtualAccountId: string) => void;
 };
 
 const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
+  const [value, setValue] = useState("all");
   const { data: virtualAccountInfos, isLoading: isLoadingVirtualAccountInfos } =
     useQuery({
       queryKey: ["virtual-account-infos"],
@@ -27,37 +30,41 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
     });
 
   const handleValueChange = (value: string) => {
+    setValue(value);
     onVirtualAccountChange(value === "all" ? "" : value);
   };
 
   const virtualAccountData = virtualAccountInfos?.data ?? [];
 
   return (
-    <Select onValueChange={handleValueChange}>
-      <SelectTrigger className="w-[280px]">
-        {isLoadingVirtualAccountInfos ? (
-          <Spinner />
-        ) : (
-          <SelectValue placeholder="Select a virtual account" />
-        )}
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectLabel>Select a virtual account</SelectLabel>
-          <SelectItem key="all" value="all">
-            All
-          </SelectItem>
-          {virtualAccountData.map((virtualAccount: VirtualAccount) => (
-            <SelectItem
-              key={virtualAccount.slashId}
-              value={virtualAccount.slashId}
-            >
-              {virtualAccount.name}
+    <>
+      <Label className="px-1">Virtual account</Label>
+      <Select onValueChange={handleValueChange} value={value}>
+        <SelectTrigger className="w-[280px]">
+          {isLoadingVirtualAccountInfos ? (
+            <Spinner />
+          ) : (
+            <SelectValue placeholder="Select a virtual account" />
+          )}
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectLabel>Select a virtual account</SelectLabel>
+            <SelectItem key="all" value="all">
+              All
             </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+            {virtualAccountData.map((virtualAccount: VirtualAccount) => (
+              <SelectItem
+                key={virtualAccount.slashId}
+                value={virtualAccount.slashId}
+              >
+                {virtualAccount.name}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </>
   );
 };
 

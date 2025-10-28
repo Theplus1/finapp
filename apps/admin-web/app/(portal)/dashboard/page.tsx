@@ -182,7 +182,6 @@ export default function Dashboard() {
     setPagination((prev) => ({
       ...prev,
       page: 1,
-      total: 0,
     }));
     setCurrentFilter((prev) => ({
       ...prev,

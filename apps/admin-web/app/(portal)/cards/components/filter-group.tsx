@@ -10,12 +10,15 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Spinner } from "@/components/ui/spinner";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
 
 type Props = {
   onGroupChange: (groupId: string) => void;
 };
 
 const FilterGroup = ({ onGroupChange }: Props) => {
+  const [value, setValue] = useState("all");
   const { data: groupInfos = [], isLoading: isLoadingGroupInfos } = useQuery({
     queryKey: ["group-infos"],
     queryFn: async () => {
@@ -25,32 +28,36 @@ const FilterGroup = ({ onGroupChange }: Props) => {
   });
 
   const handleValueChange = (value: string) => {
+    setValue(value);
     onGroupChange(value === "all" ? "" : value);
   };
 
   return (
-    <Select onValueChange={handleValueChange}>
-      <SelectTrigger className="w-[280px]">
-        {isLoadingGroupInfos ? (
-          <Spinner />
-        ) : (
-          <SelectValue placeholder="Select a group card" />
-        )}
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectLabel>Select a group card</SelectLabel>
-          <SelectItem key="all" value="all">
-            All
-          </SelectItem>
-          {groupInfos.map((group) => (
-            <SelectItem key={group._id} value={group.slashId}>
-              {group.name}
+    <>
+      <Label className="px-1">Group card</Label>
+      <Select onValueChange={handleValueChange} value={value}>
+        <SelectTrigger className="w-[280px]">
+          {isLoadingGroupInfos ? (
+            <Spinner />
+          ) : (
+            <SelectValue placeholder="Select a group card" />
+          )}
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectLabel>Select a group card</SelectLabel>
+            <SelectItem key="all" value="all">
+              All
             </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+            {groupInfos.map((group) => (
+              <SelectItem key={group._id} value={group.slashId}>
+                {group.name}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </>
   );
 };
 
