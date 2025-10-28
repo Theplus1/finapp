@@ -1,0 +1,147 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { DailyPaymentSummary, DailyPaymentSummaryDocument } from 'src/database/schemas/daily-payment-summary.schema';
+import { TransactionsService } from '../transactions/transactions.service';
+import { startOfDay, endOfDay } from 'date-fns';
+
+@Injectable()
+export class DailyPaymentSummariesService {
+  private readonly logger = new Logger(DailyPaymentSummariesService.name);
+
+  constructor(
+    @InjectModel(DailyPaymentSummary.name)
+    private readonly dailyPaymentSummaryModel: Model<DailyPaymentSummaryDocument>,
+    private readonly transactionsService: TransactionsService,
+  ) { }
+
+  /**
+   * Calculate and save daily payment summary for a specific date
+   */
+  async calculateAndSaveDailySummary(
+    virtualAccountId: string,
+    date: Date,
+    currency: string,
+  ): Promise<DailyPaymentSummaryDocument> {
+    const dayStart = startOfDay(date);
+    const dayEnd = endOfDay(date);
+
+    this.logger.log(`Calculating daily summary for ${virtualAccountId} on ${dayStart.toISOString()}`);
+
+    // Get all transactions for this day
+    const transactions = await this.transactionsService.findAllWithFilters({
+      virtualAccountId,
+      amountCents: { $lt: 0 },
+      startDate: dayStart.toISOString(),
+      endDate: dayEnd.toISOString(),
+    });
+
+    // Calculate totals
+    let totalDepositCents = 0;
+    let totalSpendNonUSCents = 0;
+    let totalSpendUSCents = 0;
+
+    transactions.forEach((transaction) => {
+      const spendAmount = Math.abs(transaction.amountCents);
+      if (transaction.merchantData?.location?.country === 'US') {
+        totalSpendUSCents += spendAmount;
+      } else {
+        totalSpendNonUSCents += spendAmount;
+      }
+    });
+
+    // Upsert the summary
+    const summary = await this.dailyPaymentSummaryModel.findOneAndUpdate(
+      {
+        virtualAccountId,
+        date: dayStart,
+      },
+      {
+        virtualAccountId,
+        date: dayStart,
+        totalDepositCents,
+        totalSpendNonUSCents,
+        totalSpendUSCents,
+        accountBalanceCents: 0, // Will be calculated separately
+        currency,
+        calculatedAt: new Date(),
+      },
+      {
+        upsert: true,
+        new: true,
+      },
+    );
+
+    this.logger.log(
+      `Daily summary saved: deposits=${totalDepositCents}, spendNonUS=${totalSpendNonUSCents}, spendUS=${totalSpendUSCents}`,
+    );
+
+    return summary;
+  }
+
+  /**
+   * Get daily summaries for a date range
+   */
+  async getDailySummaries(
+    virtualAccountId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<DailyPaymentSummaryDocument[]> {
+    return this.dailyPaymentSummaryModel
+      .find({
+        virtualAccountId,
+        date: {
+          $gte: startOfDay(startDate),
+          $lte: startOfDay(endDate),
+        },
+      })
+      .sort({ date: 1 })
+      .exec();
+  }
+
+  /**
+   * Get or calculate daily summary for a specific date
+   */
+  async getOrCalculateDailySummary(
+    virtualAccountId: string,
+    date: Date,
+    currency: string,
+  ): Promise<DailyPaymentSummaryDocument> {
+    const dayStart = startOfDay(date);
+
+    const summary = await this.dailyPaymentSummaryModel.findOne({
+      virtualAccountId,
+      date: dayStart,
+    });
+
+    if (!summary) {
+      return this.calculateAndSaveDailySummary(virtualAccountId, date, currency);
+    }
+
+    return summary;
+  }
+
+  /**
+   * Recalculate summaries for a date range
+   */
+  async recalculateSummariesForRange(
+    virtualAccountId: string,
+    startDate: Date,
+    endDate: Date,
+    currency: string,
+  ): Promise<void> {
+    const currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      await this.calculateAndSaveDailySummary(virtualAccountId, new Date(currentDate), currency);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  }
+
+  /**
+   * Delete summaries for a virtual account
+   */
+  async deleteSummariesForAccount(virtualAccountId: string): Promise<void> {
+    await this.dailyPaymentSummaryModel.deleteMany({ virtualAccountId });
+  }
+}

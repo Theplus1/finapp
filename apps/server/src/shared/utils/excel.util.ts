@@ -10,7 +10,7 @@ export type ExcelSheet<T> = {
   name: string;
   data: T[];
   columns: Array<ExcelColumn<T>>;
-  customBuilder?: (sheet: any, data: T[], columns: Array<ExcelColumn<T>>) => void;
+  customBuilder?: (sheet: any, data: T[], columns: Array<ExcelColumn<T>>) => void | Promise<void>;
 };
 
 // Constants
@@ -97,8 +97,8 @@ export async function toExcelFromSheets<T extends Record<string, any>>(
 ): Promise<Buffer> {
   const workbook = await XlsxPopulate.fromBlankAsync();
 
-  sheets.forEach((sheetConfig, index) => {
-    const { name, data, columns, customBuilder } = sheetConfig;
+  for (let index = 0; index < sheets.length; index++) {
+    const { name, data, columns, customBuilder } = sheets[index];
 
     // First sheet already exists, just rename it; others need to be added
     const sheet = index === 0 ? workbook.sheet(0) : workbook.addSheet(name);
@@ -108,14 +108,14 @@ export async function toExcelFromSheets<T extends Record<string, any>>(
 
     // Use custom builder if provided, otherwise use default
     if (customBuilder) {
-      customBuilder(sheet, data, columns);
+      await customBuilder(sheet, data, columns);
     } else {
       // Write content
       writeHeaders(sheet, columns);
       writeDataRows(sheet, data, columns);
       setColumnWidths(sheet, columns.length);
     }
-  });
+  }
 
   const buffer = await workbook.outputAsync();
   return buffer as Buffer;

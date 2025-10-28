@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { DatabaseModule } from '../../database/database.module';
 import { UsersModule } from '../../users/users.module';
 import { BotService } from '../../bot/bot.service';
+import { DailyPaymentSummariesModule } from '../../domain/daily-payment-summaries/daily-payment-summaries.module';
 
 // Schemas
 import { SyncLog, SyncLogSchema } from '../../database/schemas/sync-log.schema';
@@ -32,6 +33,7 @@ import { SlashSyncController } from './controllers/slash-sync.controller';
     ConfigModule,
     DatabaseModule,
     UsersModule,
+    DailyPaymentSummariesModule,
     MongooseModule.forFeature([
       { name: SyncLog.name, schema: SyncLogSchema },
     ]),

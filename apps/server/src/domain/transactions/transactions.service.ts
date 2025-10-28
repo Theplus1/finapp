@@ -84,7 +84,7 @@ export class TransactionsService {
       cardId?: string;
       status?: string;
       detailedStatus?: string;
-      amountCents?: number;
+      amountCents?: any;
       startDate?: string;
       endDate?: string;
       sortBy?: string;

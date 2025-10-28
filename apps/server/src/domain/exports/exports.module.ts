@@ -11,6 +11,9 @@ import { ExportsScheduler } from './exports.scheduler';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { CardsModule } from '../cards/cards.module';
 import { AccountsModule } from '../accounts/accounts.module';
+import { DailyPaymentSummariesModule } from '../daily-payment-summaries/daily-payment-summaries.module';
+import { PaymentSheetBuilder } from './services/payment-sheet.builder';
+import { ExportGeneratorsService } from './services/export-generators.service';
 
 @Module({
   imports: [
@@ -33,9 +36,16 @@ import { AccountsModule } from '../accounts/accounts.module';
     TransactionsModule,
     CardsModule,
     AccountsModule,
+    DailyPaymentSummariesModule,
   ],
   controllers: [ExportsController],
-  providers: [ExportsService, ExportsProcessor, ExportsScheduler],
+  providers: [
+    ExportsService,
+    ExportsProcessor,
+    ExportsScheduler,
+    PaymentSheetBuilder,
+    ExportGeneratorsService,
+  ],
   exports: [ExportsService],
 })
 export class ExportsModule {}
