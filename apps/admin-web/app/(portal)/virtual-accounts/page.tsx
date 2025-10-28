@@ -30,7 +30,7 @@ import { ClientPagination } from "@/components/ui/client-pagination";
 import FormLinkTelegram from "./(components)/form-link-telegram";
 import { cn } from "@/lib/utils";
 
-const fakeIdTelegram = "fakeID";
+const idTelegram = "@finnotisys_bot";
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as VirtualAccount[];
@@ -162,7 +162,7 @@ export default function VirtualAccount() {
           Telegram
           <Tooltip>
             <TooltipTrigger>
-              <CopyIcon text={fakeIdTelegram} showText={false} />
+              <CopyIcon text={idTelegram} showText={false} />
             </TooltipTrigger>
             <TooltipContent
               style={{
@@ -172,7 +172,7 @@ export default function VirtualAccount() {
               Copy this id and add it to the group you want to receive
               notifications from, then take that group id and assign it to the
               virtual account you want to receive notifications from:{" "}
-              {fakeIdTelegram}
+              {idTelegram}
             </TooltipContent>
           </Tooltip>
         </div>
