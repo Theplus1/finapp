@@ -109,7 +109,7 @@ export class PaymentSheetBuilder {
     sheet.cell(row, 3).value(formatCurrency(totals.totalSpendNonUSCents, virtualAccount.currency));
     sheet.cell(row, 4).value(formatCurrency(totals.totalSpendUSCents, virtualAccount.currency));
     sheet.cell(row, 5).value('');
-    sheet.cell(row, 6).value(formatCurrency(virtualAccount.balanceCents, virtualAccount.currency));
+    sheet.cell(row, 6).value(formatCurrency(virtualAccount.balance.amountCents, virtualAccount.currency));
   }
 
   private writeDailyRows(sheet: any, dateRange: DateRange, summaryMap: Map<string, any>, virtualAccount: VirtualAccountDocument): void {
