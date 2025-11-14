@@ -38,7 +38,7 @@ const FilterCard = ({ onCardChange }: Props) => {
         const { pagination: paginationRes, data } = res;
         totalCardInfors = [...totalCardInfors, ...data];
         hasNext =
-          (paginationRes?.total || 0) <=
+          (paginationRes?.total || 0) >=
           (paginationRes?.page || 1) * (paginationRes?.limit || 1);
         page++;
       }
