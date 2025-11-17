@@ -147,7 +147,8 @@ export const Messages = {
     if (isDeclined) {
       message += `Declined Reason: ${escapeMarkdown(declineReason)}\n`;
     }
-    message += `Transaction Date: ${formattedDate}`;
+    message += `Transaction Date: ${formattedDate}\n`;
+    message += `Reference ID: ${escapeMarkdown(transaction.id)}`;
     return message;
   },
 
