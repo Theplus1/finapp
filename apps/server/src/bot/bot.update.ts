@@ -235,6 +235,9 @@ export class BotUpdate {
       case SessionSteps.AWAITING_CARD_ID:
         await this.cardHandler.handleCardDetail(ctx, text);
         break;
+      case SessionSteps.AWAITING_EXPORT_DATE:
+        await this.transactionsHandler.handleExportDateInput(ctx, text);
+        break;
     }
   }
 

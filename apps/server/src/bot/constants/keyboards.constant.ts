@@ -39,10 +39,8 @@ export const Keyboards = {
     ]),
   transactionTimeFilterMenu: () =>
     Markup.inlineKeyboard([
-      [Markup.button.callback('Today', Actions.transaction.listToday)],
-      [Markup.button.callback('Yesterday', Actions.transaction.listYesterday)],
-      [Markup.button.callback('This Week', Actions.transaction.listThisWeek)],
-      [Markup.button.callback('This Month', Actions.transaction.listThisMonth)],
+      [Markup.button.callback('All Time', Actions.transaction.listAllTime)],
+      [Markup.button.callback('Custom Time', Actions.transaction.listCustomTime)],
       [Markup.button.callback('« Back', Actions.menu.transaction)],
     ]),
   transactionNotificationMenu: (isSubscribed: boolean) =>

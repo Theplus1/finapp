@@ -16,9 +16,11 @@ import { SessionSteps } from 'src/bot/constants/session-steps.constant';
 import { formatCurrency } from 'src/shared/utils/formatCurrency.util';
 import { Actions } from 'src/bot/constants/actions.constant';
 import { ExportType } from 'src/database/schemas/export-job.schema';
+import { isValid, parse } from 'date-fns';
 
 @Injectable()
 export class TransactionsHandler {
+
   private readonly logger = new Logger(TransactionsHandler.name);
 
   constructor(
@@ -98,16 +100,16 @@ export class TransactionsHandler {
         parse_mode: 'Markdown',
         ...Keyboards.backToTransaction(),
       });
-      
+
       // Clear session after successful response
       ctx.session = undefined;
       this.logger.log(`Transaction details sent successfully for transaction ${trimmed}`);
     } catch (error) {
       this.logger.error(`Error fetching transaction ${trimmed}:`, error);
-      
+
       // Clear session on error to prevent stuck state
       ctx.session = undefined;
-      
+
       // Provide more specific error message
       if (error.response?.status === 404) {
         await ctx.reply(Messages.noTransactionsFound);
@@ -153,54 +155,63 @@ export class TransactionsHandler {
     await ctx.answerCbQuery();
     const callbackQuery = ctx.callbackQuery;
     if (!callbackQuery || !('data' in callbackQuery)) return;
-
-    const now = new Date().toUTCString();
-    const dateFrom = new Date(now);
-    const dateTo = new Date(now);
-    dateFrom.setHours(0, 0, 0, 0);
-    dateTo.setHours(23, 59, 59, 999);
+    let filters: any = {
+      virtualAccountId: ctx.userData?.virtualAccountId,
+      detailedStatus: { $in: [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING, TransactionDetailedStatus.REVERSED] },
+      amountCents: { $lt: 0 }
+    };
 
     switch (callbackQuery.data) {
-      case Actions.transaction.listToday:
+      case Actions.transaction.listCustomTime:
+        if (!ctx.session) return;
+        ctx.session.step = SessionSteps.AWAITING_EXPORT_DATE;
+        await ctx.reply(Messages.customTimePrompt, {
+          parse_mode: 'Markdown',
+          reply_markup: { force_reply: true, selective: true },
+        });
         break;
-      case Actions.transaction.listYesterday:
-        dateFrom.setDate(dateFrom.getDate() - 1);
-        dateTo.setDate(dateTo.getDate() - 1);
-        break;
-      case Actions.transaction.listThisWeek:
-        dateFrom.setDate(dateFrom.getDate() - dateFrom.getDay());
-        break;
-      case Actions.transaction.listThisMonth:
-        dateFrom.setDate(1);
+      default:
+        await this.createExportJob(ctx, filters);
         break;
     }
+  }
 
+  async handleExportDateInput(ctx: BotContext, text: string) {
+    const [fromDateStr, toDateStr] = text.split('-');
+    const startDate = parse(fromDateStr + ' 00:00:00', 'dd/MM/yyyy HH:mm:ss', new Date());
+    const endDate = parse(toDateStr || fromDateStr + ' 23:59:59', 'dd/MM/yyyy HH:mm:ss', new Date());
+    if (!isValid(startDate) || !isValid(endDate)) {
+      await ctx.reply(Messages.errorInvalidDate);
+      return;
+    }
+    const filters: any = {
+      virtualAccountId: ctx.userData?.virtualAccountId,
+      detailedStatus: { $in: [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING, TransactionDetailedStatus.REVERSED] },
+      amountCents: { $lt: 0 },
+      startDate,
+      endDate
+    };
+    await this.createExportJob(ctx, filters);
+  }
+
+  private async createExportJob(ctx: BotContext, filters: any) {
     try {
-      // Create async export job
       const exportJob = await this.exportsService.createExport(
         ctx.from!.id,
         ctx.chat!.id,
         {
           type: ExportType.TRANSACTIONS,
-          filters: {
-            virtualAccountId: ctx.userData?.virtualAccountId,
-            detailedStatus: { $in: [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING, TransactionDetailedStatus.REVERSED] },
-            amountCents: { $lt: 0 },
-            startDate: dateFrom.toISOString(),
-            endDate: dateTo.toISOString(),
-          },
+          filters,
         },
       );
-
       await ctx.reply(
-        '⏳ *Generating your export...*\n\n' +
-        'This may take a moment. You\'ll receive a download link when it\'s ready.',
+        Messages.exportingTransactions,
         { parse_mode: 'Markdown' },
       );
 
       this.logger.log(`Export job ${exportJob.id} created for user ${ctx.from!.id}`);
     } catch (err) {
-      this.logger.error('Failed to create export job', err as any);
+      this.logger.error('Failed to export', err as any);
       await ctx.reply(Messages.errorFetchingTransactions);
     }
   }

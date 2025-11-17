@@ -22,7 +22,7 @@ export const Messages = {
     `You can now use all bot features.`,
   accountNumberAlreadyLinked: (accountId: string) =>
     `ℹ️ Your account is already linked to virtual account ID: *${accountId}*`,
-  accountNumberInvalid: 
+  accountNumberInvalid:
     `❌ Invalid virtual account ID format.\n\n` +
     `Please send a valid virtual account ID or use /cancel to cancel.`,
 
@@ -91,7 +91,7 @@ export const Messages = {
     `Member since: ${createdAt.toLocaleDateString()}`,
 
   userNotFound: 'User not found. Please use /start first.',
-  
+
   // Error messages
   mustStartBot: '⚠️ Please use /start command first to set up your account.',
   mustLinkAccount: '⚠️ Please link your virtual account first. Use /start to set up your account.',
@@ -103,7 +103,7 @@ export const Messages = {
   cardNotFound: '❌ Card not found or you do not have access to this card.',
   errorFetchingCards: '❌ Error fetching cards. Please try again later.',
   cardDetailStart: '💬 *Card Detail Form*\n\n' +
-    'Reply to this message with the card ID you want to look up.\n\n(Send /cancel to cancel)',
+    'Please *REPLY* to this message with the card ID you want to look up.\n\n(Send /cancel to cancel)',
 
   // Transactions
   transactionsMenu: '📋 *Transactions Menu*\n\nChoose an option:',
@@ -119,9 +119,9 @@ export const Messages = {
     'You will no longer receive notifications when a transaction is changed.',
 
   noTransactionsFound: '📭 No transactions found for your account.',
-  transactionInfoPrompt: 'Please send the transaction ID you want to look up.\n\n(Send /cancel to cancel)',
+  transactionInfoPrompt: 'Please *REPLY* to this message with the transaction ID you want to look up.\n\n(Send /cancel to cancel)',
   errorFetchingTransactions: '❌ Error fetching transactions. Please try again later.',
-  exportTransactionsSuccess: ({count, fileName, uri}: {count: number, fileName: string, uri: string}) =>
+  exportTransactionsSuccess: ({ count, fileName, uri }: { count: number, fileName: string, uri: string }) =>
     `✅ *Exported ${count} transactions*\n` +
     `File: ${fileName}\n` +
     `Download: ${uri}`,
@@ -139,7 +139,7 @@ export const Messages = {
     const formattedDate = format(new Date(transaction.date), 'dd-MM-yy HH:mm:ss');
     const description = transaction.merchantData?.description || 'N/A';
     const declineReason = transaction.declineReason || 'No reason provided';
-    
+
     let message = `*${title}*\n\n` +
       `Thẻ ${escapeMarkdown(cardInfo)} có giao dịch ${status}\n` +
       `Amount: ${formatCurrency(Math.abs(transaction.amountCents || 0), transaction.originalCurrency?.code)}\n` +
@@ -154,7 +154,7 @@ export const Messages = {
   replyCancelled: '❌ Reply cancelled.',
 
   // ==================== Access Control Messages ====================
-  
+
   // User-facing messages
   accessPending:
     '⏳ *Access Pending*\n\n' +
@@ -260,7 +260,7 @@ export const Messages = {
     `• ⛔ Revoked: ${statusCounts.revoked}`,
 
   // ==================== Notification Destinations Messages ====================
-  
+
   connectPrivateChatError:
     '⚠️ *Cannot Connect Private Chat*\n\n' +
     'This command can only be used in groups or channels.',
@@ -292,7 +292,7 @@ export const Messages = {
   destinationsList: (chats: Array<{ id: number; title: string; type: string }>) =>
     `📋 *Connected Notification Destinations*\n\n` +
     `Notifications will be sent to:\n\n` +
-    chats.map((chat, index) => 
+    chats.map((chat, index) =>
       `${index + 1}. *${chat.title}*\n` +
       `   Type: ${chat.type}\n` +
       `   ID: \`${chat.id}\``
@@ -300,4 +300,9 @@ export const Messages = {
     `\n\n💡 To disconnect a chat, run /disconnect in that chat.`,
 
   errorGeneric: '❌ An error occurred. Please try again later.',
+  customTimePrompt: ` Please *REPLY* to this message with start and end dates in the format dd/MM/yyyy \n(ex: 01/01/2025-31/01/2025)\n\n` +
+    `(Send /cancel to cancel)`,
+  errorInvalidDate: '❌ Invalid date format. Please try again.',
+  exportingTransactions: '⏳ *Generating your export...*\n\n' +
+    'This may take a moment. You\'ll receive a download link when it\'s ready.',
 };
