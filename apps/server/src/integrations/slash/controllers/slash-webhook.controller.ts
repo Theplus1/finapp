@@ -318,7 +318,9 @@ export class SlashWebhookController {
 
       if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED ||
         transactionData.detailedStatus === TransactionDetailedStatus.DECLINED)) {
-        await this.notifyUserAboutTransaction(transactionData);
+          setTimeout(() => {
+            this.notifyUserAboutTransaction(transactionData);
+          }, 1000);
       }
     } catch (error) {
       this.logger.error(`Error handling transaction updated event for ${event.entityId}:`, error);
