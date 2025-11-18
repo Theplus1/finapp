@@ -179,7 +179,7 @@ export class TransactionsHandler {
   async handleExportDateInput(ctx: BotContext, text: string) {
     const [fromDateStr, toDateStr] = text.split('-');
     const startDate = parse(fromDateStr + ' 00:00:00', 'dd/MM/yyyy HH:mm:ss', new Date());
-    const endDate = parse(toDateStr || fromDateStr + ' 23:59:59', 'dd/MM/yyyy HH:mm:ss', new Date());
+    const endDate = parse((toDateStr || fromDateStr) + ' 23:59:59', 'dd/MM/yyyy HH:mm:ss', new Date());
     if (!isValid(startDate) || !isValid(endDate)) {
       await ctx.reply(Messages.errorInvalidDate);
       return;

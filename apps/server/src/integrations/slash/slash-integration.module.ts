@@ -19,6 +19,8 @@ import { SlashSyncJob } from './jobs/slash-sync.job';
 // Controllers
 import { SlashWebhookController } from './controllers/slash-webhook.controller';
 import { SlashSyncController } from './controllers/slash-sync.controller';
+import { NotificationsService } from 'src/domain/notifications/notifications.service';
+import { NotificationsModule } from 'src/domain/notifications/notifications.module';
 
 /**
  * Slash Integration Module
@@ -33,6 +35,7 @@ import { SlashSyncController } from './controllers/slash-sync.controller';
     ConfigModule,
     DatabaseModule,
     UsersModule,
+    NotificationsModule,
     DailyPaymentSummariesModule,
     MongooseModule.forFeature([
       { name: SyncLog.name, schema: SyncLogSchema },
@@ -47,6 +50,7 @@ import { SlashSyncController } from './controllers/slash-sync.controller';
     SlashSyncService,
     SlashSyncJob,
     BotService,
+    NotificationsService
   ],
   exports: [
     SlashApiService,

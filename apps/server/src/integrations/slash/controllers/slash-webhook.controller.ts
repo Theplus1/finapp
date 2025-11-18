@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Logger,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
@@ -23,6 +24,10 @@ import { Messages } from '../../../bot/constants/messages.constant';
 import { SlashSyncService } from '../services/slash-sync.service';
 import { SlashApiService } from '../services/slash-api.service';
 import { CardDto, TransactionDetailedStatus, TransactionDto } from '../types';
+import { NotificationsService } from 'src/domain/notifications/notifications.service';
+import { NotificationType, NotificationStatus } from 'src/database/schemas/notification.schema';
+import { SuperAdminAuthGuard } from 'src/admin-api/guards/super-admin-auth.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Slash Webhook Controller
@@ -38,11 +43,21 @@ export class SlashWebhookController {
     private readonly botService: BotService,
     private readonly slashSyncService: SlashSyncService,
     private readonly slashApiService: SlashApiService,
+    private readonly notificationsService: NotificationsService,
   ) {
     this.webhookSecret = this.configService.get<string>(
       'slash.webhookSecret',
       '',
     );
+  }
+
+  // Test notification
+  @Post('test-notification')
+  @UseGuards(SuperAdminAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  async testNotification(@Body() body: any) {
+    this.processWebhookEvent(body);
   }
 
   /**
@@ -283,7 +298,7 @@ export class SlashWebhookController {
       const transactionData = await this.slashApiService.getTransaction(event.entityId);
       await this.slashSyncService.syncTransactionFromWebhook(transactionData);
 
-      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED || 
+      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED ||
         transactionData.detailedStatus === TransactionDetailedStatus.DECLINED)) {
         await this.notifyUserAboutTransaction(transactionData);
       }
@@ -301,7 +316,7 @@ export class SlashWebhookController {
       const transactionData = await this.slashApiService.getTransaction(event.entityId);
       await this.slashSyncService.syncTransactionFromWebhook(transactionData);
 
-      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED || 
+      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED ||
         transactionData.detailedStatus === TransactionDetailedStatus.DECLINED)) {
         await this.notifyUserAboutTransaction(transactionData);
       }
@@ -311,12 +326,19 @@ export class SlashWebhookController {
   }
 
   private async notifyUserAboutTransaction(transactionData: TransactionDto): Promise<void> {
+
     this.logger.log(`Notifying user about transaction: ${transactionData.id}`);
     const user = await this.usersService.findByVirtualAccountId(transactionData.virtualAccountId || '');
     if (!user || !user.telegramId) {
       this.logger.warn(
         `User not found for virtual account ID: ${transactionData.virtualAccountId}`,
       );
+      return;
+    }
+
+    const isNotificationSent = await this.notificationsService.isTransactionNotificationSent(user.id, transactionData.id);
+    if (isNotificationSent) {
+      this.logger.log(`Notification already sent for transaction: ${transactionData.id} with user: ${user.id}`);
       return;
     }
 
@@ -337,6 +359,15 @@ export class SlashWebhookController {
         destinations,
         Messages.transactionCreated(transactionData, card),
       );
+
+      await this.notificationsService.createNotification({
+        userId: user.id,
+        type: NotificationType.TRANSACTION,
+        status: NotificationStatus.SENT,
+        data: {
+          transactionId: transactionData.id,
+        },
+      });
     }
   }
 }

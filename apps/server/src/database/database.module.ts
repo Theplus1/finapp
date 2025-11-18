@@ -7,12 +7,14 @@ import { CardGroup, CardGroupSchema } from './schemas/card-group.schema';
 import { Transaction, TransactionSchema } from './schemas/transaction.schema';
 import { VirtualAccount, VirtualAccountSchema } from './schemas/virtual-account.schema';
 import { SyncLog, SyncLogSchema } from './schemas/sync-log.schema';
+import { Notification, NotificationSchema } from './schemas/notification.schema';
 
 // Repositories
 import { CardRepository } from './repositories/card.repository';
 import { CardGroupRepository } from './repositories/card-group.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
 import { VirtualAccountRepository } from './repositories/virtual-account.repository';
+import { NotificationRepository } from './repositories/notification.repository';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { VirtualAccountRepository } from './repositories/virtual-account.reposit
       { name: Transaction.name, schema: TransactionSchema },
       { name: VirtualAccount.name, schema: VirtualAccountSchema },
       { name: SyncLog.name, schema: SyncLogSchema },
+      { name: Notification.name, schema: NotificationSchema },
     ]),
   ],
   providers: [
@@ -29,12 +32,14 @@ import { VirtualAccountRepository } from './repositories/virtual-account.reposit
     CardGroupRepository,
     TransactionRepository,
     VirtualAccountRepository,
+    NotificationRepository,
   ],
   exports: [
     CardRepository,
     CardGroupRepository,
     TransactionRepository,
     VirtualAccountRepository,
+    NotificationRepository,
   ],
 })
 export class DatabaseModule {}
