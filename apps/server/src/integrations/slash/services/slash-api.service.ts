@@ -258,7 +258,7 @@ export class SlashApiService {
   async updateCard(cardId: string, data: UpdateCardDto): Promise<CardDto> {
     return this.request<CardDto>({
       method: 'PATCH',
-      url: `/cards/${cardId}`,
+      url: `/card/${cardId}`,
       data,
     });
   }
