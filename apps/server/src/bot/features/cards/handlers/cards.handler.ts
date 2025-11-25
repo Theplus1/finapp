@@ -44,14 +44,14 @@ export class CardsHandler {
 
       // Check if card is already paused
       if (card.status === CardStatus.PAUSED) {
-        await ctx.answerCbQuery('Card is already locked');
+        await ctx.reply('Card is already locked');
         return;
       }
 
       // Update card status to paused (locked)
       await this.slashApiService.updateCard(cardId, { status: CardStatus.PAUSED });
 
-      await ctx.answerCbQuery('Card locked successfully');
+      await ctx.reply('Card locked successfully');
       await ctx.reply(
         `🔒 *Card Locked*\n\n` +
         `Card *${card.name}* (••••${card.last4}) has been locked.\n\n` +
@@ -60,8 +60,7 @@ export class CardsHandler {
       );
     } catch (error) {
       this.logger.error(`Error locking card ${cardId}:`, error);
-      await ctx.answerCbQuery('Error locking card');
-      await ctx.reply('❌ Error locking card. Please try again later.');
+      await ctx.reply(`❌ Error locking card ${cardId}. Please try again later.`);
     }
   }
 
@@ -74,20 +73,20 @@ export class CardsHandler {
 
       // Check if card is already active
       if (card.status === CardStatus.ACTIVE) {
-        await ctx.answerCbQuery('Card is already unlocked');
+        await ctx.reply('Card is already active');
         return;
       }
 
       // Check if card is closed (cannot be unlocked)
       if (card.status === CardStatus.CLOSED) {
-        await ctx.answerCbQuery('Cannot unlock a closed card');
+        await ctx.reply('Cannot unlock a closed card');
         return;
       }
 
       // Update card status to active (unlocked)
       await this.slashApiService.updateCard(cardId, { status: CardStatus.ACTIVE });
 
-      await ctx.answerCbQuery('Card unlocked successfully');
+      await ctx.reply('Card unlocked successfully');
       await ctx.reply(
         `✅ *Card Unlocked*\n\n` +
         `Card *${card.name}* (••••${card.last4}) has been unlocked.\n\n` +
@@ -96,7 +95,7 @@ export class CardsHandler {
       );
     } catch (error) {
       this.logger.error(`Error unlocking card ${cardId}:`, error);
-      await ctx.answerCbQuery('Error unlocking card');
+      await ctx.reply('Error unlocking card');
       await ctx.reply('❌ Error unlocking card. Please try again later.');
     }
   }

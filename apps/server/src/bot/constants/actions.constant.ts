@@ -27,6 +27,8 @@ export const Actions = {
     next: 'cards.action.next',
     list: 'cards.action.list',
     detail: 'cards.action.detail',
+    lock: 'cards.action.lock',
+    unlock: 'cards.action.unlock',
   },
   feedback: {
     start: 'feedback.action.start',

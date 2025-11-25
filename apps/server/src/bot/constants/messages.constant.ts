@@ -104,7 +104,10 @@ export const Messages = {
   errorFetchingCards: '❌ Error fetching cards. Please try again later.',
   cardDetailStart: '💬 *Card Detail Form*\n\n' +
     'Please *REPLY* to this message with the card ID you want to look up.\n\n(Send /cancel to cancel)',
-
+  cardLockStart: '💬 *Card Lock Form*\n\n' +
+    'Please *REPLY* to this message with the card ID you want to lock.\n\n(Send /cancel to cancel)',
+  cardUnlockStart: '💬 *Card Unlock Form*\n\n' +
+    'Please *REPLY* to this message with the card ID you want to unlock.\n\n(Send /cancel to cancel)',
   // Transactions
   transactionsMenu: '📋 *Transactions Menu*\n\nChoose an option:',
   transactionNotificationMenu: (isSubscribed: boolean) =>

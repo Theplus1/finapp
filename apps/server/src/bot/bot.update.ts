@@ -88,18 +88,25 @@ export class BotUpdate {
     });
   }
 
-  // @Action('card.action.lock')
-  // async onCardLockAction(@Ctx() ctx: BotContext) {
-  //   await ctx.answerCbQuery();
-  //   const callbackQuery = ctx.callbackQuery;
-  //   if (!callbackQuery || !('data' in callbackQuery)) return;
-    
-  //   const match = callbackQuery.data.match(/^card_(.+)$/);
-  //   if (!match) return;
-  //   await ctx.sendChatAction('typing');
-  //   const cardId = match[1];
-  //   return this.cardHandler.handleCardLock(ctx, cardId);
-  // }
+  @ValidateUser({ answerCallback: true })
+  @Action(Actions.cards.lock)
+  async onCardLockAction(@Ctx() ctx: BotContext) {
+    ctx.session = { step: SessionSteps.AWAITING_LOCK_CARD_ID, data: {} };
+    await ctx.reply(Messages.cardLockStart, {
+      parse_mode: 'Markdown',
+      reply_markup: { force_reply: true, selective: true }
+    });
+  }
+
+  @ValidateUser({ answerCallback: true })
+  @Action(Actions.cards.unlock)
+  async onCardUnlockAction(@Ctx() ctx: BotContext) {
+    ctx.session = { step: SessionSteps.AWAITING_UNLOCK_CARD_ID, data: {} };
+    await ctx.reply(Messages.cardUnlockStart, {
+      parse_mode: 'Markdown',
+      reply_markup: { force_reply: true, selective: true }
+    });
+  }
 
   // @Action('card.action.unlock')
   // async onCardUnlockAction(@Ctx() ctx: BotContext) {
@@ -234,6 +241,12 @@ export class BotUpdate {
         break;
       case SessionSteps.AWAITING_CARD_ID:
         await this.cardHandler.handleCardDetail(ctx, text);
+        break;
+      case SessionSteps.AWAITING_LOCK_CARD_ID:
+        await this.cardHandler.handleCardLock(ctx, text);
+        break;
+      case SessionSteps.AWAITING_UNLOCK_CARD_ID:
+        await this.cardHandler.handleCardUnlock(ctx, text);
         break;
       case SessionSteps.AWAITING_EXPORT_DATE:
         await this.transactionsHandler.handleExportDateInput(ctx, text);
