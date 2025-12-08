@@ -2,6 +2,8 @@
  * Constants for Slash sync operations
  */
 
+import { TransactionDetailedStatus } from "../types";
+
 export const SYNC_CONSTANTS = {
   // Default values for missing fields
   DEFAULT_CURRENCY: 'USD',
@@ -53,3 +55,9 @@ export type SyncSource = typeof SYNC_CONSTANTS.SYNC_SOURCE[keyof typeof SYNC_CON
 export type EntityType = typeof SYNC_CONSTANTS.ENTITY_TYPE[keyof typeof SYNC_CONSTANTS.ENTITY_TYPE];
 export type SyncType = typeof SYNC_CONSTANTS.SYNC_TYPE[keyof typeof SYNC_CONSTANTS.SYNC_TYPE];
 export type SyncStatus = typeof SYNC_CONSTANTS.SYNC_STATUS[keyof typeof SYNC_CONSTANTS.SYNC_STATUS];
+
+export const StatusNotifyUserAboutTransactions = [
+  TransactionDetailedStatus.PENDING,
+  TransactionDetailedStatus.SETTLED,
+  TransactionDetailedStatus.DECLINED,
+];
