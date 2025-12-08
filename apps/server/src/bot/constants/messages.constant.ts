@@ -136,8 +136,27 @@ export const Messages = {
     };
 
     const isDeclined = transaction.detailedStatus === TransactionDetailedStatus.DECLINED;
-    const title = isDeclined ? '⚠️Giao dịch thẻ bị từ chối (Card Declined)' : '✅ Giao dịch thành công (Card Authorization)';
-    const status = isDeclined ? 'bị từ chối' : 'thành công';
+    let title = '';
+    let status = '';
+    switch(transaction.detailedStatus) {
+      case TransactionDetailedStatus.DECLINED: {
+        title = '⚠️Giao dịch thẻ bị từ chối (Card Declined)';
+        status = 'bị từ chối';
+        break;
+      }
+      case TransactionDetailedStatus.SETTLED: {
+        title = '✅ Giao dịch thành công (Card Authorization)';
+        status = 'thành công';
+        break;
+      }
+      case TransactionDetailedStatus.PENDING: {
+        title = 'ℹ️ Giao dịch đang chờ xử lí';
+        status = 'đang chờ xử lí';
+        break;
+      }
+      default: 
+        break;
+    }
     const cardInfo = card ? `${card.name} (••••${card.last4})` : 'N/A';
     const formattedDate = format(new Date(transaction.date), 'dd-MM-yy HH:mm:ss');
     const description = transaction.merchantData?.description || 'N/A';
