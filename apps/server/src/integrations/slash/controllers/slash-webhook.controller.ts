@@ -28,6 +28,7 @@ import { NotificationsService } from 'src/domain/notifications/notifications.ser
 import { NotificationType, NotificationStatus } from 'src/database/schemas/notification.schema';
 import { SuperAdminAuthGuard } from 'src/admin-api/guards/super-admin-auth.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { StatusNotifyUserAboutTransactions } from '../constants/sync.constants';
 
 /**
  * Slash Webhook Controller
@@ -298,8 +299,7 @@ export class SlashWebhookController {
       const transactionData = await this.slashApiService.getTransaction(event.entityId);
       await this.slashSyncService.syncTransactionFromWebhook(transactionData);
 
-      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED ||
-        transactionData.detailedStatus === TransactionDetailedStatus.DECLINED)) {
+      if (transactionData.amountCents < 0 && StatusNotifyUserAboutTransactions.includes(transactionData.detailedStatus)) {
         await this.notifyUserAboutTransaction(transactionData);
       }
     } catch (error) {
@@ -316,8 +316,7 @@ export class SlashWebhookController {
       const transactionData = await this.slashApiService.getTransaction(event.entityId);
       await this.slashSyncService.syncTransactionFromWebhook(transactionData);
 
-      if (transactionData.amountCents < 0 && (transactionData.detailedStatus === TransactionDetailedStatus.SETTLED ||
-        transactionData.detailedStatus === TransactionDetailedStatus.DECLINED)) {
+      if (transactionData.amountCents < 0 && StatusNotifyUserAboutTransactions.includes(transactionData.detailedStatus)) {
           setTimeout(() => {
             this.notifyUserAboutTransaction(transactionData);
           }, 1000);
