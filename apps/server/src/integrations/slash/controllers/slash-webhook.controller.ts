@@ -57,7 +57,7 @@ export class SlashWebhookController {
   @UseGuards(SuperAdminAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  async testNotification(@Body() body: any) {
+  async testNotification(@Body() body: WebhookEventDto) {
     this.processWebhookEvent(body);
   }
 
@@ -356,9 +356,11 @@ export class SlashWebhookController {
         }
       }
 
+      const notification = Messages.transactionCreated(transactionData, card);
       await this.botService.sendMessageToMultiple(
         destinations,
-        Messages.transactionCreated(transactionData, card),
+        notification.text,
+        { parse_mode: notification.parse_mode },
       );
 
       await this.notificationsService.createNotification({

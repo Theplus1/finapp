@@ -11,7 +11,7 @@ export class BotService {
   async sendMessage(chatId: number, message: string, extra?: any) {
     try {
       await this.bot.telegram.sendMessage(chatId, message, {
-        parse_mode: 'Markdown',
+        parse_mode: extra?.parse_mode || 'Markdown',
         ...extra,
       });
       this.logger.log(`Message sent to ${chatId}`);
@@ -20,8 +20,8 @@ export class BotService {
     }
   }
 
-  async sendMessageToMultiple(chatIds: number[], message: string) {
-    const promises = chatIds.map((chatId) => this.sendMessage(chatId, message));
+  async sendMessageToMultiple(chatIds: number[], message: string, extra?: any) {
+    const promises = chatIds.map((chatId) => this.sendMessage(chatId, message, extra));
     await Promise.allSettled(promises);
   }
 

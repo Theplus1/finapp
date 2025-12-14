@@ -130,9 +130,9 @@ export const Messages = {
     `Download: ${uri}`,
 
   transactionCreated: (transaction: TransactionDataDTO, card: CardDto | undefined) => {
-    // Helper function to escape Markdown special characters
-    const escapeMarkdown = (text: string): string => {
-      return text.replace(/([*_`\[\]])/g, '\\$1');
+    // Helper function to escape HTML special characters
+    const escapeHtml = (text: string): string => {
+      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     };
 
     const isDeclined = transaction.detailedStatus === TransactionDetailedStatus.DECLINED;
@@ -158,7 +158,7 @@ export const Messages = {
         break;
     }
     let isBoldDescription = false;
-    // Special case: Facebook verification code
+    // Special case: Facebook verification code if amount is $1.00 (100 cents)
     if (transaction.amountCents === -100) {
       title = '🔥 Mã xác minh Facebook';
       isBoldDescription = true;
@@ -168,16 +168,16 @@ export const Messages = {
     const description = transaction.merchantData?.description || 'N/A';
     const declineReason = transaction.declineReason || 'No reason provided';
 
-    let message = `*${title}*\n\n` +
-      `Thẻ ${escapeMarkdown(cardInfo)} có giao dịch ${status}\n` +
+    let message = `<b>${escapeHtml(title)}</b>\n\n` +
+      `Thẻ ${escapeHtml(cardInfo)} có giao dịch ${status}\n` +
       `Amount: ${formatCurrency(Math.abs(transaction.amountCents || 0), transaction.originalCurrency?.code)}\n` +
-      `Description: ${isBoldDescription ? `*${escapeMarkdown(description)}*` : escapeMarkdown(description)}\n`;
+      `Description: ${isBoldDescription ? `<b>${escapeHtml(description)}</b>` : escapeHtml(description)}\n`;
     if (isDeclined) {
-      message += `Declined Reason: ${escapeMarkdown(declineReason)}\n`;
+      message += `Declined Reason: ${escapeHtml(declineReason)}\n`;
     }
     message += `Transaction Date: ${formattedDate}\n`;
-    message += `Reference ID: ${escapeMarkdown(transaction.id)}`;
-    return message;
+    message += `Reference ID: ${escapeHtml(transaction.id)}`;
+    return { text: message, parse_mode: 'HTML' as const };
   },
 
   replyCancelled: '❌ Reply cancelled.',
