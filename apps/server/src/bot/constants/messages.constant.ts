@@ -157,6 +157,12 @@ export const Messages = {
       default: 
         break;
     }
+    let isBoldDescription = false;
+    // Special case: Facebook verification code
+    if (transaction.amountCents === -100) {
+      title = '🔥 Mã xác minh Facebook';
+      isBoldDescription = true;
+    }
     const cardInfo = card ? `${card.name} (••••${card.last4})` : 'N/A';
     const formattedDate = format(new Date(transaction.date), 'dd-MM-yy HH:mm:ss');
     const description = transaction.merchantData?.description || 'N/A';
@@ -165,7 +171,7 @@ export const Messages = {
     let message = `*${title}*\n\n` +
       `Thẻ ${escapeMarkdown(cardInfo)} có giao dịch ${status}\n` +
       `Amount: ${formatCurrency(Math.abs(transaction.amountCents || 0), transaction.originalCurrency?.code)}\n` +
-      `Description: ${escapeMarkdown(description)}\n`;
+      `Description: ${isBoldDescription ? `*${escapeMarkdown(description)}*` : escapeMarkdown(description)}\n`;
     if (isDeclined) {
       message += `Declined Reason: ${escapeMarkdown(declineReason)}\n`;
     }
