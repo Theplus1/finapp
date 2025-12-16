@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { GoogleSheetsService, SheetData } from './google-sheets.service';
 import { GoogleSheetReportService } from './google-sheet-report.service';
 import { TransactionsService } from '../../../domain/transactions/transactions.service';
@@ -155,16 +155,27 @@ export class GoogleSheetsSyncService {
    */
   private async generateSheetsData(virtualAccountId: string, month: string): Promise<SheetData[]> {
     const [year, monthNum] = month.split('-').map(Number);
-    const startDate = startOfMonth(new Date(year, monthNum - 1));
-    const endDate = endOfMonth(new Date(year, monthNum - 1));
 
-    // Get transactions in month
-    const transactions = await this.transactionsService.findAllWithFilters({
+    // Create dates in UTC to avoid timezone conversion issues
+    const daysInMonth = new Date(Date.UTC(year, monthNum, 0)).getUTCDate();
+    const startDate = new Date(Date.UTC(year, monthNum - 1, 1));
+    const endDate = new Date(Date.UTC(year, monthNum - 1, daysInMonth, 23, 59, 59, 999));
+    const today = new Date();
+
+    const allTransactions = await this.transactionsService.findAllWithFilters({
       virtualAccountId,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
     });
 
+    const transactions = allTransactions.filter((t) =>
+      t.amountCents < 0 &&
+      [
+        TransactionDetailedStatus.SETTLED,
+        TransactionDetailedStatus.PENDING,
+        TransactionDetailedStatus.REVERSED,
+      ].includes(t.detailedStatus),
+    );
     // Get virtual account info
     const virtualAccount = await this.accountsService.findBySlashId(virtualAccountId);
 
@@ -178,7 +189,7 @@ export class GoogleSheetsSyncService {
 
     // Generate 3 sheets
     const sheets: SheetData[] = [
-      await this.generatePaymentSheet(virtualAccount, startDate, endDate),
+      await this.generatePaymentSheet(virtualAccount, startDate, endDate, today, daysInMonth),
       this.generateTransactionsSheet(settledTransactions),
       this.generateReversedSheet(reversedTransactions),
     ];
@@ -193,15 +204,19 @@ export class GoogleSheetsSyncService {
     virtualAccount: any,
     startDate: Date,
     endDate: Date,
+    today: Date = new Date(),
+    daysInMonth: number,
   ): Promise<SheetData> {
-    // Recalculate daily summaries for the entire month to ensure all days are included
+    // Calculate summaries only up to today to save memory (future days will be recalculated later)
+    const calculationEndDate = today < endDate ? today : endDate;
     await this.dailyPaymentSummariesService.recalculateSummariesForRange(
       virtualAccount.slashId,
       startDate,
-      endDate,
+      calculationEndDate,
       virtualAccount.currency,
     );
 
+    // Get summaries for display (only up to today, future days will be empty)
     const dailySummaries = await this.dailyPaymentSummariesService.getDailySummaries(
       virtualAccount.slashId,
       startDate,
@@ -222,7 +237,6 @@ export class GoogleSheetsSyncService {
       dailySummaries.map((summary) => [format(summary.date, DATE_FORMAT), summary]),
     );
 
-    const daysInMonth = endDate.getDate();
     const year = startDate.getFullYear();
     const month = startDate.getMonth();
 
@@ -244,15 +258,25 @@ export class GoogleSheetsSyncService {
       const date = new Date(year, month, day);
       const dateStr = format(date, DATE_FORMAT);
       const summary = summaryMap.get(dateStr);
-
-      dailyRows.push([
-        dateStr,
-        summary ? formatCurrency(summary.totalDepositCents, virtualAccount.currency) : '',
-        summary ? formatCurrency(summary.totalSpendNonUSCents, virtualAccount.currency) : '',
-        summary ? formatCurrency(summary.totalSpendUSCents, virtualAccount.currency) : '',
-        '',
-        '',
-      ]);
+      if(calculationEndDate.getDate() >= day) {
+        dailyRows.push([
+          dateStr,
+          summary ? formatCurrency(summary.totalDepositCents, virtualAccount.currency) : '',
+          summary ? formatCurrency(summary.totalSpendNonUSCents, virtualAccount.currency) : '',
+          summary ? formatCurrency(summary.totalSpendUSCents, virtualAccount.currency) : '',
+          '',
+          '',
+        ]);
+      } else {
+        dailyRows.push([
+          dateStr,
+          '',
+          '',
+          '',
+          '',
+          '',
+        ]);
+      }
     }
 
     return {
