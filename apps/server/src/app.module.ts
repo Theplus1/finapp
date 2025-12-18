@@ -12,6 +12,7 @@ import { UsersModule } from './users/users.module';
 import configuration from './common/config/configuration';
 import { session } from 'telegraf';
 import { SlashIntegrationModule } from './integrations/slash/slash-integration.module';
+import { GoogleSheetsModule } from './integrations/google-sheets/google-sheets.module';
 const rateLimit = require('telegraf-ratelimit');
 import { Agent as HttpsAgent } from 'https';
 import { AdminApiModule } from './admin-api/admin-api.module';
@@ -132,6 +133,7 @@ import { UserValidationMiddleware } from './bot/middleware/user-validation.middl
     
     // Integration Modules
     SlashIntegrationModule,  // Slash API integration
+    GoogleSheetsModule,  // Google Sheets integration
     
     // Feature Modules
     UsersModule,
