@@ -104,6 +104,9 @@ jobs:
               -e "REDIS_PORT=${{ vars.REDIS_PORT }}" \
               -e "EXPORT_SECRET=${{ secrets.EXPORT_SECRET }}" \
               -e "RESOURCE_BASE_URL=${{ vars.RESOURCE_BASE_URL }}" \
+              -e "GOOGLE_SERVICE_ACCOUNT_KEY_FILE=./google-credentials.json" \
+              -e "GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC=true" \
+              -e "GOOGLE_SHEETS_SYNC_CRON=*/15 * * * *" \
               -e "NODE_ENV=production" \
               ${IMAGE_NAME}
 
