@@ -12,5 +12,7 @@
 # Environment variables
 .env
 
+# Google credentials
+google-credentials.json
 
 /logs

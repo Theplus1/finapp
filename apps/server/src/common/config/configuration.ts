@@ -30,5 +30,10 @@ export default () => ({
     timeout: parseInt(process.env.SLASH_TIMEOUT || '30000', 10),
     webhookSecret: process.env.SLASH_WEBHOOK_SECRET,
   },
+  googleSheets: {
+    keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE || './google-credentials.json',
+    enableScheduledSync: process.env.GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC !== 'false',
+    syncCron: process.env.GOOGLE_SHEETS_SYNC_CRON || '*/15 * * * *',
+  },
   cardDetailTimeout: 60000
 });

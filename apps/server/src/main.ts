@@ -3,11 +3,17 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { apiReference } from '@scalar/nestjs-api-reference';
+// import { apiReference } from '@scalar/nestjs-api-reference';
 import { WinstonLogger } from './common/utils/logger';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { setDefaultResultOrder } from 'node:dns';
+import { randomUUID } from 'node:crypto';
+
+// Polyfill for @nestjs/schedule compatibility with Node 18
+if (!globalThis.crypto) {
+  (globalThis as any).crypto = { randomUUID };
+}
 
 // Fix for IPv6/IPv4 DNS resolution issues with Telegram API
 // Force IPv4 first to prevent connection timeouts
@@ -61,22 +67,24 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
 
-  // Setup Scalar API documentation UI
-  app.use(
-    '/api-docs',
-    apiReference({
-      theme: 'purple',
-      content: document,
-      metaData: {
-        title: 'FinApp Admin API Documentation',
-        description: 'Interactive API documentation for FinApp Admin REST API',
-      },
-      authentication: {
-        preferredSecurityScheme: 'bearer',
-      },
-    }),
-  );
-  // SwaggerModule.setup('/api-docs', app, document);
+  // Setup Swagger UI (Scalar temporarily disabled due to ESM issue)
+  SwaggerModule.setup('/api-docs', app, document);
+  
+  // TODO: Re-enable Scalar after fixing ESM compatibility
+  // app.use(
+  //   '/api-docs',
+  //   apiReference({
+  //     theme: 'purple',
+  //     content: document,
+  //     metaData: {
+  //       title: 'FinApp Admin API Documentation',
+  //       description: 'Interactive API documentation for FinApp Admin REST API',
+  //     },
+  //     authentication: {
+  //       preferredSecurityScheme: 'bearer',
+  //     },
+  //   }),
+  // );
 
   await app.listen(port);
 
