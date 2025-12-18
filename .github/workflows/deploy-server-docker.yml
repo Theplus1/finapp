@@ -61,7 +61,7 @@ jobs:
 
       - name: Deploy to VPS
         env:
-          IMAGE_NAME: ghcr.io/theplus1/finapp-server:lastest
+          IMAGE_NAME: ghcr.io/theplus1/finapp-server:latest
         run: |
           ssh ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} << ENDSSH
             set -e
