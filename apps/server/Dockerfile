@@ -42,6 +42,9 @@ RUN npm ci --only=production --legacy-peer-deps --workspace=server
 # Copy built application from builder
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
 
+# Copy Google credentials file
+COPY apps/server/google-credentials.json ./apps/server/google-credentials.json
+
 # Set working directory to server
 WORKDIR /app/apps/server
 

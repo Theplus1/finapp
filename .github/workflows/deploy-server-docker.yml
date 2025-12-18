@@ -61,7 +61,7 @@ jobs:
 
       - name: Deploy to VPS
         env:
-          IMAGE_NAME: ghcr.io/theplus1/finapp-server:main-caf04cf
+          IMAGE_NAME: ghcr.io/theplus1/finapp-server:lastest
         run: |
           ssh ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} << ENDSSH
             set -e
@@ -111,7 +111,9 @@ jobs:
               ${IMAGE_NAME}
 
             # Clean up old images (keep last 3)
-            docker image prune -af --filter "until=72h"
+            docker images ghcr.io/theplus1/finapp-server --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | \
+              tail -n +4 | tail -n +4 | awk '{print $1}' | \
+              xargs -r docker rmi
 
             echo "✅ Deployment complete"
             docker ps --filter "name=finapp-server"
