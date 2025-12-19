@@ -32,6 +32,7 @@ export class DailyPaymentSummariesService {
     const transactions = await this.transactionsService.findAllWithFilters({
       virtualAccountId,
       amountCents: { $lt: 0 },
+      detailedStatus: { $in: ['pending', 'settled'] },
       startDate: dayStart.toISOString(),
       endDate: dayEnd.toISOString(),
     });

@@ -41,7 +41,7 @@ export class TransactionsService {
       virtualAccountId?: string;
       cardId?: string;
       status?: string;
-      detailedStatus?: string;
+      detailedStatus?: string | any;
       startDate?: string;
       endDate?: string;
       sortBy?: string;
@@ -83,7 +83,7 @@ export class TransactionsService {
       virtualAccountId?: string;
       cardId?: string;
       status?: string;
-      detailedStatus?: string;
+      detailedStatus?: string | any;
       amountCents?: any;
       startDate?: string;
       endDate?: string;
