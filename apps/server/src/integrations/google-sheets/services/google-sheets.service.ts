@@ -13,15 +13,20 @@ export interface SheetData {
 
 /**
  * Google Sheets Service
- * Handles all interactions with Google Sheets API
  */
 @Injectable()
 export class GoogleSheetsService {
   private readonly logger = new Logger(GoogleSheetsService.name);
   private sheetsApi: sheets_v4.Sheets;
   private jwtClient: JWT;
+  private readonly chunkSize: number;
 
   constructor(private readonly configService: ConfigService) {
+    // Parse chunkSize from config with safe fallback
+    const chunkSizeStr = this.configService.get<string>('googleSheets.chunkSize', '5000');
+    const parsedChunkSize = parseInt(chunkSizeStr, 10);
+    this.chunkSize = isNaN(parsedChunkSize) || parsedChunkSize <= 0 ? 5000 : parsedChunkSize;
+    
     this.initializeAuth();
   }
 
@@ -63,114 +68,201 @@ export class GoogleSheetsService {
   }
 
   /**
-   * Create new spreadsheet
-   * Note: File location management (folder creation/moving) is handled by Google Apps Script
-   */
-  async createSpreadsheet(title: string, sheets: SheetData[]): Promise<{ spreadsheetId: string; url: string }> {
-    try {
-      // Create spreadsheet
-      const response = await this.sheetsApi.spreadsheets.create({
-        requestBody: {
-          properties: {
-            title,
-          },
-          sheets: sheets.map((sheet) => ({
-            properties: {
-              title: sheet.name,
-            },
-          })),
-        },
-      });
-
-      const spreadsheetId = response.data.spreadsheetId!;
-      const url = response.data.spreadsheetUrl!;
-
-      this.logger.log(`Created spreadsheet: ${title} (${spreadsheetId})`);
-
-      // Write data to sheets
-      await this.updateSheets(spreadsheetId, sheets);
-
-      return { spreadsheetId, url };
-    } catch (error) {
-      this.logger.error(`Error creating spreadsheet: ${title}`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update data to spreadsheet (overwrite all)
+   * Update data to spreadsheet
    */
   async updateSheets(spreadsheetId: string, sheets: SheetData[]): Promise<void> {
     try {
-      const requests: any[] = [];
-
-      // Delete all old sheets (except first one)
+      // Get existing sheets info
       const spreadsheet = await this.sheetsApi.spreadsheets.get({ spreadsheetId });
       const existingSheets = spreadsheet.data.sheets || [];
+      const existingSheetMap = new Map<string, number>(
+        existingSheets.map((s) => [s.properties?.title || '', s.properties?.sheetId || 0]),
+      );
 
-      // Delete old sheets (except first one to avoid errors)
-      for (let i = 1; i < existingSheets.length; i++) {
-        requests.push({
-          deleteSheet: {
-            sheetId: existingSheets[i].properties?.sheetId,
-          },
-        });
-      }
+      const requests: any[] = [];
+      const sheetIdMap = new Map<string, number>();
 
-      // Rename first sheet to first sheet name in data
-      if (sheets.length > 0 && existingSheets.length > 0) {
-        requests.push({
-          updateSheetProperties: {
-            properties: {
-              sheetId: existingSheets[0].properties?.sheetId,
-              title: sheets[0].name,
+      for (let i = 0; i < sheets.length; i++) {
+        const sheetName = sheets[i].name;
+        const existingSheetId = existingSheetMap.get(sheetName);
+
+        if (existingSheetId !== undefined) {
+          sheetIdMap.set(sheetName, existingSheetId);
+
+          if (i === 0 && existingSheets[0]?.properties?.title !== sheetName) {
+            requests.push({
+              updateSheetProperties: {
+                properties: {
+                  sheetId: existingSheetId,
+                  title: sheetName,
+                },
+                fields: 'title',
+              },
+            });
+          }
+        } else {
+          // Sheet doesn't exist, create it
+          requests.push({
+            addSheet: {
+              properties: {
+                title: sheetName,
+              },
             },
-            fields: 'title',
-          },
-        });
+          });
+        }
       }
 
-      // Create new sheets
-      for (let i = 1; i < sheets.length; i++) {
-        requests.push({
-          addSheet: {
-            properties: {
-              title: sheets[i].name,
-            },
-          },
-        });
-      }
-
-      // Execute batch update to create/delete sheets
+      // Execute batch update to create/rename sheets if needed
       if (requests.length > 0) {
         await this.sheetsApi.spreadsheets.batchUpdate({
           spreadsheetId,
           requestBody: { requests },
         });
+
+        const refreshedSpreadsheet = await this.sheetsApi.spreadsheets.get({ spreadsheetId });
+        const refreshedSheets = refreshedSpreadsheet.data.sheets || [];
+        for (const sheet of refreshedSheets) {
+          const title = sheet.properties?.title || '';
+          if (sheets.some((s) => s.name === title)) {
+            sheetIdMap.set(title, sheet.properties?.sheetId || 0);
+          }
+        }
+      } else {
+        for (const sheet of existingSheets) {
+          const title = sheet.properties?.title || '';
+          if (sheets.some((s) => s.name === title) && !sheetIdMap.has(title)) {
+            sheetIdMap.set(title, sheet.properties?.sheetId || 0);
+          }
+        }
       }
 
-      // Clear and write data to each sheet
+      const errors: Array<{ sheetName: string; error: any }> = [];
+      
       for (const sheet of sheets) {
-        const range = `${sheet.name}!A1`;
+        const sheetId = sheetIdMap.get(sheet.name);
+        if (sheetId === undefined) {
+          const errorMsg = `Sheet "${sheet.name}" not found in spreadsheet ${spreadsheetId}`;
+          this.logger.error(errorMsg);
+          errors.push({ sheetName: sheet.name, error: new Error(errorMsg) });
+          continue;
+        }
 
-        // Clear sheet
-        await this.sheetsApi.spreadsheets.values.clear({
-          spreadsheetId,
-          range: `${sheet.name}!A:Z`,
-        });
+        try {
+          // Payment sheet
+          if (sheet.name === 'Payment') {
+            const range = `${sheet.name}!A1`;
 
-        // Write headers and data
-        const values = [sheet.headers, ...sheet.rows];
+            // Clear sheet
+            await this.sheetsApi.spreadsheets.values.clear({
+              spreadsheetId,
+              range: `${sheet.name}!A:Z`,
+            });
 
-        await this.sheetsApi.spreadsheets.values.update({
-          spreadsheetId,
-          range,
-          valueInputOption: 'RAW',
-          requestBody: { values },
-        });
+            // Write headers and data
+            const values = [sheet.headers, ...sheet.rows];
 
-        // Format headers (bold)
-        await this.formatHeaders(spreadsheetId, sheet.name);
+            await this.sheetsApi.spreadsheets.values.update({
+              spreadsheetId,
+              range,
+              valueInputOption: 'RAW',
+              requestBody: { values },
+            });
+
+            // Format headers (bold)
+            await this.formatHeaders(spreadsheetId, sheet.name, sheetId);
+            
+            this.logger.debug(`Successfully updated sheet "${sheet.name}" in spreadsheet ${spreadsheetId}`);
+          } 
+          // Transactions History and Reversed
+          else if (sheet.name === 'Transactions History' || sheet.name === 'Reversed') {
+            const range = `${sheet.name}!A1`;
+
+            // Clear sheet
+            await this.sheetsApi.spreadsheets.values.clear({
+              spreadsheetId,
+              range: `${sheet.name}!A2:Z`,
+            });
+
+            // Write headers first
+            await this.sheetsApi.spreadsheets.values.update({
+              spreadsheetId,
+              range: `${sheet.name}!A1`,
+              valueInputOption: 'RAW',
+              requestBody: { values: [sheet.headers] },
+            });
+
+            // Format headers
+            await this.formatHeaders(spreadsheetId, sheet.name, sheetId);
+
+            // Write data in chunks
+            const totalRows = sheet.rows.length;
+            
+            if (totalRows > 0) {
+              for (let i = 0; i < totalRows; i += this.chunkSize) {
+                const chunk = sheet.rows.slice(i, i + this.chunkSize);
+                const startRow = i + 2;
+                const endRow = startRow + chunk.length - 1;
+                const chunkRange = `${sheet.name}!A${startRow}:Z${endRow}`;
+
+                await this.sheetsApi.spreadsheets.values.update({
+                  spreadsheetId,
+                  range: chunkRange,
+                  valueInputOption: 'RAW',
+                  requestBody: { values: chunk },
+                });
+
+                this.logger.debug(
+                  `Wrote chunk ${Math.floor(i / this.chunkSize) + 1}/${Math.ceil(totalRows / this.chunkSize)} ` +
+                  `(rows ${startRow}-${endRow}) for sheet "${sheet.name}"`,
+                );
+              }
+
+              // Clear format for all data rows
+              const startRowIndex = 1;
+              const endRowIndex = 1 + totalRows;
+              await this.clearDataRowFormat(spreadsheetId, sheetId, startRowIndex, endRowIndex);
+            }
+            
+            this.logger.debug(
+              `Updated sheet "${sheet.name}" with ${totalRows} rows (clean + write, ${Math.ceil(totalRows / this.chunkSize)} chunks) in spreadsheet ${spreadsheetId}`,
+            );
+          } 
+          // Other sheets
+          else {
+            const range = `${sheet.name}!A1`;
+
+            // Clear sheet
+            await this.sheetsApi.spreadsheets.values.clear({
+              spreadsheetId,
+              range: `${sheet.name}!A:Z`,
+            });
+
+            const values = [sheet.headers, ...sheet.rows];
+
+            await this.sheetsApi.spreadsheets.values.update({
+              spreadsheetId,
+              range,
+              valueInputOption: 'RAW',
+              requestBody: { values },
+            });
+
+            // Format headers
+            await this.formatHeaders(spreadsheetId, sheet.name, sheetId);
+            
+            this.logger.debug(`Successfully updated sheet "${sheet.name}" in spreadsheet ${spreadsheetId}`);
+          }
+        } catch (error) {
+          this.logger.error(
+            `Failed to update sheet "${sheet.name}" in spreadsheet ${spreadsheetId}:`,
+            error,
+          );
+          errors.push({ sheetName: sheet.name, error });
+        }
+      }
+
+      if (errors.length > 0) {
+        const errorMessages = errors.map((e) => `Sheet "${e.sheetName}": ${e.error.message}`).join('; ');
+        throw new Error(`Failed to update ${errors.length} sheet(s) in spreadsheet ${spreadsheetId}: ${errorMessages}`);
       }
 
       this.logger.log(`Updated spreadsheet: ${spreadsheetId} with ${sheets.length} sheets`);
@@ -181,24 +273,89 @@ export class GoogleSheetsService {
   }
 
   /**
-   * Format headers (bold, background color)
+   * Clear format for data rows
+   * @param spreadsheetId - The spreadsheet ID
+   * @param sheetId - The sheet ID
+   * @param startRowIndex - Start row index
+   * @param endRowIndex - End row index
    */
-  private async formatHeaders(spreadsheetId: string, sheetName: string): Promise<void> {
+  private async clearDataRowFormat(
+    spreadsheetId: string,
+    sheetId: number,
+    startRowIndex: number,
+    endRowIndex: number,
+  ): Promise<void> {
     try {
-      const spreadsheet = await this.sheetsApi.spreadsheets.get({ spreadsheetId });
-      const sheet = spreadsheet.data.sheets?.find((s) => s.properties?.title === sheetName);
-
-      if (!sheet || !sheet.properties?.sheetId) {
-        return;
+      if (startRowIndex < 1) {
+        startRowIndex = 1;
       }
-
-      const sheetId = sheet.properties.sheetId;
 
       const requests = [
         {
           repeatCell: {
             range: {
               sheetId,
+              startRowIndex,
+              endRowIndex,
+              startColumnIndex: 0,
+              endColumnIndex: 26,
+            },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: {
+                  red: 1.0,
+                  green: 1.0,
+                  blue: 1.0,
+                },
+                textFormat: {
+                  bold: false,
+                },
+              },
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat)',
+          },
+        },
+      ];
+
+      await this.sheetsApi.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: { requests },
+      });
+    } catch (error) {
+      this.logger.warn(`Error clearing data row format:`, error);
+    }
+  }
+
+  /**
+   * Format headers
+   * @param spreadsheetId - The spreadsheet ID
+   * @param sheetName - The sheet name
+   * @param sheetId - The sheet ID
+   */
+  private async formatHeaders(
+    spreadsheetId: string,
+    sheetName: string,
+    sheetId?: number,
+  ): Promise<void> {
+    try {
+      let targetSheetId = sheetId;
+
+      if (targetSheetId === undefined) {
+        const spreadsheet = await this.sheetsApi.spreadsheets.get({ spreadsheetId });
+        const sheet = spreadsheet.data.sheets?.find((s) => s.properties?.title === sheetName);
+
+        if (!sheet || !sheet.properties?.sheetId) {
+          return;
+        }
+
+        targetSheetId = sheet.properties.sheetId;
+      }
+
+      const requests = [
+        {
+          repeatCell: {
+            range: {
+              sheetId: targetSheetId,
               startRowIndex: 0,
               endRowIndex: 1,
             },
