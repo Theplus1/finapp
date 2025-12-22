@@ -22,6 +22,19 @@ const delay = (ms: number): Promise<void> => {
 };
 
 /**
+ * Normalize date to UTC
+ */
+function normalizeDateToUTC(date: Date): Date {
+  const utcDate = new Date(Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    0, 0, 0, 0
+  ));
+  return utcDate;
+}
+
+/**
  * Google Sheets Sync Service
  * Handles sync logic from database to Google Sheets
  */
@@ -235,11 +248,15 @@ export class GoogleSheetsSyncService {
     today: Date = new Date(),
     daysInMonth: number,
   ): Promise<SheetData> {
+    const normalizedStartDate = normalizeDateToUTC(startDate);
+    const normalizedEndDate = normalizeDateToUTC(endDate);
+    const calculationEndDate = today < endDate ? today : endDate;
+    
     // Get summaries for display (only up to today, future days will be empty)
     const dailySummaries = await this.dailyPaymentSummariesService.getDailySummaries(
       virtualAccount.slashId,
-      startDate,
-      endDate,
+      normalizedStartDate,
+      normalizedEndDate,
     );
 
     // Calculate totals
