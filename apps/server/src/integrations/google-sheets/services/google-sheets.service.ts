@@ -22,7 +22,11 @@ export class GoogleSheetsService {
   private readonly chunkSize: number;
 
   constructor(private readonly configService: ConfigService) {
-    this.chunkSize = this.configService.get<number>('googleSheets.chunkSize', 5000);
+    // Parse chunkSize from config with safe fallback
+    const chunkSizeStr = this.configService.get<string>('googleSheets.chunkSize', '5000');
+    const parsedChunkSize = parseInt(chunkSizeStr, 10);
+    this.chunkSize = isNaN(parsedChunkSize) || parsedChunkSize <= 0 ? 5000 : parsedChunkSize;
+    
     this.initializeAuth();
   }
 

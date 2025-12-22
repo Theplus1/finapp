@@ -38,10 +38,13 @@ export class GoogleSheetsSyncService {
     private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
     private readonly configService: ConfigService,
   ) {
-    this.syncDelayBetweenAccounts = this.configService.get<number>(
+    // Parse syncDelayBetweenAccounts from config with safe fallback
+    const delayStr = this.configService.get<string>(
       'googleSheets.syncDelayBetweenAccounts',
-      1000,
+      '1000',
     );
+    const parsedDelay = parseInt(delayStr, 10);
+    this.syncDelayBetweenAccounts = isNaN(parsedDelay) || parsedDelay < 0 ? 1000 : parsedDelay;
   }
 
   /**
@@ -232,15 +235,6 @@ export class GoogleSheetsSyncService {
     today: Date = new Date(),
     daysInMonth: number,
   ): Promise<SheetData> {
-    const calculationEndDate = today < endDate ? today : endDate;
-    await this.dailyPaymentSummariesService.recalculateSummariesForRange(
-      virtualAccount.slashId,
-      startDate,
-      calculationEndDate,
-      virtualAccount.currency,
-      true,
-    );
-
     // Get summaries for display (only up to today, future days will be empty)
     const dailySummaries = await this.dailyPaymentSummariesService.getDailySummaries(
       virtualAccount.slashId,
