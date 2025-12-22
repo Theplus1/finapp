@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { format } from 'date-fns';
 import { GoogleSheetsService, SheetData } from './google-sheets.service';
 import { GoogleSheetReportService } from './google-sheet-report.service';
@@ -14,12 +15,20 @@ const MONTH_FORMAT = 'yyyy-MM';
 const DATE_FORMAT = 'M/d/yyyy';
 
 /**
+ * Helper function to delay execution
+ */
+const delay = (ms: number): Promise<void> => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+/**
  * Google Sheets Sync Service
  * Handles sync logic from database to Google Sheets
  */
 @Injectable()
 export class GoogleSheetsSyncService {
   private readonly logger = new Logger(GoogleSheetsSyncService.name);
+  private readonly syncDelayBetweenAccounts: number;
 
   constructor(
     private readonly googleSheetsService: GoogleSheetsService,
@@ -27,11 +36,16 @@ export class GoogleSheetsSyncService {
     private readonly transactionsService: TransactionsService,
     private readonly accountsService: AccountsService,
     private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.syncDelayBetweenAccounts = this.configService.get<number>(
+      'googleSheets.syncDelayBetweenAccounts',
+      1000,
+    );
+  }
 
   /**
    * Sync a virtual account to Google Sheets (current month)
-   * Now looks up in GoogleSheetReport collection instead of creating new files
    */
   async syncVirtualAccountToSheets(virtualAccountId: string): Promise<void> {
     const startTime = Date.now();
@@ -133,12 +147,23 @@ export class GoogleSheetsSyncService {
     let success = 0;
     let failed = 0;
 
-    for (const account of virtualAccounts) {
+    for (let i = 0; i < virtualAccounts.length; i++) {
+      const account = virtualAccounts[i];
       try {
         await this.syncVirtualAccountToSheets(account.slashId);
         success++;
+        this.logger.debug(`Synced ${account.slashId} (${i + 1}/${virtualAccounts.length})`);
+
+        if (i < virtualAccounts.length - 1 && this.syncDelayBetweenAccounts > 0) {
+          await delay(this.syncDelayBetweenAccounts);
+        }
       } catch (error) {
         failed++;
+        this.logger.error(`Failed to sync ${account.slashId}:`, error);
+
+        if (i < virtualAccounts.length - 1 && this.syncDelayBetweenAccounts > 0) {
+          await delay(this.syncDelayBetweenAccounts);
+        }
       }
     }
 
@@ -207,13 +232,13 @@ export class GoogleSheetsSyncService {
     today: Date = new Date(),
     daysInMonth: number,
   ): Promise<SheetData> {
-    // Calculate summaries only up to today to save memory (future days will be recalculated later)
     const calculationEndDate = today < endDate ? today : endDate;
     await this.dailyPaymentSummariesService.recalculateSummariesForRange(
       virtualAccount.slashId,
       startDate,
       calculationEndDate,
       virtualAccount.currency,
+      true,
     );
 
     // Get summaries for display (only up to today, future days will be empty)

@@ -29,11 +29,14 @@ export default () => ({
     baseUrl: process.env.SLASH_BASE_URL || 'https://api.joinslash.com',
     timeout: parseInt(process.env.SLASH_TIMEOUT || '30000', 10),
     webhookSecret: process.env.SLASH_WEBHOOK_SECRET,
+    enableScheduledSync: process.env.SLASH_ENABLE_SCHEDULED_SYNC !== 'false', // Default: true
   },
   googleSheets: {
     keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE || './google-credentials.json',
     enableScheduledSync: process.env.GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC !== 'false',
     syncCron: process.env.GOOGLE_SHEETS_SYNC_CRON || '*/15 * * * *',
+    syncDelayBetweenAccounts: parseInt(process.env.GOOGLE_SHEETS_SYNC_DELAY_BETWEEN_ACCOUNTS || '1000', 10), // milliseconds
+    chunkSize: parseInt(process.env.GOOGLE_SHEETS_CHUNK_SIZE || '5000', 10), // rows per chunk
   },
   cardDetailTimeout: 60000
 });
