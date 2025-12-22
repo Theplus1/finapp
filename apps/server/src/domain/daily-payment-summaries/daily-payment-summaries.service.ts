@@ -22,11 +22,14 @@ export class DailyPaymentSummariesService {
     virtualAccountId: string,
     date: Date,
     currency: string,
+    silent: boolean = false,
   ): Promise<DailyPaymentSummaryDocument> {
     const dayStart = startOfDay(date);
     const dayEnd = endOfDay(date);
 
-    this.logger.log(`Calculating daily summary for ${virtualAccountId} on ${dayStart.toISOString()}`);
+    if (!silent) {
+      this.logger.log(`Calculating daily summary for ${virtualAccountId} on ${dayStart.toISOString()}`);
+    }
 
     // Get all transactions for this day
     const transactions = await this.transactionsService.findAllWithFilters({
@@ -73,9 +76,11 @@ export class DailyPaymentSummariesService {
       },
     );
 
-    this.logger.log(
-      `Daily summary saved: deposits=${totalDepositCents}, spendNonUS=${totalSpendNonUSCents}, spendUS=${totalSpendUSCents}`,
-    );
+    if (!silent) {
+      this.logger.log(
+        `Daily summary saved: deposits=${totalDepositCents}, spendNonUS=${totalSpendNonUSCents}, spendUS=${totalSpendUSCents}`,
+      );
+    }
 
     return summary;
   }
@@ -133,11 +138,12 @@ export class DailyPaymentSummariesService {
     startDate: Date,
     endDate: Date,
     currency: string,
+    silent: boolean = false,
   ): Promise<void> {
     const currentDate = new Date(startDate);
 
     while (currentDate <= endDate) {
-      await this.calculateAndSaveDailySummary(virtualAccountId, new Date(currentDate), currency);
+      await this.calculateAndSaveDailySummary(virtualAccountId, new Date(currentDate), currency, silent);
       currentDate.setDate(currentDate.getDate() + 1);
     }
   }
