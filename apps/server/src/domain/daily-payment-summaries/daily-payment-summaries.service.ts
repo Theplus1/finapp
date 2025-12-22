@@ -88,13 +88,16 @@ export class DailyPaymentSummariesService {
     startDate: Date,
     endDate: Date,
   ): Promise<DailyPaymentSummaryDocument[]> {
-    return this.dailyPaymentSummaryModel
-      .find({
+    return this.dailyPaymentSummaryModel.aggregate().match({
         virtualAccountId,
         date: {
           $gte: startOfDay(startDate),
           $lte: startOfDay(endDate),
         },
+      }).addFields({
+        hour: { $hour: '$date' },
+      }).match({
+        hour: 0,
       })
       .sort({ date: 1 })
       .exec();
