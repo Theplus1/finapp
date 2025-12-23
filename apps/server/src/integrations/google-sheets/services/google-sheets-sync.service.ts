@@ -283,7 +283,7 @@ export class GoogleSheetsSyncService {
     const summaryRow = [
       '',
       formatCurrency(totals.totalDepositCents, virtualAccount.currency),
-      formatCurrency(virtualAccount.spend.amountCents, virtualAccount.currency),
+      formatCurrency(totals.totalSpendNonUSCents + totals.totalSpendUSCents, virtualAccount.currency),
       formatCurrency(totals.totalSpendNonUSCents, virtualAccount.currency),
       formatCurrency(totals.totalSpendUSCents, virtualAccount.currency),
       '',

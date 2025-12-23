@@ -107,7 +107,7 @@ export class PaymentSheetBuilder {
     const row = PaymentSheetBuilder.SUMMARY_ROW;
     sheet.cell(row, 1).value('');
     sheet.cell(row, 2).value(formatCurrency(totals.totalDepositCents, virtualAccount.currency));
-    sheet.cell(row, 3).value(formatCurrency(virtualAccount.spend.amountCents, virtualAccount.currency));
+    sheet.cell(row, 3).value(formatCurrency(totals.totalSpendNonUSCents + totals.totalSpendUSCents, virtualAccount.currency));
     sheet.cell(row, 4).value(formatCurrency(totals.totalSpendNonUSCents, virtualAccount.currency));
     sheet.cell(row, 5).value(formatCurrency(totals.totalSpendUSCents, virtualAccount.currency));
     sheet.cell(row, 6).value('');
