@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SlashIntegrationModule } from '../integrations/slash/slash-integration.module';
 import { UsersModule } from '../users/users.module';
@@ -30,6 +29,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
+import { DailySummaryController } from './controllers/daily-summary.controller';
+import { DailyPaymentSummariesModule } from 'src/domain/daily-payment-summaries/daily-payment-summaries.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
     TransactionsModule, // Domain logic for transactions
     AccountsModule, // Domain logic for accounts
     AdminUsersModule, // Domain logic for admin users
+    DailyPaymentSummariesModule
   ],
   controllers: [
     AuthController,
@@ -59,7 +61,8 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
     CardsController,
     CardGroupsController,
     AccountsController,
-    UsersController
+    UsersController,
+    DailySummaryController
   ],
   providers: [
     // Strategies

@@ -10,6 +10,7 @@ import { TransactionDetailedStatus } from '../../../integrations/slash/types';
 import { getTransactionColumns, getReversedTransactionColumns } from '../../../domain/exports/helpers/column-definitions.helper';
 import { formatCurrency } from '../../../shared/utils/formatCurrency.util';
 import { ExcelColumn } from '../../../shared/utils/excel.util';
+import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
 
 const MONTH_FORMAT = 'yyyy-MM';
 const DATE_FORMAT = 'M/d/yyyy';
@@ -242,7 +243,7 @@ export class GoogleSheetsSyncService {
    * Generate Payment sheet
    */
   private async generatePaymentSheet(
-    virtualAccount: any,
+    virtualAccount: VirtualAccountDocument,
     startDate: Date,
     endDate: Date,
     today: Date = new Date(),
@@ -282,6 +283,7 @@ export class GoogleSheetsSyncService {
     const summaryRow = [
       '',
       formatCurrency(totals.totalDepositCents, virtualAccount.currency),
+      formatCurrency(virtualAccount.spend.amountCents, virtualAccount.currency),
       formatCurrency(totals.totalSpendNonUSCents, virtualAccount.currency),
       formatCurrency(totals.totalSpendUSCents, virtualAccount.currency),
       '',
@@ -298,6 +300,7 @@ export class GoogleSheetsSyncService {
         dailyRows.push([
           dateStr,
           summary ? formatCurrency(summary.totalDepositCents, virtualAccount.currency) : '',
+          summary ? formatCurrency(summary.totalSpendNonUSCents + summary.totalSpendUSCents, virtualAccount.currency) : '',
           summary ? formatCurrency(summary.totalSpendNonUSCents, virtualAccount.currency) : '',
           summary ? formatCurrency(summary.totalSpendUSCents, virtualAccount.currency) : '',
           '',

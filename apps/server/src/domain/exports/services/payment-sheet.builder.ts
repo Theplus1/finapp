@@ -28,12 +28,13 @@ export class PaymentSheetBuilder {
 
   constructor(
     private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
-  ) {}
+  ) { }
 
   getColumns(): ExcelColumn<any>[] {
     return [
       { key: 'date', header: 'Date' },
       { key: 'totalDeposit', header: 'Tổng nạp' },
+      { key: 'totalSpend', header: 'Tổng tiêu' },
       { key: 'totalSpendNonUS', header: 'Tổng tiêu non US' },
       { key: 'totalSpendUS', header: 'Tổng tiêu trong US' },
       { key: 'empty', header: '' },
@@ -64,7 +65,7 @@ export class PaymentSheetBuilder {
     const year = now.getFullYear();
     const month = now.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
+
     return {
       startDate: new Date(year, month, 1),
       endDate: new Date(year, month, daysInMonth),
@@ -106,10 +107,11 @@ export class PaymentSheetBuilder {
     const row = PaymentSheetBuilder.SUMMARY_ROW;
     sheet.cell(row, 1).value('');
     sheet.cell(row, 2).value(formatCurrency(totals.totalDepositCents, virtualAccount.currency));
-    sheet.cell(row, 3).value(formatCurrency(totals.totalSpendNonUSCents, virtualAccount.currency));
-    sheet.cell(row, 4).value(formatCurrency(totals.totalSpendUSCents, virtualAccount.currency));
-    sheet.cell(row, 5).value('');
-    sheet.cell(row, 6).value(formatCurrency(virtualAccount.balance.amountCents, virtualAccount.currency));
+    sheet.cell(row, 3).value(formatCurrency(virtualAccount.spend.amountCents, virtualAccount.currency));
+    sheet.cell(row, 4).value(formatCurrency(totals.totalSpendNonUSCents, virtualAccount.currency));
+    sheet.cell(row, 5).value(formatCurrency(totals.totalSpendUSCents, virtualAccount.currency));
+    sheet.cell(row, 6).value('');
+    sheet.cell(row, 7).value(formatCurrency(virtualAccount.balance.amountCents, virtualAccount.currency));
   }
 
   private writeDailyRows(sheet: any, dateRange: DateRange, summaryMap: Map<string, any>, virtualAccount: VirtualAccountDocument): void {
@@ -118,7 +120,7 @@ export class PaymentSheetBuilder {
       const dateStr = format(date, PaymentSheetBuilder.DATE_FORMAT);
       const rowIndex = PaymentSheetBuilder.DATA_START_ROW + day - 1;
       const summary = summaryMap.get(dateStr);
-      
+
       this.writeDailyRow(sheet, rowIndex, dateStr, summary, virtualAccount);
     }
   }
@@ -126,9 +128,10 @@ export class PaymentSheetBuilder {
   private writeDailyRow(sheet: any, rowIndex: number, dateStr: string, summary: any, virtualAccount: VirtualAccountDocument): void {
     sheet.cell(rowIndex, 1).value(dateStr);
     sheet.cell(rowIndex, 2).value(summary ? formatCurrency(summary.totalDepositCents, virtualAccount.currency) : '');
-    sheet.cell(rowIndex, 3).value(summary ? formatCurrency(summary.totalSpendNonUSCents, virtualAccount.currency) : '');
-    sheet.cell(rowIndex, 4).value(summary ? formatCurrency(summary.totalSpendUSCents, virtualAccount.currency) : '');
-    sheet.cell(rowIndex, 5).value('');
+    sheet.cell(rowIndex, 3).value(summary ? formatCurrency(summary.totalSpendUSCents + summary.totalSpendNonUSCents, virtualAccount.currency) : '');
+    sheet.cell(rowIndex, 4).value(summary ? formatCurrency(summary.totalSpendNonUSCents, virtualAccount.currency) : '');
+    sheet.cell(rowIndex, 5).value(summary ? formatCurrency(summary.totalSpendUSCents, virtualAccount.currency) : '');
     sheet.cell(rowIndex, 6).value('');
+    sheet.cell(rowIndex, 7).value('');
   }
 }

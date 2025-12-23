@@ -21,7 +21,6 @@ import { CardsModule } from './domain/cards/cards.module';
 import { TransactionsModule } from './domain/transactions/transactions.module';
 import { AccountsModule } from './domain/accounts/accounts.module';
 import { ExportsModule } from './domain/exports/exports.module';
-import { UserValidationMiddleware } from './bot/middleware/user-validation.middleware';
 
 @Module({
   imports: [

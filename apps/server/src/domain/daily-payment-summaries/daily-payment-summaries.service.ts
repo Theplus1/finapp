@@ -28,7 +28,7 @@ export class DailyPaymentSummariesService {
     const dayEnd = endOfDay(date);
 
     if (!silent) {
-      this.logger.log(`Calculating daily summary for ${virtualAccountId} on ${dayStart.toISOString()}`);
+      this.logger.log(`Calculating daily summary for ${virtualAccountId} from ${dayStart.toISOString()} to ${dayEnd.toISOString()}`);
     }
 
     // Get all transactions for this day
@@ -137,11 +137,10 @@ export class DailyPaymentSummariesService {
     virtualAccountId: string,
     startDate: Date,
     endDate: Date,
-    currency: string,
+    currency: string = "USD",
     silent: boolean = false,
   ): Promise<void> {
     const currentDate = new Date(startDate);
-
     while (currentDate <= endDate) {
       await this.calculateAndSaveDailySummary(virtualAccountId, new Date(currentDate), currency, silent);
       currentDate.setDate(currentDate.getDate() + 1);

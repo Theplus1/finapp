@@ -43,7 +43,8 @@ export class GoogleSheetsService {
     this.logger.log(`Loading Google credentials from: ${absolutePath}`);
 
     if (!fs.existsSync(absolutePath)) {
-      throw new Error(`Google credentials file not found at: ${absolutePath}`);
+      this.logger.fatal(`Google credentials file not found at: ${absolutePath}`);
+      return;
     }
 
     const keyFile = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
@@ -51,7 +52,8 @@ export class GoogleSheetsService {
     this.logger.log(`Project ID: ${keyFile.project_id}`);
 
     if (!keyFile.client_email || !keyFile.private_key) {
-      throw new Error('Invalid credentials file: missing client_email or private_key');
+      this.logger.fatal('Invalid credentials file: missing client_email or private_key');
+      return;
     }
 
     this.jwtClient = new google.auth.JWT({
