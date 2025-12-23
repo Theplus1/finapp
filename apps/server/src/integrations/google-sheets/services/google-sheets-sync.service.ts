@@ -277,7 +277,7 @@ export class GoogleSheetsSyncService {
     const year = startDate.getFullYear();
     const month = startDate.getMonth();
 
-    const headers = ['Date', 'Tổng nạp', 'Tổng tiêu non US', 'Tổng tiêu trong US', '', 'Account Balance'];
+    const headers = ['Date', 'Tổng nạp', 'Tổng tiêu', 'Tổng tiêu non US', 'Tổng tiêu trong US', '', 'Account Balance'];
 
     // Summary row
     const summaryRow = [
@@ -309,6 +309,7 @@ export class GoogleSheetsSyncService {
       } else {
         dailyRows.push([
           dateStr,
+          '',
           '',
           '',
           '',
