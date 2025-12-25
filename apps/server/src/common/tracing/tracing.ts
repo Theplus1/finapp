@@ -1,26 +1,33 @@
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { CompositePropagator, W3CTraceContextPropagator, W3CBaggagePropagator } from '@opentelemetry/core';
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
+import * as process from 'process';
 
-export function initializeTracing() {
-  const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318';
-
-  const sdk = new NodeSDK({
-    traceExporter: new OTLPTraceExporter({
-      url: otlpEndpoint,
+const otelSDK = new NodeSDK({
+  spanProcessor: new BatchSpanProcessor(
+    new OTLPTraceExporter({
+      url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318',
     }),
-    instrumentations: [getNodeAutoInstrumentations()],
-    serviceName: 'finapp-server',
-  });
+  ),
+  contextManager: new AsyncLocalStorageContextManager(),
+  textMapPropagator: new CompositePropagator({
+    propagators: [
+      new W3CTraceContextPropagator(),
+      new W3CBaggagePropagator(),
+    ],
+  }),
+  instrumentations: [getNodeAutoInstrumentations()],
+});
 
-  sdk.start();
-  console.log('OpenTelemetry tracing initialized');
+export default otelSDK;
 
-  process.on('SIGTERM', () => {
-    sdk.shutdown()
-      .then(() => console.log('Tracing terminated'))
-      .catch((log: any) => console.log('Error terminating tracing', log))
-      .finally(() => process.exit(0));
-  });
-}
+process.on('SIGTERM', () => {
+  otelSDK
+    .shutdown()
+    .then(() => console.log('OpenTelemetry SDK shut down successfully'))
+    .catch((err) => console.log('Error shutting down OpenTelemetry SDK', err))
+    .finally(() => process.exit(0));
+});

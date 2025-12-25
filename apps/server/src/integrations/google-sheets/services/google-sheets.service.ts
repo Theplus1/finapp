@@ -4,10 +4,16 @@ import { google, sheets_v4 } from 'googleapis';
 import { GoogleAuth } from 'google-auth-library';
 import { SheetName } from '../constants/sheet-names.constant';
 
+export interface ColumnStyle {
+  range?: string; // e.g., 'B2:B50' - if not provided, applies to entire column
+  styles?: Record<string, any>; // e.g., { numberFormat: '$#,##0.00', bold: true, alignment: { horizontal: 'center' } }
+}
+
 export interface SheetData {
   name: string;
   headers: string[];
   rows: any[][];
+  columnStyles?: Record<string, string | ColumnStyle>; // e.g., { 'B': '$#,##0.00' } or { 'B': { range: 'B2:B50', styles: { numberFormat: '$#,##0.00' } } }
 }
 
 /**

@@ -25,7 +25,7 @@ export class GoogleSheetsSyncJob implements OnModuleInit {
     );
     this.syncCron = this.configService.get<string>(
       'googleSheets.syncCron',
-      '*/15 * * * *',
+      '*/50 * * * *',
     );
   }
 

@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TelegrafModule } from 'nestjs-telegraf';
 import { BullModule } from '@nestjs/bull';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { OpenTelemetryModule } from 'nestjs-otel';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { BotModule } from './bot/bot.module';
@@ -24,6 +25,16 @@ import { ExportsModule } from './domain/exports/exports.module';
 
 @Module({
   imports: [
+    // OpenTelemetry - uses tracing.ts SDK configuration
+    OpenTelemetryModule.forRoot({
+      metrics: {
+        hostMetrics: true,
+        apiMetrics: {
+          enable: true,
+        },
+      },
+    }),
+
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,

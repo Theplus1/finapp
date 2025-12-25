@@ -12,8 +12,12 @@ import { TransactionsModule } from '../transactions/transactions.module';
 import { CardsModule } from '../cards/cards.module';
 import { AccountsModule } from '../accounts/accounts.module';
 import { DailyPaymentSummariesModule } from '../daily-payment-summaries/daily-payment-summaries.module';
-import { PaymentSheetBuilder } from './services/payment-sheet.builder';
-import { ExportGeneratorsService } from './services/export-generators.service';
+import { ExportSheetsService } from './services/export-sheets.service';
+import { PaymentExportSheetService } from './services/payment-export-sheet.service';
+import { DepositExportSheetService } from './services/deposit-export-sheet.service';
+import { LocationExportSheetService } from './services/location-export-sheet.service';
+import { TransactionsExportSheetService } from './services/transactions-export-sheet.service';
+import { CardsExportSheetService } from './services/cards-export-sheet.service';
 
 @Module({
   imports: [
@@ -43,8 +47,12 @@ import { ExportGeneratorsService } from './services/export-generators.service';
     ExportsService,
     ExportsProcessor,
     ExportsScheduler,
-    PaymentSheetBuilder,
-    ExportGeneratorsService,
+    ExportSheetsService,
+    PaymentExportSheetService,
+    DepositExportSheetService,
+    LocationExportSheetService,
+    TransactionsExportSheetService,
+    CardsExportSheetService,
   ],
   exports: [ExportsService],
 })

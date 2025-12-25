@@ -6,3 +6,7 @@ export function formatCurrency(value: number, code: string = 'USD'): string {
     maximumFractionDigits: 2,
   });
 }
+
+export function centsToDollars(cents: number): number {
+  return cents / 100;
+}

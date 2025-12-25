@@ -9,10 +9,6 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { setDefaultResultOrder } from 'node:dns';
 import { randomUUID } from 'node:crypto';
 import { apiReference } from '@scalar/nestjs-api-reference';
-import { initializeTracing } from './common/tracing/tracing';
-
-// Initialize OpenTelemetry tracing FIRST before anything else
-initializeTracing();
 
 // Polyfill for @nestjs/schedule compatibility with Node 18
 if (!globalThis.crypto) {
@@ -72,23 +68,23 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
 
   // Setup Swagger UI (Scalar temporarily disabled due to ESM issue)
-  SwaggerModule.setup('/api-docs', app, document);
+  // SwaggerModule.setup('/api-docs', app, document);
   
   // TODO: Re-enable Scalar after fixing ESM compatibility
-  // app.use(
-  //   '/api-docs',
-  //   apiReference({
-  //     theme: 'purple',
-  //     content: document,
-  //     metaData: {
-  //       title: 'FinApp Admin API Documentation',
-  //       description: 'Interactive API documentation for FinApp Admin REST API',
-  //     },
-  //     authentication: {
-  //       preferredSecurityScheme: 'bearer',
-  //     },
-  //   }),
-  // );
+  app.use(
+    '/api-docs',
+    apiReference({
+      theme: 'purple',
+      content: document,
+      metaData: {
+        title: 'FinApp Admin API Documentation',
+        description: 'Interactive API documentation for FinApp Admin REST API',
+      },
+      authentication: {
+        preferredSecurityScheme: 'bearer',
+      },
+    }),
+  );
 
   await app.listen(port);
 

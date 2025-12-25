@@ -28,6 +28,9 @@
     "packages/*"
   ],
   "dependencies": {
+    "@opentelemetry/context-async-hooks": "^2.2.0",
+    "@opentelemetry/core": "^2.2.0",
+    "@opentelemetry/sdk-trace-base": "^2.2.0",
     "next": "^15.5.7"
   }
 }

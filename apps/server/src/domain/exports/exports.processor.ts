@@ -2,11 +2,13 @@ import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import * as fs from 'fs-extra';
+import XlsxPopulate = require('xlsx-populate');
 import { InjectBot } from 'nestjs-telegraf';
 import { Telegraf } from 'telegraf';
 import { ExportJob, ExportJobDoc, ExportStatus, ExportType } from 'src/database/schemas/export-job.schema';
 import { ExportsService } from './exports.service';
-import { ExportGeneratorsService } from './services/export-generators.service';
+import { ExportSheetsService } from './services/export-sheets.service';
+import { CardsExportSheetService } from './services/cards-export-sheet.service';
 import { saveExportFile, formatFileSize } from './helpers/export-file.helper';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
 
@@ -24,7 +26,8 @@ export class ExportsProcessor {
 
   constructor(
     private readonly exportsService: ExportsService,
-    private readonly exportGeneratorsService: ExportGeneratorsService,
+    private readonly exportSheetsService: ExportSheetsService,
+    private readonly cardsExportSheetService: CardsExportSheetService,
     @InjectBot() private readonly bot: Telegraf<BotContext>,
   ) {}
 
@@ -67,11 +70,114 @@ export class ExportsProcessor {
   private async generateExportByType(type: ExportType, filters: Record<string, any>) {
     switch (type) {
       case ExportType.TRANSACTIONS:
-        return this.exportGeneratorsService.generateTransactionsExport(filters);
+        return this.generateTransactionsExportWithSheets(filters);
       case ExportType.CARDS:
-        return this.exportGeneratorsService.generateCardsExport(filters);
+        return this.generateCardsExportWithSheets(filters);
       default:
         throw new Error(`Unsupported export type: ${type}`);
+    }
+  }
+
+  private async generateTransactionsExportWithSheets(filters: Record<string, any>) {
+    const sheets = await this.exportSheetsService.generateAllSheets(filters);
+    const buffer = await this.sheetsToExcel(sheets);
+
+    const totalRecords = sheets.reduce((sum, sheet) => sum + sheet.rows.length, 0);
+
+    return {
+      buffer,
+      recordCount: totalRecords,
+    };
+  }
+
+  private async generateCardsExportWithSheets(filters: Record<string, any>) {
+    const virtualAccountId = filters.virtualAccountId;
+    const [cards, total] = await this.cardsExportSheetService.findAllCards(virtualAccountId);
+    
+    const sheet = this.cardsExportSheetService.generateCardsSheet(cards);
+    const buffer = await this.sheetsToExcel([sheet]);
+
+    return {
+      buffer,
+      recordCount: total,
+    };
+  }
+
+  private async sheetsToExcel(sheets: any[]): Promise<Buffer> {
+    const workbook = await XlsxPopulate.fromBlankAsync();
+
+    for (let index = 0; index < sheets.length; index++) {
+      const { name, headers, rows, columnStyles } = sheets[index];
+
+      const sheet = index === 0 ? workbook.sheet(0) : workbook.addSheet(name);
+      if (index === 0) {
+        sheet.name(name);
+      }
+
+      this.writeSheetHeaders(sheet, headers);
+      this.writeSheetRows(sheet, rows, columnStyles);
+      this.setSheetColumnWidths(sheet, headers.length);
+    }
+
+    const buffer = await workbook.outputAsync();
+    return buffer as Buffer;
+  }
+
+  private writeSheetHeaders(sheet: any, headers: string[]): void {
+    headers.forEach((header, colIndex) => {
+      const cell = sheet.cell(1, colIndex + 1);
+      cell.value(header);
+      cell.style('bold', true);
+    });
+  }
+
+  private writeSheetRows(sheet: any, rows: any[][], columnStyles?: Record<string, any>): void {
+    rows.forEach((row, rowIndex) => {
+      row.forEach((value, colIndex) => {
+        const cell = sheet.cell(rowIndex + 2, colIndex + 1);
+        const columnLetter = String.fromCharCode(65 + colIndex);
+        
+        // Apply format BEFORE writing value
+        if (columnStyles && columnStyles[columnLetter]) {
+          const styleSpec = columnStyles[columnLetter];
+          if (typeof styleSpec === 'string') {
+            cell.style('numberFormat', styleSpec);
+          }
+        }
+        
+        if (value && typeof value === 'object' && value.formula) {
+          cell.formula(value.formula);
+        } else {
+          cell.value(value ?? '');
+        }
+      });
+    });
+  }
+
+  private applyColumnStyles(sheet: any, columnStyles: Record<string, any>): void {
+    Object.entries(columnStyles).forEach(([column, styleSpec]) => {
+      if (typeof styleSpec === 'string') {
+        // Simple format string: apply numberFormat to entire column
+        const columnObj = sheet.column(column);
+        if (columnObj && columnObj.style) {
+          columnObj.style('numberFormat', styleSpec);
+        }
+      } else if (styleSpec.styles) {
+        // Style object with styles property
+        const target = styleSpec.range ? sheet.range(styleSpec.range) : sheet.column(column);
+        if (target && target.style) {
+          Object.entries(styleSpec.styles).forEach(([styleKey, styleValue]) => {
+            target.style(styleKey, styleValue);
+          });
+        }
+      }
+    });
+  }
+
+  private setSheetColumnWidths(sheet: any, columnCount: number): void {
+    for (let colIndex = 0; colIndex < columnCount; colIndex++) {
+      const columnLetter = String.fromCharCode(65 + colIndex);
+      sheet.column(columnLetter).width(15);
     }
   }
 
