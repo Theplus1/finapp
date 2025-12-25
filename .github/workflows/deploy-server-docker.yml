@@ -106,7 +106,7 @@ jobs:
               -e "GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC=true" \
               -e "GOOGLE_SHEETS_SYNC_CRON=*/30 * * * *" \
               -e "GOOGLE_SERVICE_ACCOUNT_KEY=${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" \
-              -e "OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317" \
+              -e "OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318" \
               -e "NODE_ENV=production" \
               ${IMAGE_NAME}
 
