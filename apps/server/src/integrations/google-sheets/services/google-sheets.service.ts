@@ -1,9 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { google, sheets_v4 } from 'googleapis';
-import { JWT } from 'google-auth-library';
-import * as fs from 'fs';
-import * as path from 'path';
+import { GoogleAuth } from 'google-auth-library';
+import { SheetName } from '../constants/sheet-names.constant';
 
 export interface SheetData {
   name: string;
@@ -15,57 +14,54 @@ export interface SheetData {
  * Google Sheets Service
  */
 @Injectable()
-export class GoogleSheetsService {
+export class GoogleSheetsService implements OnModuleInit {
   private readonly logger = new Logger(GoogleSheetsService.name);
   private sheetsApi: sheets_v4.Sheets;
-  private jwtClient: JWT;
+  private auth: GoogleAuth;
   private readonly chunkSize: number;
+  private isInitialized = false;
 
   constructor(private readonly configService: ConfigService) {
-    // Parse chunkSize from config with safe fallback
     const chunkSizeStr = this.configService.get<string>('googleSheets.chunkSize', '5000');
     const parsedChunkSize = parseInt(chunkSizeStr, 10);
     this.chunkSize = isNaN(parsedChunkSize) || parsedChunkSize <= 0 ? 5000 : parsedChunkSize;
-    
-    this.initializeAuth();
   }
 
   /**
-   * Initialize authentication with Google APIs
+   * Initialize authentication on module init
    */
-  private initializeAuth(): void {
-    const keyFilePath = this.configService.get<string>(
-      'googleSheets.keyFile',
-      './google-credentials.json',
-    );
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.initializeAuth();
+      this.isInitialized = true;
+    } catch (error) {
+      this.logger.error('Failed to initialize Google Sheets authentication:', error);
+      throw error;
+    }
+  }
 
-    const absolutePath = path.resolve(process.cwd(), keyFilePath);
-    this.logger.log(`Loading Google credentials from: ${absolutePath}`);
-
-    if (!fs.existsSync(absolutePath)) {
-      this.logger.fatal(`Google credentials file not found at: ${absolutePath}`);
-      return;
+  /**
+   * Initialize authentication with Google APIs using environment variables
+   * Required config:
+   * - googleSheets.accountKey (base64 encoded service account JSON)
+   */
+  private async initializeAuth(): Promise<void> {
+    const accountKey = this.configService.get<string>('googleSheets.accountKey');
+    if (!accountKey) {
+      throw new Error(
+        'Google Sheets authentication failed: Missing required configuration. ' +
+        'Please set GOOGLE_SERVICE_ACCOUNT_KEY environment variable.',
+      );
     }
 
-    const keyFile = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
-    this.logger.log(`Loaded credentials for service account: ${keyFile.client_email}`);
-    this.logger.log(`Project ID: ${keyFile.project_id}`);
-
-    if (!keyFile.client_email || !keyFile.private_key) {
-      this.logger.fatal('Invalid credentials file: missing client_email or private_key');
-      return;
-    }
-
-    this.jwtClient = new google.auth.JWT({
-      email: keyFile.client_email,
-      key: keyFile.private_key,
-      scopes: [
-        'https://www.googleapis.com/auth/spreadsheets',
-      ],
+    this.logger.log('Initializing Google Sheets authentication from base64 encoded credentials');
+    const credentials = JSON.parse(Buffer.from(accountKey, 'base64').toString('utf8'));
+    this.auth = new GoogleAuth({
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
-
-    this.sheetsApi = google.sheets({ version: 'v4', auth: this.jwtClient });
-
+    this.sheetsApi = google.sheets({ version: 'v4', auth: this.auth });
+    this.logger.log(`Authenticated with service account: ${credentials.client_email}`);
     this.logger.log('Google Sheets API initialized successfully');
   }
 
@@ -141,6 +137,12 @@ export class GoogleSheetsService {
       const errors: Array<{ sheetName: string; error: any }> = [];
       
       for (const sheet of sheets) {
+        // Skip Deposit sheet if it already exists (preserve manual data)
+        if (sheet.name === SheetName.DEPOSIT && existingSheetMap.has(SheetName.DEPOSIT)) {
+          this.logger.debug('Skipping Deposit sheet update - preserving manual data');
+          continue;
+        }
+
         const sheetId = sheetIdMap.get(sheet.name);
         if (sheetId === undefined) {
           const errorMsg = `Sheet "${sheet.name}" not found in spreadsheet ${spreadsheetId}`;
@@ -150,8 +152,36 @@ export class GoogleSheetsService {
         }
 
         try {
-          // Payment sheet
-          if (sheet.name === 'Payment') {
+          // Payment sheet - uses formulas, needs USER_ENTERED
+          if (sheet.name === SheetName.PAYMENT) {
+            const range = `${sheet.name}!A1`;
+
+            // Clear sheet
+            await this.sheetsApi.spreadsheets.values.clear({
+              spreadsheetId,
+              range: `${sheet.name}!A:Z`,
+            });
+
+            // Write headers and data with USER_ENTERED to interpret formulas
+            const values = [sheet.headers, ...sheet.rows];
+
+            await this.sheetsApi.spreadsheets.values.update({
+              spreadsheetId,
+              range,
+              valueInputOption: 'USER_ENTERED',
+              requestBody: { values },
+            });
+
+            // Format headers (bold)
+            await this.formatHeaders(spreadsheetId, sheet.name, sheetId);
+            
+            // Apply currency formatting to columns B, C, E (Tổng nạp, Tổng tiêu, Account Balance)
+            await this.applyCurrencyFormat(spreadsheetId, sheetId, [1, 2, 4], sheet.rows.length);
+            
+            this.logger.debug(`Successfully updated sheet "${sheet.name}" in spreadsheet ${spreadsheetId}`);
+          }
+          // Deposit sheet - simple update with RAW values
+          else if (sheet.name === SheetName.DEPOSIT) {
             const range = `${sheet.name}!A1`;
 
             // Clear sheet
@@ -173,10 +203,13 @@ export class GoogleSheetsService {
             // Format headers (bold)
             await this.formatHeaders(spreadsheetId, sheet.name, sheetId);
             
+            // Apply currency formatting to column B (Tổng nạp)
+            await this.applyCurrencyFormat(spreadsheetId, sheetId, [1], sheet.rows.length);
+            
             this.logger.debug(`Successfully updated sheet "${sheet.name}" in spreadsheet ${spreadsheetId}`);
           } 
-          // Transactions History and Reversed
-          else if (sheet.name === 'Transactions History' || sheet.name === 'Reversed') {
+          // Transactions History, Reversed, Location, and Hold sheets - chunked update
+          else if (sheet.name === SheetName.TRANSACTIONS_HISTORY || sheet.name === SheetName.REVERSED || sheet.name === SheetName.LOCATION || sheet.name === SheetName.HOLD) {
             const range = `${sheet.name}!A1`;
 
             // Clear sheet
@@ -388,6 +421,52 @@ export class GoogleSheetsService {
   }
 
   /**
+   * Apply currency formatting to specific columns
+   * @param spreadsheetId - The spreadsheet ID
+   * @param sheetId - The sheet ID
+   * @param columns - Array of column indices to format (0-based)
+   * @param rowCount - Number of rows to format
+   */
+  private async applyCurrencyFormat(
+    spreadsheetId: string,
+    sheetId: number,
+    columns: number[],
+    rowCount: number,
+  ): Promise<void> {
+    try {
+      const requests = columns.map((columnIndex) => ({
+        repeatCell: {
+          range: {
+            sheetId,
+            startRowIndex: 1, // Skip header row
+            endRowIndex: rowCount + 2, // Include summary row and all data rows
+            startColumnIndex: columnIndex,
+            endColumnIndex: columnIndex + 1,
+          },
+          cell: {
+            userEnteredFormat: {
+              numberFormat: {
+                type: 'CURRENCY',
+                pattern: '$#,##0.00',
+              },
+            },
+          },
+          fields: 'userEnteredFormat.numberFormat',
+        },
+      }));
+
+      await this.sheetsApi.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: { requests },
+      });
+
+      this.logger.debug(`Applied currency formatting to columns ${columns.join(', ')}`);
+    } catch (error) {
+      this.logger.warn('Error applying currency format:', error);
+    }
+  }
+
+  /**
    * Check if spreadsheet exists
    */
   async spreadsheetExists(spreadsheetId: string): Promise<boolean> {
@@ -396,6 +475,23 @@ export class GoogleSheetsService {
       return true;
     } catch (error) {
       return false;
+    }
+  }
+
+  /**
+   * Read data from a specific sheet
+   */
+  async readSheetData(spreadsheetId: string, sheetName: string, range?: string): Promise<any[][]> {
+    try {
+      const fullRange = range ? `${sheetName}!${range}` : `${sheetName}`;
+      const response = await this.sheetsApi.spreadsheets.values.get({
+        spreadsheetId,
+        range: fullRange,
+      });
+      return response.data.values || [];
+    } catch (error) {
+      this.logger.warn(`Error reading sheet "${sheetName}" from spreadsheet ${spreadsheetId}:`, error);
+      return [];
     }
   }
 

@@ -3,12 +3,16 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-// import { apiReference } from '@scalar/nestjs-api-reference';
 import { WinstonLogger } from './common/utils/logger';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { setDefaultResultOrder } from 'node:dns';
 import { randomUUID } from 'node:crypto';
+import { apiReference } from '@scalar/nestjs-api-reference';
+import { initializeTracing } from './common/tracing/tracing';
+
+// Initialize OpenTelemetry tracing FIRST before anything else
+initializeTracing();
 
 // Polyfill for @nestjs/schedule compatibility with Node 18
 if (!globalThis.crypto) {

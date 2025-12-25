@@ -5,6 +5,12 @@ import { GoogleSheetReport, GoogleSheetReportSchema } from '../../database/schem
 import { GoogleSheetsService } from './services/google-sheets.service';
 import { GoogleSheetsSyncService } from './services/google-sheets-sync.service';
 import { GoogleSheetReportService } from './services/google-sheet-report.service';
+import { PaymentSheetService } from './services/payment-sheet.service';
+import { DepositSheetService } from './services/deposit-sheet.service';
+import { LocationSheetService } from './services/location-sheet.service';
+import { HoldSheetService } from './services/hold-sheet.service';
+import { TransactionsHistorySheetService } from './services/transactions-history-sheet.service';
+import { ReversedSheetService } from './services/reversed-sheet.service';
 import { GoogleSheetReportRepository } from '../../database/repositories/google-sheet-report.repository';
 import { GoogleSheetsSyncJob } from './jobs/google-sheets-sync.job';
 import { GoogleSheetsSyncController } from './controllers/google-sheets-sync.controller';
@@ -35,6 +41,12 @@ import { DailyPaymentSummariesModule } from '../../domain/daily-payment-summarie
     GoogleSheetsService,
     GoogleSheetsSyncService,
     GoogleSheetReportService,
+    PaymentSheetService,
+    DepositSheetService,
+    LocationSheetService,
+    HoldSheetService,
+    TransactionsHistorySheetService,
+    ReversedSheetService,
     GoogleSheetReportRepository,
     GoogleSheetsSyncJob,
   ],

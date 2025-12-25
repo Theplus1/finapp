@@ -68,7 +68,7 @@ jobs:
             cd ${{ vars.SERVER_APP_DIR }}
 
             # Ensure directories exist for volume mounts (Docker will create them as root otherwise)
-            mkdir -p logs public/exports
+            mkdir -p public/exports
 
             # Log in to GitHub Container Registry
             echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -87,7 +87,6 @@ jobs:
               --network host \
               --dns 8.8.8.8 \
               --dns 1.1.1.1 \
-              -v ${{ vars.SERVER_APP_DIR }}/logs:/app/logs \
               -v ${{ vars.SERVER_APP_DIR }}/public/exports:/app/public/exports \
               -e "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" \
               -e "MODE=${{ vars.MODE }}" \
@@ -104,9 +103,10 @@ jobs:
               -e "REDIS_PORT=${{ vars.REDIS_PORT }}" \
               -e "EXPORT_SECRET=${{ secrets.EXPORT_SECRET }}" \
               -e "RESOURCE_BASE_URL=${{ vars.RESOURCE_BASE_URL }}" \
-              -e "GOOGLE_SERVICE_ACCOUNT_KEY_FILE=./google-credentials.json" \
               -e "GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC=true" \
               -e "GOOGLE_SHEETS_SYNC_CRON=*/30 * * * *" \
+              -e "GOOGLE_SERVICE_ACCOUNT_KEY=${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" \
+              -e "OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317" \
               -e "NODE_ENV=production" \
               ${IMAGE_NAME}
 

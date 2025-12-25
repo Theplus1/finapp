@@ -32,7 +32,7 @@ export default () => ({
     enableScheduledSync: process.env.SLASH_ENABLE_SCHEDULED_SYNC !== 'false', // Default: true
   },
   googleSheets: {
-    keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE || './google-credentials.json',
+    accountKey: process.env.GOOGLE_SERVICE_ACCOUNT_KEY,
     enableScheduledSync: process.env.GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC !== 'false',
     syncCron: process.env.GOOGLE_SHEETS_SYNC_CRON || '*/15 * * * *',
     syncDelayBetweenAccounts: process.env.GOOGLE_SHEETS_SYNC_DELAY_BETWEEN_ACCOUNTS || '10000', // milliseconds

@@ -13,26 +13,18 @@ export class WinstonLogger implements LoggerService {
         winston.format.splat(),
         winston.format.json(),
       ),
-      defaultMeta: { service: 'telegram-bot' },
+      defaultMeta: { service: 'finapp-server' },
       transports: [
-        new winston.transports.File({
-          filename: 'logs/error.log',
-          level: 'error',
+        new winston.transports.Console({
+          format: process.env.NODE_ENV === 'production'
+            ? winston.format.json()
+            : winston.format.combine(
+                winston.format.colorize(),
+                winston.format.simple(),
+              ),
         }),
-        new winston.transports.File({ filename: 'logs/combined.log' }),
       ],
     });
-
-    if (process.env.NODE_ENV !== 'production') {
-      this.logger.add(
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple(),
-          ),
-        }),
-      );
-    }
   }
 
   log(message: string, context?: string) {

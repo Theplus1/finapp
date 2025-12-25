@@ -3,14 +3,17 @@ import { ConfigService } from '@nestjs/config';
 import { format } from 'date-fns';
 import { GoogleSheetsService, SheetData } from './google-sheets.service';
 import { GoogleSheetReportService } from './google-sheet-report.service';
+import { PaymentSheetService } from './payment-sheet.service';
+import { DepositSheetService } from './deposit-sheet.service';
+import { LocationSheetService } from './location-sheet.service';
+import { HoldSheetService } from './hold-sheet.service';
+import { TransactionsHistorySheetService } from './transactions-history-sheet.service';
+import { ReversedSheetService } from './reversed-sheet.service';
+import { SheetName } from '../constants/sheet-names.constant';
 import { TransactionsService } from '../../../domain/transactions/transactions.service';
 import { AccountsService } from '../../../domain/accounts/accounts.service';
 import { DailyPaymentSummariesService } from '../../../domain/daily-payment-summaries/daily-payment-summaries.service';
 import { TransactionDetailedStatus } from '../../../integrations/slash/types';
-import { getTransactionColumns, getReversedTransactionColumns } from '../../../domain/exports/helpers/column-definitions.helper';
-import { formatCurrency } from '../../../shared/utils/formatCurrency.util';
-import { ExcelColumn } from '../../../shared/utils/excel.util';
-import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
 
 const MONTH_FORMAT = 'yyyy-MM';
 const DATE_FORMAT = 'M/d/yyyy';
@@ -47,6 +50,12 @@ export class GoogleSheetsSyncService {
   constructor(
     private readonly googleSheetsService: GoogleSheetsService,
     private readonly googleSheetReportService: GoogleSheetReportService,
+    private readonly paymentSheetService: PaymentSheetService,
+    private readonly depositSheetService: DepositSheetService,
+    private readonly locationSheetService: LocationSheetService,
+    private readonly holdSheetService: HoldSheetService,
+    private readonly transactionsHistorySheetService: TransactionsHistorySheetService,
+    private readonly reversedSheetService: ReversedSheetService,
     private readonly transactionsService: TransactionsService,
     private readonly accountsService: AccountsService,
     private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
@@ -108,7 +117,7 @@ export class GoogleSheetsSyncService {
       }
 
       // Get data for current month
-      const sheets = await this.generateSheetsData(virtualAccountId, currentMonth);
+      const sheets = await this.generateSheetsData(virtualAccountId, currentMonth, report.sheetId);
 
       // Update existing spreadsheet
       await this.googleSheetsService.updateSheets(report.sheetId, sheets);
@@ -119,7 +128,7 @@ export class GoogleSheetsSyncService {
       report.lastSyncError = undefined;
       await report.save();
 
-      const transactionCount = sheets.find((s) => s.name === 'Transactions History')?.rows.length || 0;
+      const transactionCount = sheets.find((s) => s.name === SheetName.TRANSACTIONS_HISTORY)?.rows.length || 0;
       const duration = Date.now() - startTime;
       this.logger.log(
         `Synced ${report.sheetName} (${report.sheetId}) successfully (${transactionCount} transactions, ${duration}ms)`,
@@ -160,7 +169,7 @@ export class GoogleSheetsSyncService {
 
     const virtualAccounts = await this.accountsService.findAll();
     this.logger.log(`Found ${virtualAccounts.length} virtual accounts in database to sync`);
-    
+
     let success = 0;
     let failed = 0;
 
@@ -195,7 +204,7 @@ export class GoogleSheetsSyncService {
   /**
    * Generate sheets data for a virtual account (current month)
    */
-  private async generateSheetsData(virtualAccountId: string, month: string): Promise<SheetData[]> {
+  private async generateSheetsData(virtualAccountId: string, month: string, spreadsheetId?: string): Promise<SheetData[]> {
     const [year, monthNum] = month.split('-').map(Number);
 
     // Create dates in UTC to avoid timezone conversion issues
@@ -204,168 +213,44 @@ export class GoogleSheetsSyncService {
     const endDate = new Date(Date.UTC(year, monthNum - 1, daysInMonth, 23, 59, 59, 999));
     const today = new Date();
 
-    const allTransactions = await this.transactionsService.findAllWithFilters({
+    const transactions = await this.transactionsService.findAllWithFilters({
       virtualAccountId,
+      detailedStatus: {
+        $in: [
+          TransactionDetailedStatus.SETTLED,
+          TransactionDetailedStatus.PENDING,
+          TransactionDetailedStatus.REVERSED,
+        ]
+      },
+      amountCents: { $lt: 0 },
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
     });
 
-    const transactions = allTransactions.filter((t) =>
-      t.amountCents < 0 &&
-      [
-        TransactionDetailedStatus.SETTLED,
-        TransactionDetailedStatus.PENDING,
-        TransactionDetailedStatus.REVERSED,
-      ].includes(t.detailedStatus),
-    );
     // Get virtual account info
     const virtualAccount = await this.accountsService.findBySlashId(virtualAccountId);
 
     // Partition transactions
     const settledTransactions = transactions.filter(
-      (t) => t.detailedStatus !== TransactionDetailedStatus.REVERSED,
+      (t) => [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING].includes(t.detailedStatus),
     );
     const reversedTransactions = transactions.filter(
       (t) => t.detailedStatus === TransactionDetailedStatus.REVERSED,
     );
+    const pendingTransactions = transactions.filter(
+      (t) => t.detailedStatus === TransactionDetailedStatus.PENDING,
+    );
 
-    // Generate 3 sheets
     const sheets: SheetData[] = [
-      await this.generatePaymentSheet(virtualAccount, startDate, endDate, today, daysInMonth),
-      this.generateTransactionsSheet(settledTransactions),
-      this.generateReversedSheet(reversedTransactions),
+      await this.paymentSheetService.generatePaymentSheet(virtualAccount, startDate, endDate, today, daysInMonth),
+      this.depositSheetService.generateDepositSheet(startDate, daysInMonth),
+      await this.locationSheetService.generateLocationSheet(virtualAccount, startDate, endDate, today, daysInMonth),
+      this.holdSheetService.generateHoldSheet(pendingTransactions),
+      this.transactionsHistorySheetService.generateTransactionsHistorySheet(settledTransactions),
+      this.reversedSheetService.generateReversedSheet(reversedTransactions),
     ];
 
     return sheets;
-  }
-
-  /**
-   * Generate Payment sheet
-   */
-  private async generatePaymentSheet(
-    virtualAccount: VirtualAccountDocument,
-    startDate: Date,
-    endDate: Date,
-    today: Date = new Date(),
-    daysInMonth: number,
-  ): Promise<SheetData> {
-    const normalizedStartDate = normalizeDateToUTC(startDate);
-    const normalizedEndDate = normalizeDateToUTC(endDate);
-    const calculationEndDate = today < endDate ? today : endDate;
-    
-    // Get summaries for display (only up to today, future days will be empty)
-    const dailySummaries = await this.dailyPaymentSummariesService.getDailySummaries(
-      virtualAccount.slashId,
-      normalizedStartDate,
-      normalizedEndDate,
-    );
-
-    // Calculate totals
-    const totals = dailySummaries.reduce(
-      (acc, summary) => ({
-        totalDepositCents: acc.totalDepositCents + summary.totalDepositCents,
-        totalSpendNonUSCents: acc.totalSpendNonUSCents + summary.totalSpendNonUSCents,
-        totalSpendUSCents: acc.totalSpendUSCents + summary.totalSpendUSCents,
-      }),
-      { totalDepositCents: 0, totalSpendNonUSCents: 0, totalSpendUSCents: 0 },
-    );
-
-    const summaryMap = new Map(
-      dailySummaries.map((summary) => [format(summary.date, DATE_FORMAT), summary]),
-    );
-
-    const year = startDate.getFullYear();
-    const month = startDate.getMonth();
-
-    const headers = ['Date', 'Tổng nạp', 'Tổng tiêu', 'Tổng tiêu non US', 'Tổng tiêu trong US', '', 'Account Balance'];
-
-    // Summary row
-    const summaryRow = [
-      '',
-      formatCurrency(totals.totalDepositCents, virtualAccount.currency),
-      formatCurrency(totals.totalSpendNonUSCents + totals.totalSpendUSCents, virtualAccount.currency),
-      formatCurrency(totals.totalSpendNonUSCents, virtualAccount.currency),
-      formatCurrency(totals.totalSpendUSCents, virtualAccount.currency),
-      '',
-      formatCurrency(virtualAccount.balance.amountCents, virtualAccount.currency),
-    ];
-
-    // Daily rows
-    const dailyRows: any[][] = [];
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      const dateStr = format(date, DATE_FORMAT);
-      const summary = summaryMap.get(dateStr);
-      if(calculationEndDate.getDate() >= day) {
-        dailyRows.push([
-          dateStr,
-          summary ? formatCurrency(summary.totalDepositCents, virtualAccount.currency) : '',
-          summary ? formatCurrency(summary.totalSpendNonUSCents + summary.totalSpendUSCents, virtualAccount.currency) : '',
-          summary ? formatCurrency(summary.totalSpendNonUSCents, virtualAccount.currency) : '',
-          summary ? formatCurrency(summary.totalSpendUSCents, virtualAccount.currency) : '',
-          '',
-          '',
-        ]);
-      } else {
-        dailyRows.push([
-          dateStr,
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-        ]);
-      }
-    }
-
-    return {
-      name: 'Payment',
-      headers,
-      rows: [summaryRow, ...dailyRows],
-    };
-  }
-
-  /**
-   * Generate Transactions History sheet
-   */
-  private generateTransactionsSheet(transactions: any[]): SheetData {
-    const columns = getTransactionColumns();
-    const headers = columns.map((col) => col.header);
-    const rows = transactions.map((transaction) => this.mapTransactionToRow(transaction, columns));
-
-    return {
-      name: 'Transactions History',
-      headers,
-      rows,
-    };
-  }
-
-  /**
-   * Generate Reversed sheet
-   */
-  private generateReversedSheet(transactions: any[]): SheetData {
-    const columns = getReversedTransactionColumns();
-    const headers = columns.map((col) => col.header);
-    const rows = transactions.map((transaction) => this.mapTransactionToRow(transaction, columns));
-
-    return {
-      name: 'Reversed',
-      headers,
-      rows,
-    };
-  }
-
-  /**
-   * Map transaction object to row array according to columns definition
-   */
-  private mapTransactionToRow(transaction: any, columns: ExcelColumn<any>[]): any[] {
-    return columns.map((col) => {
-      if (col.map) {
-        return col.map(transaction);
-      }
-      return transaction[col.key] || '';
-    });
   }
 
   /**
