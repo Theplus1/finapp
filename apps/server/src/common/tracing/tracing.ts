@@ -1,6 +1,7 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 
 export function initializeTracing() {
   const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318';
@@ -10,6 +11,7 @@ export function initializeTracing() {
       url: otlpEndpoint,
     }),
     instrumentations: [getNodeAutoInstrumentations()],
+    serviceName: 'finapp-server',
   });
 
   sdk.start();
