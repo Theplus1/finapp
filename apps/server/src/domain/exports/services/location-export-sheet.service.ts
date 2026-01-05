@@ -18,11 +18,10 @@ interface DateRange {
 export class LocationExportSheetService {
   constructor() {}
 
-  async generateLocationSheet(
-    virtualAccount: VirtualAccountDocument,
+  generateLocationSheet(
     dateRange: DateRange,
     transactions: any[] = [],
-  ): Promise<SheetData> {
+  ): SheetData {
     const dailySummaries = calculateLocationDailySummaries(transactions, dateRange.startDate, dateRange.daysInMonth);
 
     const totals = this.calculateTotals(dailySummaries);

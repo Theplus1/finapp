@@ -1,37 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { SheetData } from './google-sheets.service';
 import { SheetName } from '../constants/sheet-names.constant';
-import { DailyPaymentSummariesService } from '../../../domain/daily-payment-summaries/daily-payment-summaries.service';
 import { formatCurrency } from '../../../shared/utils/formatCurrency.util';
 import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
-import { normalizeDateToUTC, createSummaryMap, formatSheetDate } from '../utils/sheet.utils';
+import { createSummaryMap, formatSheetDate } from '../utils/sheet.utils';
 import { DailySummarySheetBuilder, DailyRowBuilder, SummaryRowBuilder, formatCurrencyOrEmpty } from '../utils/sheet-builder.utils';
+import { calculateLocationDailySummaries, LocationDailySummary } from '../../../domain/exports/utils/daily-summaries.util';
 
-interface DailySummary {
-  date: Date;
-  totalSpendNonUSCents: number;
-  totalSpendUSCents: number;
+interface DateRange {
+  startDate: Date;
+  endDate: Date;
+  today: Date;
+  daysInMonth: number;
 }
 
 @Injectable()
 export class LocationSheetService {
-  constructor(private readonly dailyPaymentSummariesService: DailyPaymentSummariesService) { }
+  constructor() { }
 
-  async generateLocationSheet(
+  generateLocationSheet(
     virtualAccount: VirtualAccountDocument,
-    startDate: Date,
-    endDate: Date,
-    today: Date = new Date(),
-    daysInMonth: number,
-  ): Promise<SheetData> {
-    const normalizedStartDate = normalizeDateToUTC(startDate);
-    const normalizedEndDate = normalizeDateToUTC(endDate);
-
-    const dailySummaries = await this.dailyPaymentSummariesService.getDailySummaries(
-      virtualAccount.slashId,
-      normalizedStartDate,
-      normalizedEndDate,
-    );
+    dateRange: DateRange,
+    transactions: any[] = [],
+  ): SheetData {
+    const dailySummaries = calculateLocationDailySummaries(transactions, dateRange.startDate, dateRange.daysInMonth);
 
     const totals = this.calculateTotals(dailySummaries);
     const summaryMap = createSummaryMap(dailySummaries);
@@ -46,10 +38,10 @@ export class LocationSheetService {
       summaryRowBuilder,
     );
 
-    return builder.build(startDate, daysInMonth, summaryMap, today, endDate);
+    return builder.build(dateRange.startDate, dateRange.daysInMonth, summaryMap, dateRange.today, dateRange.endDate);
   }
 
-  private calculateTotals(summaries: DailySummary[]) {
+  private calculateTotals(summaries: LocationDailySummary[]) {
     return summaries.reduce(
       (acc, summary) => ({
         totalSpendNonUSCents: acc.totalSpendNonUSCents + summary.totalSpendNonUSCents,
@@ -60,10 +52,10 @@ export class LocationSheetService {
   }
 }
 
-class LocationDailyRowBuilder implements DailyRowBuilder<DailySummary> {
+class LocationDailyRowBuilder implements DailyRowBuilder<LocationDailySummary> {
   constructor(private readonly currency: string) { }
 
-  buildRow(date: Date, summary: DailySummary | undefined): any[] {
+  buildRow(date: Date, summary: LocationDailySummary | undefined): any[] {
     return [
       formatSheetDate(date),
       formatCurrencyOrEmpty(summary?.totalSpendNonUSCents, this.currency),

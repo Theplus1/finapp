@@ -18,11 +18,11 @@ interface DateRange {
 export class PaymentExportSheetService {
   constructor() {}
 
-  async generatePaymentSheet(
+  generatePaymentSheet(
     virtualAccount: VirtualAccountDocument,
     dateRange: DateRange,
     transactions: any[] = [],
-  ): Promise<SheetData> {
+  ): SheetData {
     const dailySummaries = calculatePaymentDailySummaries(transactions, dateRange.startDate, dateRange.daysInMonth);
 
     const totals = this.calculateTotals(dailySummaries);

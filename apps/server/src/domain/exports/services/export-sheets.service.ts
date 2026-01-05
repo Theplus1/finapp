@@ -73,9 +73,9 @@ export class ExportSheetsService {
     const dateRange = { startDate, endDate, today, daysInMonth };
 
     const sheets: SheetData[] = [
-      await this.paymentExportSheetService.generatePaymentSheet(virtualAccount, dateRange, transactions),
+      this.paymentExportSheetService.generatePaymentSheet(virtualAccount, dateRange, transactions),
       this.depositExportSheetService.generateDepositSheet(startDate, daysInMonth),
-      await this.locationExportSheetService.generateLocationSheet(virtualAccount, dateRange, transactions),
+      this.locationExportSheetService.generateLocationSheet(dateRange, transactions),
       this.transactionsExportSheetService.generateHoldSheet(pendingTransactions),
       this.transactionsExportSheetService.generateTransactionsSheet(settledTransactions),
       this.transactionsExportSheetService.generateReversedSheet(reversedTransactions),

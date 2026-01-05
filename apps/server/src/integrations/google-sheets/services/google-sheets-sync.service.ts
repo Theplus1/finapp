@@ -241,10 +241,12 @@ export class GoogleSheetsSyncService {
       (t) => t.detailedStatus === TransactionDetailedStatus.PENDING,
     );
 
+    const dateRange = { startDate, endDate, today, daysInMonth };
+
     const sheets: SheetData[] = [
-      await this.paymentSheetService.generatePaymentSheet(virtualAccount, startDate, endDate, today, daysInMonth),
+      this.paymentSheetService.generatePaymentSheet(virtualAccount, dateRange, transactions),
       this.depositSheetService.generateDepositSheet(startDate, daysInMonth),
-      await this.locationSheetService.generateLocationSheet(virtualAccount, startDate, endDate, today, daysInMonth),
+      this.locationSheetService.generateLocationSheet(virtualAccount, dateRange, transactions),
       this.holdSheetService.generateHoldSheet(pendingTransactions),
       this.transactionsHistorySheetService.generateTransactionsHistorySheet(settledTransactions),
       this.reversedSheetService.generateReversedSheet(reversedTransactions),

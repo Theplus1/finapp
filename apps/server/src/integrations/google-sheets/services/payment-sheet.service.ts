@@ -1,44 +1,35 @@
 import { Injectable } from '@nestjs/common';
 import { SheetData } from './google-sheets.service';
 import { SheetName } from '../constants/sheet-names.constant';
-import { DailyPaymentSummariesService } from '../../../domain/daily-payment-summaries/daily-payment-summaries.service';
 import { formatCurrency } from '../../../shared/utils/formatCurrency.util';
 import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
-import { normalizeDateToUTC, createSummaryMap, formatSheetDate } from '../utils/sheet.utils';
+import { createSummaryMap, formatSheetDate } from '../utils/sheet.utils';
 import { DailySummarySheetBuilder, DailyRowBuilder, SummaryRowBuilder, formatCurrencyOrEmpty } from '../utils/sheet-builder.utils';
+import { calculatePaymentDailySummaries, DailySummary } from '../../../domain/exports/utils/daily-summaries.util';
 
-interface DailySummary {
-    date: Date;
-    totalDepositCents: number;
-    totalSpendNonUSCents: number;
-    totalSpendUSCents: number;
+interface DateRange {
+  startDate: Date;
+  endDate: Date;
+  today: Date;
+  daysInMonth: number;
 }
 
 @Injectable()
 export class PaymentSheetService {
-    constructor(private readonly dailyPaymentSummariesService: DailyPaymentSummariesService) { }
+    constructor() { }
 
-    async generatePaymentSheet(
+    generatePaymentSheet(
         virtualAccount: VirtualAccountDocument,
-        startDate: Date,
-        endDate: Date,
-        today: Date = new Date(),
-        daysInMonth: number,
-    ): Promise<SheetData> {
-        const normalizedStartDate = normalizeDateToUTC(startDate);
-        const normalizedEndDate = normalizeDateToUTC(endDate);
-
-        const dailySummaries = await this.dailyPaymentSummariesService.getDailySummaries(
-            virtualAccount.slashId,
-            normalizedStartDate,
-            normalizedEndDate,
-        );
+        dateRange: DateRange,
+        transactions: any[] = [],
+    ): SheetData {
+        const dailySummaries = calculatePaymentDailySummaries(transactions, dateRange.startDate, dateRange.daysInMonth);
 
         const totals = this.calculateTotals(dailySummaries);
         const summaryMap = createSummaryMap(dailySummaries);
 
         const dailyRowBuilder = new PaymentDailyRowBuilder(virtualAccount.currency);
-        const summaryRowBuilder = new PaymentSummaryRowBuilder(totals, virtualAccount.currency, daysInMonth);
+        const summaryRowBuilder = new PaymentSummaryRowBuilder(totals, virtualAccount.currency, dateRange.daysInMonth);
 
         const builder = new DailySummarySheetBuilder(
             SheetName.PAYMENT,
@@ -47,7 +38,7 @@ export class PaymentSheetService {
             summaryRowBuilder,
         );
 
-        return builder.build(startDate, daysInMonth, summaryMap, today, endDate);
+        return builder.build(dateRange.startDate, dateRange.daysInMonth, summaryMap, dateRange.today, dateRange.endDate);
     }
 
     private calculateTotals(summaries: DailySummary[]) {
