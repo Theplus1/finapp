@@ -244,7 +244,7 @@ export class GoogleSheetsSyncService {
     const dateRange = { startDate, endDate, today, daysInMonth };
 
     const sheets: SheetData[] = [
-      this.paymentSheetService.generatePaymentSheet(virtualAccount, dateRange, transactions),
+      this.paymentSheetService.generatePaymentSheet(virtualAccount, dateRange, settledTransactions),
       this.depositSheetService.generateDepositSheet(startDate, daysInMonth),
       this.locationSheetService.generateLocationSheet(virtualAccount, dateRange, transactions),
       this.holdSheetService.generateHoldSheet(pendingTransactions),
