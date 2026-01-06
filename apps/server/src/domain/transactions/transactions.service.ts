@@ -81,7 +81,7 @@ export class TransactionsService {
   async findAllWithFilters(
     filters: {
       virtualAccountId?: string;
-      cardId?: string;
+      cardId?: string | any;
       status?: string;
       detailedStatus?: string | any;
       amountCents?: any;
@@ -89,6 +89,7 @@ export class TransactionsService {
       endDate?: string;
       sortBy?: string;
       sortOrder?: SortOrder;
+      merchantData?: any;
     },
   ): Promise<TransactionWithRelations[]> {
     const dbFilters: any = {};
@@ -99,6 +100,7 @@ export class TransactionsService {
     if (filters.amountCents) dbFilters.amountCents = filters.amountCents;
     if (filters.startDate) dbFilters.startDate = new Date(filters.startDate);
     if (filters.endDate) dbFilters.endDate = new Date(filters.endDate);
+    if (filters.merchantData) dbFilters.merchantData = filters.merchantData;
     const data = await this.find(dbFilters);
     const enrichedData = await this.enrichTransactions(data);
     return enrichedData;

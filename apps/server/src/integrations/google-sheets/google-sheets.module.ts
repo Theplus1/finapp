@@ -18,6 +18,7 @@ import { GoogleSheetReportController } from './controllers/google-sheet-report.c
 import { TransactionsModule } from '../../domain/transactions/transactions.module';
 import { AccountsModule } from '../../domain/accounts/accounts.module';
 import { DailyPaymentSummariesModule } from '../../domain/daily-payment-summaries/daily-payment-summaries.module';
+import { RefundedSheetService } from './services/refunded-sheet.service';
 
 /**
  * Google Sheets Integration Module
@@ -47,6 +48,7 @@ import { DailyPaymentSummariesModule } from '../../domain/daily-payment-summarie
     HoldSheetService,
     TransactionsHistorySheetService,
     ReversedSheetService,
+    RefundedSheetService,
     GoogleSheetReportRepository,
     GoogleSheetsSyncJob,
   ],

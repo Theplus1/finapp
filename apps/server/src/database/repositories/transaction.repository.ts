@@ -15,6 +15,7 @@ export interface TransactionFilters {
   minAmount?: number;
   maxAmount?: number;
   merchantCategory?: string;
+  merchantData?: any;
   limit?: number;
   skip?: number;
 }
@@ -44,6 +45,10 @@ export class TransactionRepository {
 
     if (filters.cardId) {
       query.cardId = filters.cardId;
+    }
+
+    if (filters.merchantData) {
+      query.merchantData = filters.merchantData;
     }
 
     if (filters.detailedStatus) {
