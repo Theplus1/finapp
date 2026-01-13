@@ -17,6 +17,7 @@ import { ReversedSheetService } from './services/reversed-sheet.service';
 import { GoogleSheetReportRepository } from '../../database/repositories/google-sheet-report.repository';
 import { GoogleSheetReportAllRepository } from '../../database/repositories/google-sheet-report-all.repository';
 import { GoogleSheetsSyncJob } from './jobs/google-sheets-sync.job';
+import { GoogleSheetsSyncFullJob } from './jobs/google-sheets-sync-full.job';
 import { GoogleSheetsSyncController } from './controllers/google-sheets-sync.controller';
 import { GoogleSheetsSyncFullController } from './controllers/google-sheets-sync-full.controller';
 import { GoogleSheetReportController } from './controllers/google-sheet-report.controller';
@@ -66,6 +67,7 @@ import { RefundedSheetService } from './services/refunded-sheet.service';
     GoogleSheetReportRepository,
     GoogleSheetReportAllRepository,
     GoogleSheetsSyncJob,
+    GoogleSheetsSyncFullJob,
   ],
   exports: [
     GoogleSheetsService,

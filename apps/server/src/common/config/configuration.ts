@@ -33,7 +33,8 @@ export default () => ({
   },
   googleSheets: {
     accountKey: process.env.GOOGLE_SERVICE_ACCOUNT_KEY,
-    enableScheduledSync: process.env.GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC !== 'false',
+    enableScheduledSync: process.env.GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC !== 'true', // disable sync monthly
+    enableScheduledSyncFull: process.env.GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC_FULL !== 'false', // enable sync full daily
     syncCron: process.env.GOOGLE_SHEETS_SYNC_CRON || '*/15 * * * *',
     syncDelayBetweenAccounts: process.env.GOOGLE_SHEETS_SYNC_DELAY_BETWEEN_ACCOUNTS || '30000', // milliseconds
     chunkSize: process.env.GOOGLE_SHEETS_CHUNK_SIZE || '5000', // rows per chunk

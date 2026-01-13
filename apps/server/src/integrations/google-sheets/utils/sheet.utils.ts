@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 
 export const DATE_FORMAT = 'M/d/yyyy';
+export const DATE_FORMAT_ISO = 'yyyy-MM-dd';
 
 /**
  * Normalize date to UTC midnight
@@ -31,6 +32,13 @@ export function generateMonthDates(startDate: Date, daysInMonth: number): Date[]
  */
 export function formatSheetDate(date: Date): string {
   return format(date, DATE_FORMAT);
+}
+
+/**
+ * Format date string in ISO format (yyyy-MM-dd)
+ */
+export function formatSheetDateISO(date: Date): string {
+  return format(date, DATE_FORMAT_ISO);
 }
 
 /**

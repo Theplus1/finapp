@@ -3,9 +3,10 @@ import { SheetData } from './google-sheets.service';
 import { SheetName } from '../constants/sheet-names.constant';
 import { formatCurrency } from '../../../shared/utils/formatCurrency.util';
 import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
-import { createSummaryMap, formatSheetDate } from '../utils/sheet.utils';
+import { createSummaryMap, formatSheetDate, formatSheetDateISO } from '../utils/sheet.utils';
 import { DailySummarySheetBuilder, DailyRowBuilder, SummaryRowBuilder, formatCurrencyOrEmpty } from '../utils/sheet-builder.utils';
-import { calculateLocationDailySummaries, LocationDailySummary } from '../../../domain/exports/utils/daily-summaries.util';
+import { calculateLocationDailySummaries, calculateLocationDailySummariesRange, LocationDailySummary } from '../../../domain/exports/utils/daily-summaries.util';
+import { generateDateRange } from '../utils/date-range.utils';
 
 interface DateRange {
   startDate: Date;
@@ -39,6 +40,60 @@ export class LocationSheetService {
     );
 
     return builder.build(dateRange.startDate, dateRange.daysInMonth, summaryMap, dateRange.today, dateRange.endDate);
+  }
+
+  /**
+   * Generate Location sheet for full date range (for full data sync)
+   */
+  generateLocationSheetFullRange(
+    virtualAccount: VirtualAccountDocument,
+    dateRange: { startDate: Date; endDate: Date; today: Date; days: number },
+    transactions: any[] = [],
+  ): SheetData {
+    const dailySummaries = calculateLocationDailySummariesRange(
+      transactions,
+      dateRange.startDate,
+      dateRange.endDate,
+    );
+
+    const totals = this.calculateTotals(dailySummaries);
+    
+    // Create summary map
+    const summaryMapISO = new Map<string, LocationDailySummary>();
+    dailySummaries.forEach(summary => {
+      const dateStr = formatSheetDateISO(summary.date);
+      summaryMapISO.set(dateStr, summary);
+    });
+
+    // Generate date range
+    const dates = generateDateRange(dateRange.startDate, dateRange.endDate);
+
+    const rows: any[][] = [];
+    
+    // Row 2: Summary row
+    rows.push([
+      '',
+      formatCurrency(totals.totalSpendNonUSCents, virtualAccount.currency),
+      formatCurrency(totals.totalSpendUSCents, virtualAccount.currency),
+    ]);
+    
+    // Daily rows
+    dates.forEach((date: Date) => {
+      const dateStr = formatSheetDateISO(date);
+      const summary = summaryMapISO.get(dateStr);
+      
+      rows.push([
+        formatSheetDateISO(date),
+        formatCurrencyOrEmpty(summary?.totalSpendNonUSCents, virtualAccount.currency),
+        formatCurrencyOrEmpty(summary?.totalSpendUSCents, virtualAccount.currency),
+      ]);
+    });
+    
+    return {
+      name: SheetName.LOCATION,
+      headers: ['Date', 'Tổng tiêu non US', 'Tổng tiêu trong US'],
+      rows,
+    };
   }
 
   private calculateTotals(summaries: LocationDailySummary[]) {
