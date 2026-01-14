@@ -34,4 +34,23 @@ export class NotificationsService {
     });
     return notifications.length > 0;
   }
+
+  async isBalanceAlertSent(userId: string, virtualAccountId: string, cooldownHours: number): Promise<boolean> {
+    const cooldownDate = new Date();
+    cooldownDate.setHours(cooldownDate.getHours() - cooldownHours);
+
+    const notifications = await this.notificationRepository.find({
+      filter: {
+        type: NotificationType.BALANCE_ALERT,
+        status: NotificationStatus.SENT,
+        data: {
+          virtualAccountId,
+        },
+        userId,
+        createdAt: { $gte: cooldownDate },
+      },
+      limit: 1,
+    });
+    return notifications.length > 0;
+  }
 }
