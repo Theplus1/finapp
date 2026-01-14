@@ -3,9 +3,10 @@ import { SheetData } from './google-sheets.service';
 import { SheetName } from '../constants/sheet-names.constant';
 import { formatCurrency } from '../../../shared/utils/formatCurrency.util';
 import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
-import { createSummaryMap, formatSheetDate } from '../utils/sheet.utils';
+import { createSummaryMap, formatSheetDate, formatSheetDateISO, normalizeDateToLocalMidnight } from '../utils/sheet.utils';
 import { DailySummarySheetBuilder, DailyRowBuilder, SummaryRowBuilder, formatCurrencyOrEmpty } from '../utils/sheet-builder.utils';
 import { calculatePaymentDailySummaries, DailySummary } from '../../../domain/exports/utils/daily-summaries.util';
+import { generateDateRange } from '../utils/date-range.utils';
 
 interface DateRange {
   startDate: Date;
@@ -33,12 +34,106 @@ export class PaymentSheetService {
 
         const builder = new DailySummarySheetBuilder(
             SheetName.PAYMENT,
-            ['Date', 'Tổng nạp', 'Tổng tiêu', '', 'Account Balance'],
+            ['Date', 'Tổng nạp', 'Tổng tiêu', 'Tổng refund', 'Account Balance'],
             dailyRowBuilder,
             summaryRowBuilder,
         );
 
         return builder.build(dateRange.startDate, dateRange.daysInMonth, summaryMap, dateRange.today, dateRange.endDate);
+    }
+
+    /**
+     * Generate Payment sheet for full date range (for full data sync)
+     */
+    generatePaymentSheetFullRange(
+        virtualAccount: VirtualAccountDocument,
+        dateRange: { startDate: Date; endDate: Date; today: Date; days: number },
+        transactions: any[] = [],
+    ): SheetData {
+        const dates = generateDateRange(dateRange.startDate, dateRange.endDate);
+        
+        // Calculate daily summaries for spending
+        const dailySummariesMap = new Map<string, DailySummary>();
+        
+        // Initialize all dates
+        dates.forEach(date => {
+            const dateStr = formatSheetDateISO(date);
+            dailySummariesMap.set(dateStr, {
+                date,
+                totalDepositCents: 0,
+                totalSpendNonUSCents: 0,
+                totalSpendUSCents: 0,
+            });
+        });
+        
+        // Process transactions
+        transactions.forEach((transaction) => {
+            if (!transaction.date) return;
+            
+            // Normalize to local midnight (preserve timezone from DB)
+            const normalizedDate = normalizeDateToLocalMidnight(new Date(transaction.date));
+            
+            const dateStr = formatSheetDateISO(normalizedDate);
+            const summary = dailySummariesMap.get(dateStr);
+            
+            if (summary) {
+                const spendAmount = Math.abs(transaction.amountCents);
+                if (transaction.merchantData?.location?.country === 'US') {
+                    summary.totalSpendUSCents += spendAmount;
+                } else {
+                    summary.totalSpendNonUSCents += spendAmount;
+                }
+            }
+        });
+        
+        const dailySummaries = Array.from(dailySummariesMap.values()).sort(
+            (a, b) => a.date.getTime() - b.date.getTime()
+        );
+        
+        const totals = this.calculateTotals(dailySummaries);
+        
+        // Build rows
+        const rows: any[][] = [];
+        
+        // Row 2: Summary row
+        const totalSpend = totals.totalSpendNonUSCents + totals.totalSpendUSCents;
+        rows.push([
+            '',
+            `=SUM(B3:B)`,
+            formatCurrency(totalSpend, virtualAccount.currency),
+            `=SUM(ARRAYFORMULA(VALUE(SUBSTITUTE('${SheetName.REFUNDED}'!E2:E, "$", ""))))`,
+            `=B2-C2+D2`,
+        ]);
+        
+        // Create summary map
+        const summaryMapISO = new Map<string, DailySummary>();
+        dailySummaries.forEach(summary => {
+            const dateStr = formatSheetDateISO(summary.date);
+            summaryMapISO.set(dateStr, summary);
+        });
+        
+        // Daily rows
+        // Payment row 3 = Deposit row 2 (lệch 1 row do Payment có summary row ở row 2)
+        dates.forEach((date, index) => {
+            const dateStr = formatSheetDateISO(date);
+            const summary = summaryMapISO.get(dateStr);
+            const dayTotalSpend = summary ? summary.totalSpendNonUSCents + summary.totalSpendUSCents : 0;
+            const depositRowNumber = index + 2;
+            
+            rows.push([
+                formatSheetDateISO(date),
+                `='${SheetName.DEPOSIT}'!B${depositRowNumber}`,
+                formatCurrencyOrEmpty(dayTotalSpend, virtualAccount.currency),
+                '',
+                '',
+            ]);
+        });
+        
+        return {
+            name: SheetName.PAYMENT,
+            headers: ['Date', 'Tổng nạp', 'Tổng tiêu', 'Tổng refund', 'Account Balance'],
+            rows,
+        };
     }
 
     private calculateTotals(summaries: DailySummary[]) {

@@ -14,6 +14,7 @@ import { TransactionsService } from '../../../domain/transactions/transactions.s
 import { AccountsService } from '../../../domain/accounts/accounts.service';
 import { DailyPaymentSummariesService } from '../../../domain/daily-payment-summaries/daily-payment-summaries.service';
 import { TransactionDetailedStatus } from '../../../integrations/slash/types';
+import { RefundedSheetService } from './refunded-sheet.service';
 
 const MONTH_FORMAT = 'yyyy-MM';
 const DATE_FORMAT = 'M/d/yyyy';
@@ -58,7 +59,7 @@ export class GoogleSheetsSyncService {
     private readonly reversedSheetService: ReversedSheetService,
     private readonly transactionsService: TransactionsService,
     private readonly accountsService: AccountsService,
-    private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
+    private readonly refundedSheetService: RefundedSheetService,
     private readonly configService: ConfigService,
   ) {
     // Parse syncDelayBetweenAccounts from config with safe fallback
@@ -220,8 +221,11 @@ export class GoogleSheetsSyncService {
           TransactionDetailedStatus.SETTLED,
           TransactionDetailedStatus.PENDING,
           TransactionDetailedStatus.REVERSED,
+          TransactionDetailedStatus.REFUND,
         ]
       },
+      cardId: {$ne: null},
+      merchantData: {$ne: null},
       amountCents: { $lt: 0 },
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
@@ -241,15 +245,25 @@ export class GoogleSheetsSyncService {
       (t) => t.detailedStatus === TransactionDetailedStatus.PENDING,
     );
 
+    const refundedTransactions = await this.transactionsService.findAllWithFilters({
+      virtualAccountId,
+      detailedStatus: TransactionDetailedStatus.REFUND,
+      cardId: {$ne: null},
+      merchantData: {$ne: null},
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    });
+
     const dateRange = { startDate, endDate, today, daysInMonth };
 
     const sheets: SheetData[] = [
       this.paymentSheetService.generatePaymentSheet(virtualAccount, dateRange, settledTransactions),
       this.depositSheetService.generateDepositSheet(startDate, daysInMonth),
-      this.locationSheetService.generateLocationSheet(virtualAccount, dateRange, transactions),
+      this.locationSheetService.generateLocationSheet(virtualAccount, dateRange, settledTransactions),
       this.holdSheetService.generateHoldSheet(pendingTransactions),
       this.transactionsHistorySheetService.generateTransactionsHistorySheet(settledTransactions),
       this.reversedSheetService.generateReversedSheet(reversedTransactions),
+      this.refundedSheetService.generateRefundedSheet(refundedTransactions),
     ];
 
     return sheets;

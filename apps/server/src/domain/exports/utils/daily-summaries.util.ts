@@ -1,4 +1,4 @@
-import { formatSheetDate } from '../../../integrations/google-sheets/utils/sheet.utils';
+import { formatSheetDate, formatSheetDateISO, normalizeDateToLocalMidnight } from '../../../integrations/google-sheets/utils/sheet.utils';
 
 export interface DailySummary {
   date: Date;
@@ -33,7 +33,9 @@ export function calculatePaymentDailySummaries(
   }
 
   transactions.forEach((transaction) => {
-    const transactionDate = new Date(transaction.date || transaction.authorizedAt);
+    if (!transaction.date) return;
+    
+    const transactionDate = new Date(transaction.date);
     const dateStr = formatSheetDate(transactionDate);
 
     const summary = dailySummariesMap.get(dateStr);
@@ -69,7 +71,9 @@ export function calculateLocationDailySummaries(
   }
 
   transactions.forEach((transaction) => {
-    const transactionDate = new Date(transaction.date || transaction.authorizedAt);
+    if (!transaction.date) return;
+    
+    const transactionDate = new Date(transaction.date);
     const dateStr = formatSheetDate(transactionDate);
 
     const summary = dailySummariesMap.get(dateStr);
@@ -84,4 +88,63 @@ export function calculateLocationDailySummaries(
   });
 
   return Array.from(dailySummariesMap.values());
+}
+
+/**
+ * Calculate location daily summaries for a full date range (not limited to one month)
+ * Normalizes transaction dates to UTC midnight for accurate matching
+ * Creates summaries for ALL dates in range (from startDate to endDate), matching Payment sheet behavior
+ */
+export function calculateLocationDailySummariesRange(
+  transactions: any[],
+  startDate: Date,
+  endDate: Date,
+): LocationDailySummary[] {
+  const dailySummariesMap = new Map<string, LocationDailySummary>();
+
+  // Normalize start and end dates to local midnight (preserve timezone from DB)
+  const normalizedStartDate = normalizeDateToLocalMidnight(startDate);
+  const normalizedEndDate = normalizeDateToLocalMidnight(endDate);
+
+  // Generate all dates in range (same as Payment sheet)
+  const current = new Date(normalizedStartDate);
+  while (current.getTime() <= normalizedEndDate.getTime()) {
+    const dateStr = formatSheetDateISO(current); // Use ISO format to match Payment sheet
+    dailySummariesMap.set(dateStr, {
+      date: new Date(current),
+      totalSpendNonUSCents: 0,
+      totalSpendUSCents: 0,
+    });
+    
+    // Move to next day (local time)
+    current.setDate(current.getDate() + 1);
+    current.setHours(0, 0, 0, 0);
+  }
+
+  // Process transactions
+  transactions.forEach((transaction) => {
+    if (!transaction.date) return;
+
+    // Normalize transaction date to local midnight (preserve timezone from DB)
+    const normalizedDate = normalizeDateToLocalMidnight(new Date(transaction.date));
+    
+    // Only process transactions within the date range
+    if (normalizedDate.getTime() < normalizedStartDate.getTime() || normalizedDate.getTime() > normalizedEndDate.getTime()) {
+      return;
+    }
+    
+    const dateStr = formatSheetDateISO(normalizedDate); // Use ISO format to match Payment sheet
+
+    const summary = dailySummariesMap.get(dateStr);
+    if (summary) {
+      const spendAmount = Math.abs(transaction.amountCents);
+      if (transaction.merchantData?.location?.country === 'US') {
+        summary.totalSpendUSCents += spendAmount;
+      } else {
+        summary.totalSpendNonUSCents += spendAmount;
+      }
+    }
+  });
+
+  return Array.from(dailySummariesMap.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
 }
