@@ -54,15 +54,19 @@ export default function VirtualAccount() {
   }, [setBreadcrumbs]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["virtual-accounts", countGetList],
+    queryKey: ["virtual-accounts", countGetList, pagination.page],
     queryFn: async () => {
-      const res = await api.virtualAccounts.getVirtualAccounts();
+      const res = await api.virtualAccounts.getVirtualAccounts({
+        page: pagination.page,
+        limit: pagination.pageSize,
+      });
       setPagination((prev) => ({
         ...prev,
         total: res.pagination?.total ?? 0,
       }));
       return res.data;
     },
+    refetchOnMount: "always",
   });
 
   const dataVirtualAccount: VirtualAccount[] = useMemo(() => {
