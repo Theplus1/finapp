@@ -43,9 +43,7 @@ export class NotificationsService {
       filter: {
         type: NotificationType.BALANCE_ALERT,
         status: NotificationStatus.SENT,
-        data: {
-          virtualAccountId,
-        },
+        'data.virtualAccountId': virtualAccountId, // Use dot notation for nested field
         userId,
         createdAt: { $gte: cooldownDate },
       },
