@@ -3,7 +3,7 @@ import { SheetData } from './google-sheets.service';
 import { SheetName } from '../constants/sheet-names.constant';
 import { formatCurrency } from '../../../shared/utils/formatCurrency.util';
 import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
-import { createSummaryMap, formatSheetDate, formatSheetDateISO } from '../utils/sheet.utils';
+import { createSummaryMap, formatSheetDate, formatSheetDateISO, normalizeDateToLocalMidnight } from '../utils/sheet.utils';
 import { DailySummarySheetBuilder, DailyRowBuilder, SummaryRowBuilder, formatCurrencyOrEmpty } from '../utils/sheet-builder.utils';
 import { calculatePaymentDailySummaries, DailySummary } from '../../../domain/exports/utils/daily-summaries.util';
 import { generateDateRange } from '../utils/date-range.utils';
@@ -70,13 +70,8 @@ export class PaymentSheetService {
         transactions.forEach((transaction) => {
             if (!transaction.date) return;
             
-            const transactionDate = new Date(transaction.date);
-            const normalizedDate = new Date(Date.UTC(
-                transactionDate.getUTCFullYear(),
-                transactionDate.getUTCMonth(),
-                transactionDate.getUTCDate(),
-                0, 0, 0, 0
-            ));
+            // Normalize to local midnight (preserve timezone from DB)
+            const normalizedDate = normalizeDateToLocalMidnight(new Date(transaction.date));
             
             const dateStr = formatSheetDateISO(normalizedDate);
             const summary = dailySummariesMap.get(dateStr);

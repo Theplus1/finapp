@@ -1,4 +1,4 @@
-import { formatSheetDate, formatSheetDateISO } from '../../../integrations/google-sheets/utils/sheet.utils';
+import { formatSheetDate, formatSheetDateISO, normalizeDateToLocalMidnight } from '../../../integrations/google-sheets/utils/sheet.utils';
 
 export interface DailySummary {
   date: Date;
@@ -102,19 +102,9 @@ export function calculateLocationDailySummariesRange(
 ): LocationDailySummary[] {
   const dailySummariesMap = new Map<string, LocationDailySummary>();
 
-  // Normalize start and end dates to UTC midnight
-  const normalizedStartDate = new Date(Date.UTC(
-    startDate.getUTCFullYear(),
-    startDate.getUTCMonth(),
-    startDate.getUTCDate(),
-    0, 0, 0, 0
-  ));
-  const normalizedEndDate = new Date(Date.UTC(
-    endDate.getUTCFullYear(),
-    endDate.getUTCMonth(),
-    endDate.getUTCDate(),
-    0, 0, 0, 0
-  ));
+  // Normalize start and end dates to local midnight (preserve timezone from DB)
+  const normalizedStartDate = normalizeDateToLocalMidnight(startDate);
+  const normalizedEndDate = normalizeDateToLocalMidnight(endDate);
 
   // Generate all dates in range (same as Payment sheet)
   const current = new Date(normalizedStartDate);
@@ -126,23 +116,17 @@ export function calculateLocationDailySummariesRange(
       totalSpendUSCents: 0,
     });
     
-    // Move to next day
-    current.setUTCDate(current.getUTCDate() + 1);
-    current.setUTCHours(0, 0, 0, 0);
+    // Move to next day (local time)
+    current.setDate(current.getDate() + 1);
+    current.setHours(0, 0, 0, 0);
   }
 
   // Process transactions
   transactions.forEach((transaction) => {
     if (!transaction.date) return;
 
-    // Normalize transaction date to UTC midnight
-    const transactionDate = new Date(transaction.date);
-    const normalizedDate = new Date(Date.UTC(
-      transactionDate.getUTCFullYear(),
-      transactionDate.getUTCMonth(),
-      transactionDate.getUTCDate(),
-      0, 0, 0, 0
-    ));
+    // Normalize transaction date to local midnight (preserve timezone from DB)
+    const normalizedDate = normalizeDateToLocalMidnight(new Date(transaction.date));
     
     // Only process transactions within the date range
     if (normalizedDate.getTime() < normalizedStartDate.getTime() || normalizedDate.getTime() > normalizedEndDate.getTime()) {

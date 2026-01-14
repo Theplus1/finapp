@@ -16,6 +16,15 @@ export function normalizeDateToUTC(date: Date): Date {
 }
 
 /**
+ * Normalize date to local midnight (keep original timezone, set time to 00:00:00)
+ */
+export function normalizeDateToLocalMidnight(date: Date): Date {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+/**
  * Generate array of dates for a month
  */
 export function generateMonthDates(startDate: Date, daysInMonth: number): Date[] {

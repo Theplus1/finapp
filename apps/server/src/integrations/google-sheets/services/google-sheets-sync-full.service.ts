@@ -16,7 +16,7 @@ import { AccountsService } from '../../../domain/accounts/accounts.service';
 import { TransactionDetailedStatus } from '../../../integrations/slash/types';
 import { getTransactionColumns } from '../../../domain/exports/helpers/column-definitions.helper';
 import { generateDateRange } from '../utils/date-range.utils';
-import { normalizeDateToUTC } from '../utils/sheet.utils';
+import { normalizeDateToLocalMidnight } from '../utils/sheet.utils';
 import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
 
 /**
@@ -120,7 +120,11 @@ export class GoogleSheetsSyncFullService {
         const dateB = b.date ? new Date(b.date).getTime() : 0;
         return dateA - dateB;
       });
-
+      // If no transactions found, return
+      if(allTransactions.length === 0) {
+        this.logger.warn(`No transactions found for VA ${virtualAccountId}`);
+        return;
+      }
       this.logger.log(
         `Loaded ${allTransactions.length} total transactions (sorted by date ASC)`,
       );
@@ -132,12 +136,12 @@ export class GoogleSheetsSyncFullService {
         if (!firstTx.date) {
           throw new Error('First transaction has no date');
         }
-        firstTransactionDate = normalizeDateToUTC(new Date(firstTx.date));
+        firstTransactionDate = normalizeDateToLocalMidnight(new Date(firstTx.date));
       } else {
-        firstTransactionDate = normalizeDateToUTC(now);
+        firstTransactionDate = normalizeDateToLocalMidnight(now);
       }
 
-      const rangeEnd = normalizeDateToUTC(now);
+      const rangeEnd = normalizeDateToLocalMidnight(now);
       
       this.logger.log(
         `Date range: ${firstTransactionDate.toISOString()} to ${rangeEnd.toISOString()}`,
