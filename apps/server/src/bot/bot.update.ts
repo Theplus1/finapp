@@ -72,13 +72,6 @@ export class BotUpdate {
   }
 
   @ValidateUser({ answerCallback: true })
-  @Action(Actions.cards.list)
-  async onCardsListAction(@Ctx() ctx: BotContext) {
-    await ctx.answerCbQuery();
-    return this.cardHandler.exportCardsList(ctx);
-  }
-
-  @ValidateUser({ answerCallback: true })
   @Action(Actions.cards.detail)
   async onCardDetailAction(@Ctx() ctx: BotContext) {
     ctx.session = { step: SessionSteps.AWAITING_CARD_ID, data: {} };

@@ -98,7 +98,6 @@ export const Keyboards = {
   // Cards keyboards
   cardsMenu: () =>
     Markup.inlineKeyboard([
-      [Markup.button.callback('List Cards', Actions.cards.list)],
       [Markup.button.callback('Card Detail', Actions.cards.detail)],
       [Markup.button.callback('Lock Card', Actions.cards.lock), Markup.button.callback('Unlock Card', Actions.cards.unlock)],
       [Markup.button.callback('« Back to Menu', Actions.menu.main)],
