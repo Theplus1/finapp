@@ -32,6 +32,11 @@ export interface VirtualAccount {
   routingNumber: string;
 }
 
+type Params = {
+  page: number;
+  limit: number;
+};
+
 export interface VirtualAccountsDetailResponse {
   success: true;
   message: string;
@@ -42,8 +47,10 @@ export interface VirtualAccountsDetailResponse {
 }
 
 export const virtualAccountsApi = {
-  getVirtualAccounts: async (): Promise<ApiResponse<VirtualAccount[]>> => {
-    return apiClient.get("/virtual-account");
+  getVirtualAccounts: async (
+    params?: Params
+  ): Promise<ApiResponse<VirtualAccount[]>> => {
+    return apiClient.get("/virtual-account", { params });
   },
   getVirtualAccountById: async (
     id: string
