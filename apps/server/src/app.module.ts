@@ -22,6 +22,7 @@ import { CardsModule } from './domain/cards/cards.module';
 import { TransactionsModule } from './domain/transactions/transactions.module';
 import { AccountsModule } from './domain/accounts/accounts.module';
 import { ExportsModule } from './domain/exports/exports.module';
+import { BalanceAlertsModule } from './domain/balance-alerts/balance-alerts.module';
 
 @Module({
   imports: [
@@ -140,6 +141,7 @@ import { ExportsModule } from './domain/exports/exports.module';
     TransactionsModule,
     AccountsModule,
     ExportsModule,  // Export functionality
+    BalanceAlertsModule,  // Balance alert functionality
     
     // Integration Modules
     SlashIntegrationModule,  // Slash API integration
