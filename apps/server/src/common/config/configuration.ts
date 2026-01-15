@@ -39,5 +39,11 @@ export default () => ({
     syncDelayBetweenAccounts: process.env.GOOGLE_SHEETS_SYNC_DELAY_BETWEEN_ACCOUNTS || '30000', // milliseconds
     chunkSize: process.env.GOOGLE_SHEETS_CHUNK_SIZE || '5000', // rows per chunk
   },
-  cardDetailTimeout: 60000
+  cardDetailTimeout: 60000,
+  balanceAlert: {
+    enable: process.env.BALANCE_ALERT_ENABLE !== 'false', // Default: true
+    cron: process.env.BALANCE_ALERT_CRON || '0 * * * *', // Default: every hour
+    thresholdUsd: parseFloat(process.env.BALANCE_ALERT_THRESHOLD_USD || '5000'), // Default: 5000 USD
+    cooldownHours: parseFloat(process.env.BALANCE_ALERT_COOLDOWN_HOURS || '24'), // Default: 24 hours (supports decimals, e.g., 0.1 = 6 minutes)
+  },
 });

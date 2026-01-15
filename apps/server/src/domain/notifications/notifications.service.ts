@@ -34,4 +34,26 @@ export class NotificationsService {
     });
     return notifications.length > 0;
   }
+
+  async isBalanceAlertSent(userId: string, virtualAccountId: string, cooldownHours: number): Promise<boolean> {
+    if (cooldownHours <= 0) {
+      return false;
+    }
+
+    // Convert hours to milliseconds to support decimal values (e.g., 0.1 hours = 6 minutes)
+    const cooldownMs = cooldownHours * 60 * 60 * 1000;
+    const cooldownDate = new Date(Date.now() - cooldownMs);
+
+    const notifications = await this.notificationRepository.find({
+      filter: {
+        type: NotificationType.BALANCE_ALERT,
+        status: NotificationStatus.SENT,
+        'data.virtualAccountId': virtualAccountId, // Use dot notation for nested field
+        userId,
+        createdAt: { $gte: cooldownDate },
+      },
+      limit: 1,
+    });
+    return notifications.length > 0;
+  }
 }
