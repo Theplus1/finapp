@@ -44,6 +44,6 @@ export default () => ({
     enable: process.env.BALANCE_ALERT_ENABLE !== 'false', // Default: true
     cron: process.env.BALANCE_ALERT_CRON || '0 * * * *', // Default: every hour
     thresholdUsd: parseFloat(process.env.BALANCE_ALERT_THRESHOLD_USD || '5000'), // Default: 5000 USD
-    cooldownHours: parseInt(process.env.BALANCE_ALERT_COOLDOWN_HOURS || '24', 10), // Default: 24 hours
+    cooldownHours: parseFloat(process.env.BALANCE_ALERT_COOLDOWN_HOURS || '24'), // Default: 24 hours (supports decimals, e.g., 0.1 = 6 minutes)
   },
 });

@@ -36,8 +36,13 @@ export class NotificationsService {
   }
 
   async isBalanceAlertSent(userId: string, virtualAccountId: string, cooldownHours: number): Promise<boolean> {
-    const cooldownDate = new Date();
-    cooldownDate.setHours(cooldownDate.getHours() - cooldownHours);
+    if (cooldownHours <= 0) {
+      return false;
+    }
+
+    // Convert hours to milliseconds to support decimal values (e.g., 0.1 hours = 6 minutes)
+    const cooldownMs = cooldownHours * 60 * 60 * 1000;
+    const cooldownDate = new Date(Date.now() - cooldownMs);
 
     const notifications = await this.notificationRepository.find({
       filter: {
