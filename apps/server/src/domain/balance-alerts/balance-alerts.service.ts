@@ -112,7 +112,7 @@ export class BalanceAlertsService {
       const balanceCents = Math.round(balanceResult * 100);
 
       // Check if balance is below threshold
-      if (balanceCents >= this.thresholdCents || balanceCents <= 0) {
+      if (balanceCents >= this.thresholdCents) {
         this.logger.log(
           `Balance ${balanceCents / 100} USD for VA ${report.virtualAccountId} is above threshold. Skipping.`,
         );
