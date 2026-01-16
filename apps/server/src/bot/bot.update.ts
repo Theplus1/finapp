@@ -11,6 +11,7 @@ import { SessionSteps } from './constants/session-steps.constant';
 import { CardsHandler } from './features/cards/handlers/cards.handler';
 import { TransactionsHandler } from './features/transactions/handlers/transactions.handler';
 import { Actions } from './constants/actions.constant';
+import { actionWithPayloadRegex } from 'src/shared/utils/actionRegex.util';
 import { UserValidationInterceptor } from './interceptors/user-validation.interceptor';
 import { ValidateUser } from './decorators/validate-user.decorator';
 
@@ -146,7 +147,7 @@ export class BotUpdate {
   }
 
   @ValidateUser({ answerCallback: true })
-  @Action(/^transaction.action.list.(?!s_)(.+)$/)
+  @Action(actionWithPayloadRegex(Actions.transaction.list, '(?!s_)(.+)'))
   async onTransactionExportAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleTransactionExportAction(ctx);
   }
@@ -156,7 +157,13 @@ export class BotUpdate {
   async onTransactionDetailAction(@Ctx() ctx: BotContext) {
     return this.transactionsHandler.handleTransactionDetailAction(ctx);
   }
-  
+
+  @ValidateUser({ answerCallback: true })
+  @Action(actionWithPayloadRegex(Actions.transaction.getConfirmCode))
+  async onTransactionGetConfirmCodeAction(@Ctx() ctx: BotContext) {
+    return this.transactionsHandler.handleTransactionGetConfirmCodeAction(ctx);
+  }
+
   @ValidateUser({ answerCallback: true })
   @Action(Actions.menu.about)
   async onAboutAction(@Ctx() ctx: BotContext) {
