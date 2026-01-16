@@ -113,7 +113,7 @@ export class BalanceAlertsService {
 
       // Check if balance is below threshold
       if (balanceCents >= this.thresholdCents || balanceCents <= 0) {
-        this.logger.debug(
+        this.logger.log(
           `Balance ${balanceCents / 100} USD for VA ${report.virtualAccountId} is above threshold. Skipping.`,
         );
         return 'skipped';
@@ -121,7 +121,7 @@ export class BalanceAlertsService {
 
       const va = vaMap.get(report.virtualAccountId);
       if (!va) {
-        this.logger.warn(
+        this.logger.log(
           `Virtual account ${report.virtualAccountId} not found in map. Skipping alert.`,
         );
         return 'skipped';
@@ -130,7 +130,7 @@ export class BalanceAlertsService {
       const user = await this.usersService.findByVirtualAccountId(report.virtualAccountId);
 
       if (!user || !user.telegramId) {
-        this.logger.warn(
+        this.logger.log(
           `No user found for virtual account ${report.virtualAccountId} (${va.name}). Skipping alert.`,
         );
         return 'skipped';
@@ -139,7 +139,7 @@ export class BalanceAlertsService {
       // Check if user has notification destinations
       const destinations = user.notificationChatIds || [];
       if (destinations.length === 0) {
-        this.logger.warn(
+          this.logger.log(
           `User ${user.telegramId} has no notification destinations for VA ${report.virtualAccountId}. Skipping alert.`,
         );
         return 'skipped';
@@ -153,7 +153,7 @@ export class BalanceAlertsService {
       );
 
       if (alreadySent) {
-        this.logger.debug(
+        this.logger.log(
           `Balance alert already sent for VA ${report.virtualAccountId} within cooldown period. Skipping.`,
         );
         return 'skipped';
@@ -192,7 +192,7 @@ export class BalanceAlertsService {
         });
         return 'error';
       } else if (failedCount > 0) {
-        this.logger.warn(
+        this.logger.log(
           `Partial failure: ${successCount} succeeded, ${failedCount} failed for VA ${report.virtualAccountId}`,
         );
       }
@@ -279,13 +279,13 @@ export class BalanceAlertsService {
       );
 
       if (!data || data.length === 0 || !data[0] || data[0].length === 0) {
-        this.logger.warn(`No data found in cell E2 of Payment sheet for sheetId ${sheetId}`);
+        this.logger.log(`No data found in cell E2 of Payment sheet for sheetId ${sheetId}`);
         return null;
       }
 
       const cellValue = data[0][0];
       if (cellValue === undefined || cellValue === null || cellValue === '') {
-        this.logger.warn(`Cell E2 is empty for sheetId ${sheetId}`);
+        this.logger.log(`Cell E2 is empty for sheetId ${sheetId}`);
         return null;
       }
 
@@ -297,11 +297,11 @@ export class BalanceAlertsService {
         const cleaned = cellValue.replace(/[$,\s]/g, '');
         balance = parseFloat(cleaned);
         if (isNaN(balance)) {
-          this.logger.warn(`Could not parse balance value "${cellValue}" from sheetId ${sheetId}`);
+          this.logger.log(`Could not parse balance value "${cellValue}" from sheetId ${sheetId}`);
           return null;
         }
       } else {
-        this.logger.warn(`Unexpected balance value type: ${typeof cellValue} for sheetId ${sheetId}`);
+        this.logger.error(`Unexpected balance value type: ${typeof cellValue} for sheetId ${sheetId}`);
         return null;
       }
 
