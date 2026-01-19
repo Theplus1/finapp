@@ -160,7 +160,7 @@ export class BalanceAlertsService {
       }
 
       const thresholdUsd = this.thresholdCents / 100;
-      const message = Messages.balanceAlert(va.name, thresholdUsd);
+      const message = Messages.balanceAlert(va.name, balanceCents / 100);
       
       const results = await Promise.allSettled(
         destinations.map((chatId) =>
