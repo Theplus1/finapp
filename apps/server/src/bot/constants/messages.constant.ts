@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { TransactionDataDTO } from "src/integrations/slash/dto/webhook.dto";
 import { CardDto, TransactionDetailedStatus } from "src/integrations/slash/types";
 import { formatCurrency } from "src/shared/utils/formatCurrency.util";
+import { MarkdownUtil } from "src/shared/utils/markdown.util";
 import type { UserDocument } from "src/users/users.schema";
 import type { AccessStatus } from "src/users/users.schema";
 
@@ -336,8 +337,8 @@ export const Messages = {
     'This may take a moment. You\'ll receive a download link when it\'s ready.',
 
   // Balance Alert
-  balanceAlert: (vaName: string, thresholdUsd: number) => ({
-    text: `⚠️ Balance của tài khoản "${vaName}" đang có số dư <${thresholdUsd}USD, cần topup thêm để tránh lỗi thanh toán`,
+  balanceAlert: (vaName: string, balanceUsd: number) => ({
+    text: `⚠️ Balance của tài khoản "${MarkdownUtil.escapse(vaName)}" đang có số dư ${balanceUsd}USD, cần topup thêm để tránh lỗi thanh toán`,
     parse_mode: 'Markdown' as const,
   }),
 };
