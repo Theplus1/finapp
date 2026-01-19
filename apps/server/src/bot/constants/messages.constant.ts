@@ -166,13 +166,16 @@ export const Messages = {
     }
     const cardInfo = card ? `${card.name} (••••${card.last4})` : 'N/A';
     const formattedDate = format(new Date(transaction.date), 'dd-MM-yy HH:mm:ss');
-    // const description = transaction.merchantData?.description || 'N/A';
     const declineReason = transaction.declineReason || 'No reason provided';
 
     let message = `<b>${escapeHtml(title)}</b>\n\n` +
       `Thẻ ${escapeHtml(cardInfo)} có giao dịch ${status}\n` +
       `Amount: ${formatCurrency(Math.abs(transaction.amountCents || 0), transaction.originalCurrency?.code)}\n`;
-    // `Description: ${isBoldDescription ? `<b>${escapeHtml(description)}</b>` : escapeHtml(description)}\n`
+
+    if (transaction.amountCents !== -100) {
+      const description = transaction.merchantData?.description || 'N/A';
+      message += `Description: ${isBoldDescription ? `<b>${escapeHtml(description)}</b>` : escapeHtml(description)}\n`;
+    }
     if (isDeclined) {
       message += `Declined Reason: ${escapeHtml(declineReason)}\n`;
     }
