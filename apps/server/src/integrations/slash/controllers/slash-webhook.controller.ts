@@ -21,6 +21,7 @@ import {
 import { BotService } from '../../../bot/bot.service';
 import { UsersService } from '../../../users/users.service';
 import { Messages } from '../../../bot/constants/messages.constant';
+import { Keyboards } from '../../../bot/constants/keyboards.constant';
 import { SlashSyncService } from '../services/slash-sync.service';
 import { SlashApiService } from '../services/slash-api.service';
 import { CardDto, TransactionDetailedStatus, TransactionDto } from '../types';
@@ -360,7 +361,10 @@ export class SlashWebhookController {
       await this.botService.sendMessageToMultiple(
         destinations,
         notification.text,
-        { parse_mode: notification.parse_mode },
+        {
+          parse_mode: notification.parse_mode,
+          ...Keyboards.getConfirmCode(transactionData.id),
+        },
       );
 
       await this.notificationsService.createNotification({

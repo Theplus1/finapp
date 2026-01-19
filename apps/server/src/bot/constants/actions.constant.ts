@@ -13,6 +13,7 @@ export const Actions = {
     notification: 'transaction.action.notification',
     subscribeNotification: 'transaction.action.subscribeNotification',
     unsubscribeNotification: 'transaction.action.unsubscribeNotification',
+    getConfirmCode: 'transaction.action.getConfirmCode',
 
     // Time filters
     listAllTime: 'transaction.action.list.allTime',

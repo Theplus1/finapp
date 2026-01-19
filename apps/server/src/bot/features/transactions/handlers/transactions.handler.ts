@@ -15,12 +15,14 @@ import {
 import { SessionSteps } from 'src/bot/constants/session-steps.constant';
 import { formatCurrency } from 'src/shared/utils/formatCurrency.util';
 import { Actions } from 'src/bot/constants/actions.constant';
+import { actionWithPayloadRegex } from 'src/shared/utils/actionRegex.util';
 import { ExportType } from 'src/database/schemas/export-job.schema';
 import { isValid, parse } from 'date-fns';
+import type { User } from '@telegraf/types';
+import type { CardDto } from 'src/integrations/slash/types';
 
 @Injectable()
 export class TransactionsHandler {
-
   private readonly logger = new Logger(TransactionsHandler.name);
 
   constructor(
@@ -65,6 +67,73 @@ export class TransactionsHandler {
       parse_mode: 'Markdown',
       reply_markup: { force_reply: true, selective: true },
     });
+  }
+
+  async handleTransactionGetConfirmCodeAction(
+    ctx: BotContext
+  ) {
+    const callbackQuery = ctx.callbackQuery;
+    if (!callbackQuery || !('data' in callbackQuery)) return;
+
+    const callbackTransactionId = callbackQuery?.data.match(actionWithPayloadRegex(Actions.transaction.getConfirmCode))?.[1];
+    if (!callbackTransactionId) {
+      await ctx.reply(Messages.noTransactionsFound);
+      if (ctx.session) ctx.session = undefined;
+      return;
+    }
+    await ctx.sendChatAction('typing');
+    try {
+      this.logger.log(
+        `Fetching transaction details for transaction ${callbackTransactionId}`,
+      );
+      const transactionDetail =
+        await this.slashApiService.getTransaction(callbackTransactionId);
+      const userData = ctx.userData!;
+      if (
+        !transactionDetail ||
+        transactionDetail.virtualAccountId !== userData.virtualAccountId
+      ) {
+        this.logger.warn(
+          `Transaction ${callbackTransactionId} not found or does not belong to user ${userData.virtualAccountId}`,
+        );
+        await ctx.reply(Messages.noTransactionsFound);
+        if (ctx.session) ctx.session = undefined;
+        return;
+      }
+      let card: CardDto | undefined;
+      if (transactionDetail.cardId) {
+        try {
+          const cardData = await this.slashApiService.getCard(transactionDetail.cardId, false, false);
+          card = cardData;
+        } catch (error) {
+          this.logger.warn(`Failed to fetch card data for ${transactionDetail.cardId}:`, error);
+        }
+      }
+      const detail = this.formatConfirmCode(transactionDetail, card, ctx.from!);
+      await ctx.reply(detail, {
+        parse_mode: 'HTML',
+      });
+      try {
+        await ctx.editMessageReplyMarkup(undefined);
+      } catch (error) {
+        this.logger.error('Failed to edit message reply markup', error);
+      }
+
+      if (ctx.session) ctx.session = undefined;
+      this.logger.log(
+        `Transaction details sent successfully for transaction ${callbackTransactionId}`,
+      );
+    } catch (error) {
+      this.logger.error(`Error fetching transaction ${callbackTransactionId}:`, error);
+      if (ctx.session) ctx.session = undefined;
+      if (error.response?.status === 404) {
+        await ctx.reply(Messages.noTransactionsFound);
+      } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+        await ctx.reply('❌ Request timed out. Please try again later.');
+      } else {
+        await ctx.reply(Messages.errorFetchingTransactions);
+      }
+    }
   }
 
   async handleTransactionInput(ctx: BotContext, transactionId: string) {
@@ -149,6 +218,25 @@ export class TransactionsHandler {
       default:
         return '❓';
     }
+  }
+
+  private formatConfirmCode(
+    transactionDTO: TransactionDto,
+    card: CardDto | undefined,
+    userInfo: User,
+  ): string {
+    // Helper function to escape HTML special characters
+    const escapeHtml = (text: string): string => {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    };
+    const description = transactionDTO.merchantData?.description || 'N/A';
+    let message = `${Messages.transactionCreated(transactionDTO, card).text}\n`;
+    message += `Description: ${escapeHtml(description)}\n`;
+    message += `Người thực hiện: ${userInfo.username || userInfo.id}\n`;
+    return message;
   }
 
   async handleTransactionExportAction(ctx: BotContext) {

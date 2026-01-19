@@ -55,7 +55,8 @@ export class CardsHandler {
       await ctx.reply(
         `🔒 *Card Locked*\n\n` +
         `Card *${card.name}* (••••${card.last4}) has been locked.\n\n` +
-        `The card cannot be used for transactions until unlocked.`,
+        `The card cannot be used for transactions until unlocked.\n` +
+        `Người thực hiện: ${ctx.from!.username || ctx.from!.id}`,
         { parse_mode: 'Markdown' }
       );
     } catch (error) {
@@ -90,7 +91,8 @@ export class CardsHandler {
       await ctx.reply(
         `✅ *Card Unlocked*\n\n` +
         `Card *${card.name}* (••••${card.last4}) has been unlocked.\n\n` +
-        `The card can now be used for transactions.`,
+        `The card can now be used for transactions.\n` +
+        `Người thực hiện: ${ctx.from!.username || ctx.from!.id}`,
         { parse_mode: 'Markdown' }
       );
     } catch (error) {

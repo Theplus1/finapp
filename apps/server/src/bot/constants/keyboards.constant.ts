@@ -59,6 +59,15 @@ export const Keyboards = {
     Markup.inlineKeyboard([
       [Markup.button.callback('« Back', Actions.menu.transaction)],
     ]),
+  getConfirmCode: (transactionId: string) =>
+    Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          '🔐 Get Confirm Code',
+          `${Actions.transaction.getConfirmCode}.${transactionId}`,
+        ),
+      ],
+    ]),
 
   transactionsMenu: (isSubscribed: boolean) =>
     Markup.inlineKeyboard([
