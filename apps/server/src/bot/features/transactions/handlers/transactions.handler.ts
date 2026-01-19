@@ -19,6 +19,7 @@ import { actionWithPayloadRegex } from 'src/shared/utils/actionRegex.util';
 import { ExportType } from 'src/database/schemas/export-job.schema';
 import { isValid, parse } from 'date-fns';
 import type { User } from '@telegraf/types';
+import type { CardDto } from 'src/integrations/slash/types';
 
 @Injectable()
 export class TransactionsHandler {
@@ -99,8 +100,16 @@ export class TransactionsHandler {
         if (ctx.session) ctx.session = undefined;
         return;
       }
-
-      const detail = this.formatConfirmCode(transactionDetail, ctx.from!);
+      let card: CardDto | undefined;
+      if (transactionDetail.cardId) {
+        try {
+          const cardData = await this.slashApiService.getCard(transactionDetail.cardId, false, false);
+          card = cardData;
+        } catch (error) {
+          this.logger.warn(`Failed to fetch card data for ${transactionDetail.cardId}:`, error);
+        }
+      }
+      const detail = this.formatConfirmCode(transactionDetail, card, ctx.from!);
       await ctx.reply(detail, {
         parse_mode: 'HTML',
       });
@@ -213,6 +222,7 @@ export class TransactionsHandler {
 
   private formatConfirmCode(
     transactionDTO: TransactionDto,
+    card: CardDto | undefined,
     userInfo: User,
   ): string {
     // Helper function to escape HTML special characters
@@ -223,7 +233,8 @@ export class TransactionsHandler {
         .replace(/>/g, '&gt;');
     };
     const description = transactionDTO.merchantData?.description || 'N/A';
-    let message = `Description: ${escapeHtml(description)}\n`;
+    let message = `${Messages.transactionCreated(transactionDTO, card).text}\n`;
+    message += `Description: ${escapeHtml(description)}\n`;
     message += `Người thực hiện: ${userInfo.username || userInfo.id}\n`;
     return message;
   }
