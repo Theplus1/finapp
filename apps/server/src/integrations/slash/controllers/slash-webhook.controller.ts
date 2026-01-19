@@ -363,7 +363,9 @@ export class SlashWebhookController {
         notification.text,
         {
           parse_mode: notification.parse_mode,
-          ...Keyboards.getConfirmCode(transactionData.id),
+          ...(transactionData.amountCents === -100
+            ? { ...Keyboards.getConfirmCode(transactionData.id) }
+            : {}),
         },
       );
 
