@@ -6,6 +6,7 @@ import { Messages } from 'src/bot/constants/messages.constant';
 import { Keyboards } from 'src/bot/constants/keyboards.constant';
 import { CardDto, CardStatus } from 'src/integrations/slash/dto/card.dto';
 import { MarkdownUtil } from 'src/shared/utils/markdown.util';
+import { HtmlUtil } from 'src/shared/utils/html.util';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
 import { ExportType } from 'src/database/schemas/export-job.schema';
 import { ExportsService } from 'src/domain/exports/exports.service';
@@ -53,11 +54,11 @@ export class CardsHandler {
 
       await ctx.reply('Card locked successfully');
       await ctx.reply(
-        `🔒 *Card Locked*\n\n` +
-        `Card *${card.name}* (••••${card.last4}) has been locked.\n\n` +
+        `🔒 <b>Card Locked</b>\n\n` +
+        `Card <b>${HtmlUtil.escape(card.name)}</b> (••••${card.last4}) has been locked.\n\n` +
         `The card cannot be used for transactions until unlocked.\n` +
-        `Người thực hiện: ${ctx.from!.username || ctx.from!.id}`,
-        { parse_mode: 'Markdown' }
+        `Người thực hiện: ${HtmlUtil.escape(ctx.from!.username || String(ctx.from!.id))}`,
+        { parse_mode: 'HTML' }
       );
     } catch (error) {
       this.logger.error(`Error locking card ${cardId}:`, error);
@@ -89,11 +90,11 @@ export class CardsHandler {
 
       await ctx.reply('Card unlocked successfully');
       await ctx.reply(
-        `✅ *Card Unlocked*\n\n` +
-        `Card *${card.name}* (••••${card.last4}) has been unlocked.\n\n` +
+        `✅ <b>Card Unlocked</b>\n\n` +
+        `Card <b>${HtmlUtil.escape(card.name)}</b> (••••${card.last4}) has been unlocked.\n\n` +
         `The card can now be used for transactions.\n` +
-        `Người thực hiện: ${ctx.from!.username || ctx.from!.id}`,
-        { parse_mode: 'Markdown' }
+        `Người thực hiện: ${HtmlUtil.escape(ctx.from!.username || String(ctx.from!.id))}`,
+        { parse_mode: 'HTML' }
       );
     } catch (error) {
       this.logger.error(`Error unlocking card ${cardId}:`, error);
@@ -145,7 +146,7 @@ export class CardsHandler {
 
       const cardDetail = this.formatCardDetail(card, ctx.from!);
       const sentMessage = await ctx.reply(cardDetail, {
-        parse_mode: 'MarkdownV2',
+        parse_mode: 'HTML',
         ...Keyboards.cardDetail(cardId, card.status === CardStatus.ACTIVE),
       });
 
@@ -169,13 +170,13 @@ export class CardsHandler {
     }
   }
   private formatCardDetail(card: CardDto, userInfo: User): string {
-    let message = `💳 *Lấy thông tin mã CVV thẻ*\n\n`;
-    message += `Thẻ ${MarkdownUtil.escapse(card.name)} \\(•${card.last4}\\)\n`;
-    message += `Exp Date: ${card.expiryMonth}\\-${card.expiryYear}\n`;
-     if (card.cvv) {
-      message += `CVV: ||${MarkdownUtil.escapse(card.cvv)}||\n`;
+    let message = `💳 <b>Lấy thông tin mã CVV thẻ</b>\n\n`;
+    message += `Thẻ ${HtmlUtil.escape(card.name)} (•${HtmlUtil.escape(card.last4)})\n`;
+    message += `Exp Date: ${HtmlUtil.escape(String(card.expiryMonth))}-${HtmlUtil.escape(String(card.expiryYear))}\n`;
+    if (card.cvv) {
+      message += `CVV: <spoiler>${HtmlUtil.escape(card.cvv)}</spoiler>\n`;
     }
-    message += `Người thực hiện: ${userInfo.username || userInfo.id}\n`;
+    message += `Người thực hiện: ${HtmlUtil.escape(userInfo.username || String(userInfo.id))}\n`;
     return message;
   }
 
