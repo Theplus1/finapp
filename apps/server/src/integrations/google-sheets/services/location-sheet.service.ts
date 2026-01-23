@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SheetData } from './google-sheets.service';
 import { SheetName } from '../constants/sheet-names.constant';
-import { formatCurrency } from '../../../shared/utils/formatCurrency.util';
+import { formatCurrency, centsToDollars } from '../../../shared/utils/formatCurrency.util';
 import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
 import { createSummaryMap, formatSheetDate, formatSheetDateISO } from '../utils/sheet.utils';
 import { DailySummarySheetBuilder, DailyRowBuilder, SummaryRowBuilder, formatCurrencyOrEmpty } from '../utils/sheet-builder.utils';
@@ -71,10 +71,11 @@ export class LocationSheetService {
     const rows: any[][] = [];
     
     // Row 2: Summary row
+    // Write numbers instead of formatted strings so currency formatting can be applied
     rows.push([
       '',
-      formatCurrency(totals.totalSpendNonUSCents, virtualAccount.currency),
-      formatCurrency(totals.totalSpendUSCents, virtualAccount.currency),
+      totals.totalSpendNonUSCents > 0 ? centsToDollars(totals.totalSpendNonUSCents) : '',
+      totals.totalSpendUSCents > 0 ? centsToDollars(totals.totalSpendUSCents) : '',
     ]);
     
     // Daily rows
@@ -84,8 +85,8 @@ export class LocationSheetService {
       
       rows.push([
         formatSheetDateISO(date),
-        formatCurrencyOrEmpty(summary?.totalSpendNonUSCents, virtualAccount.currency),
-        formatCurrencyOrEmpty(summary?.totalSpendUSCents, virtualAccount.currency),
+        summary?.totalSpendNonUSCents ? centsToDollars(summary.totalSpendNonUSCents) : '',
+        summary?.totalSpendUSCents ? centsToDollars(summary.totalSpendUSCents) : '',
       ]);
     });
     
