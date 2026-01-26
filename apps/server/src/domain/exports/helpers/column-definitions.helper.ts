@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { ExcelColumn } from 'src/shared/utils/excel.util';
+import { centsToDollars } from 'src/shared/utils/formatCurrency.util';
 
 const DATE_TIME_FORMAT = 'yyyy-MM-dd HH:mm:ss';
 const MONTH_FORMAT = 'yyyy-MM';
@@ -35,7 +36,7 @@ export function getTransactionColumns(): ExcelColumn<any>[] {
     { key: 'date', header: 'Date', map: (t) => formatDate(t.date) },
     { key: 'authorizedAt', header: 'Authorized', map: (t) => formatDate(t.authorizedAt) },
     { key: 'merchant', header: 'Merchant', map: (t) => t.merchantData?.description },
-    { key: 'amount', header: 'Amount', map: (t) => formatActualAmount(t.amountCents, '$') },
+    { key: 'amount', header: 'Amount', map: (t) => t.amountCents ? centsToDollars(t.amountCents) : '' },
     { key: 'card', header: 'Card', map: (t) => t.card ? `${t.card.name} ${t.card.last4}` : '' },
     { key: 'detailedStatus', header: 'Status', map: (t) => t.detailedStatus.toUpperCase() },
     { key: 'originalAmount', header: 'Original', map: (t) => t.originalCurrency ? formatAmount(t.originalCurrency.amountCents) : '' },
@@ -51,7 +52,7 @@ export function getReversedTransactionColumns(): ExcelColumn<any>[] {
     { key: 'date', header: 'Date', map: (t) => formatDate(t.date) },
     { key: 'authorizedAt', header: 'Authorized', map: (t) => formatDate(t.authorizedAt) },
     { key: 'merchant', header: 'Merchant', map: (t) => t.merchantData?.description },
-    { key: 'amount', header: 'Amount', map: (t) => formatActualAmount(t.amountCents, '$') },
+    { key: 'amount', header: 'Amount', map: (t) => t.amountCents ? centsToDollars(t.amountCents) : '' },
     { key: 'card', header: 'Card', map: (t) => t.card ? `${t.card.name} ${t.card.last4}` : '' },
     { key: 'detailedStatus', header: 'Status', map: (t) => t.detailedStatus.toUpperCase() },
     { key: 'originalAmount', header: 'Original', map: (t) => t.originalCurrency ? formatAmount(t.originalCurrency.amountCents) : '' },

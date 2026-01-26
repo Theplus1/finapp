@@ -347,6 +347,17 @@ export class GoogleSheetsService implements OnModuleInit {
               );
             }
             
+            // Apply currency formatting based on sheet type (format every update)
+            if (totalRows > 0) {
+              if (sheet.name === SheetName.TRANSACTIONS_HISTORY || sheet.name === SheetName.HOLD || sheet.name === SheetName.REVERSED) {
+                // Amount column is at index 4 (column E)
+                await this.applyCurrencyFormat(spreadsheetId, sheetId, [4], totalRows);
+              } else if (sheet.name === SheetName.LOCATION) {
+                // Amount columns are at index 1 and 2 (columns B and C)
+                await this.applyCurrencyFormat(spreadsheetId, sheetId, [1, 2], totalRows);
+              }
+            }
+            
             this.logger.debug(
               `Updated sheet "${sheet.name}" with ${totalRows} rows ` +
               `(${Math.ceil(totalRows / BATCH_SIZE)} batches, ${Math.ceil(totalRows / this.chunkSize)} chunks) ` +
@@ -374,6 +385,11 @@ export class GoogleSheetsService implements OnModuleInit {
 
             // Format headers
             await this.formatHeaders(spreadsheetId, sheet.name, sheetId);
+            
+            // Apply currency formatting for Refunded sheet (Amount column at index 4)
+            if (sheet.name === SheetName.REFUNDED && sheet.rows.length > 0) {
+              await this.applyCurrencyFormat(spreadsheetId, sheetId, [4], sheet.rows.length);
+            }
             
             this.logger.debug(`Successfully updated sheet "${sheet.name}" in spreadsheet ${spreadsheetId}`);
           }

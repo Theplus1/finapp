@@ -3,6 +3,7 @@ import { TransactionDataDTO } from "src/integrations/slash/dto/webhook.dto";
 import { CardDto, TransactionDetailedStatus } from "src/integrations/slash/types";
 import { formatCurrency } from "src/shared/utils/formatCurrency.util";
 import { MarkdownUtil } from "src/shared/utils/markdown.util";
+import { HtmlUtil } from "src/shared/utils/html.util";
 import type { UserDocument } from "src/users/users.schema";
 import type { AccessStatus } from "src/users/users.schema";
 
@@ -341,7 +342,7 @@ export const Messages = {
 
   // Balance Alert
   balanceAlert: (vaName: string, balanceUsd: number) => ({
-    text: `⚠️ Balance của tài khoản "${MarkdownUtil.escapse(vaName)}" đang có số dư ${balanceUsd}USD, cần topup thêm để tránh lỗi thanh toán`,
-    parse_mode: 'Markdown' as const,
+    text: `⚠️ Balance của tài khoản "${HtmlUtil.escape(vaName)}" đang có số dư ${balanceUsd}USD, cần topup thêm để tránh lỗi thanh toán`,
+    parse_mode: 'HTML' as const,
   }),
 };
