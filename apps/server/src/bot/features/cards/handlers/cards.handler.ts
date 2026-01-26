@@ -170,13 +170,14 @@ export class CardsHandler {
     }
   }
   private formatCardDetail(card: CardDto, userInfo: User): string {
-    let message = `💳 <b>Lấy thông tin mã CVV thẻ</b>\n\n`;
-    message += `Thẻ ${HtmlUtil.escape(card.name)} (•${HtmlUtil.escape(card.last4)})\n`;
-    message += `Exp Date: ${HtmlUtil.escape(String(card.expiryMonth))}-${HtmlUtil.escape(String(card.expiryYear))}\n`;
-    if (card.cvv) {
-      message += `CVV: <spoiler>${HtmlUtil.escape(card.cvv)}</spoiler>\n`;
+    let message = `💳 *Lấy thông tin mã CVV thẻ*\n\n`;
+    message += `Thẻ ${MarkdownUtil.escapse(card.name)} \\(•${card.last4}\\)\n`;
+    message += `Exp Date: ${card.expiryMonth}\\-${card.expiryYear}\n`;
+     if (card.cvv) {
+      message += `CVV: ||${MarkdownUtil.escapse(card.cvv)}||\n`;
     }
-    message += `Người thực hiện: ${HtmlUtil.escape(userInfo.username || String(userInfo.id))}\n`;
+    message += `Người thực hiện: ${MarkdownUtil.escapse(userInfo.username || String(userInfo.id))}\n`;
+
     return message;
   }
 
