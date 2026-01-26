@@ -18,18 +18,10 @@ import {
   TransactionDataDTO,
   WebhookEventType,
 } from '../dto/webhook.dto';
-import { BotService } from '../../../bot/bot.service';
-import { UsersService } from '../../../users/users.service';
-import { Messages } from '../../../bot/constants/messages.constant';
-import { Keyboards } from '../../../bot/constants/keyboards.constant';
 import { SlashSyncService } from '../services/slash-sync.service';
 import { SlashApiService } from '../services/slash-api.service';
-import { CardDto, TransactionDetailedStatus, TransactionDto } from '../types';
-import { NotificationsService } from 'src/domain/notifications/notifications.service';
-import { NotificationType, NotificationStatus } from 'src/database/schemas/notification.schema';
 import { SuperAdminAuthGuard } from 'src/admin-api/guards/super-admin-auth.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { StatusNotifyUserAboutTransactions } from '../constants/sync.constants';
 
 /**
  * Slash Webhook Controller
@@ -41,11 +33,8 @@ export class SlashWebhookController {
   private readonly webhookSecret: string;
   constructor(
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService,
-    private readonly botService: BotService,
     private readonly slashSyncService: SlashSyncService,
     private readonly slashApiService: SlashApiService,
-    private readonly notificationsService: NotificationsService,
   ) {
     this.webhookSecret = this.configService.get<string>(
       'slash.webhookSecret',
@@ -299,10 +288,6 @@ export class SlashWebhookController {
     try {
       const transactionData = await this.slashApiService.getTransaction(event.entityId);
       await this.slashSyncService.syncTransactionFromWebhook(transactionData);
-
-      if (transactionData.amountCents < 0 && StatusNotifyUserAboutTransactions.includes(transactionData.detailedStatus)) {
-        await this.notifyUserAboutTransaction(transactionData);
-      }
     } catch (error) {
       this.logger.error(`Error handling transaction created event for ${event.entityId}:`, error);
     }
@@ -316,67 +301,8 @@ export class SlashWebhookController {
     try {
       const transactionData = await this.slashApiService.getTransaction(event.entityId);
       await this.slashSyncService.syncTransactionFromWebhook(transactionData);
-
-      if (transactionData.amountCents < 0 && StatusNotifyUserAboutTransactions.includes(transactionData.detailedStatus)) {
-          setTimeout(() => {
-            this.notifyUserAboutTransaction(transactionData);
-          }, 1000);
-      }
     } catch (error) {
       this.logger.error(`Error handling transaction updated event for ${event.entityId}:`, error);
-    }
-  }
-
-  private async notifyUserAboutTransaction(transactionData: TransactionDto): Promise<void> {
-
-    this.logger.log(`Notifying user about transaction: ${transactionData.id}`);
-    const user = await this.usersService.findByVirtualAccountId(transactionData.virtualAccountId || '');
-    if (!user || !user.telegramId) {
-      this.logger.warn(
-        `User not found for virtual account ID: ${transactionData.virtualAccountId}`,
-      );
-      return;
-    }
-
-    const isNotificationSent = await this.notificationsService.isTransactionNotificationSent(user.id, transactionData.id);
-    if (isNotificationSent) {
-      this.logger.log(`Notification already sent for transaction: ${transactionData.id} with user: ${user.id}`);
-      return;
-    }
-
-    const destinations = user.notificationChatIds;
-    if (destinations.length > 0) {
-
-      let card: CardDto | undefined;
-      if (transactionData.cardId) {
-        try {
-          const cardData = await this.slashApiService.getCard(transactionData.cardId, false, false);
-          card = cardData;
-        } catch (error) {
-          this.logger.warn(`Failed to fetch card data for ${transactionData.cardId}:`, error);
-        }
-      }
-
-      const notification = Messages.transactionCreated(transactionData, card);
-      await this.botService.sendMessageToMultiple(
-        destinations,
-        notification.text,
-        {
-          parse_mode: notification.parse_mode,
-          ...(transactionData.amountCents === -100
-            ? { ...Keyboards.getConfirmCode(transactionData.id) }
-            : {}),
-        },
-      );
-
-      await this.notificationsService.createNotification({
-        userId: user.id,
-        type: NotificationType.TRANSACTION,
-        status: NotificationStatus.SENT,
-        data: {
-          transactionId: transactionData.id,
-        },
-      });
     }
   }
 }

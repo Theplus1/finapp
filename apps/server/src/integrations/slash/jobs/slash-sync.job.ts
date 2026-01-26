@@ -41,10 +41,29 @@ export class SlashSyncJob {
   }
 
   /**
-   * Sync recent transactions every hour
+   * Sync recent transactions every minute
+   */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async syncRecentTransactions() {
+    if (!this.enableScheduledSync) {
+      return;
+    }
+
+    this.logger.log('Starting scheduled recent transaction sync...');
+    try {
+      // Sync transactions from last 1 minute
+      await this.slashSyncService.syncRecentTransactionsByMinutes(1);
+      this.logger.log('Scheduled recent transaction sync completed successfully');
+    } catch (error) {
+      this.logger.error('Scheduled recent transaction sync failed:', error);
+    }
+  }
+
+  /**
+   * Sync recent transactions every day
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async syncRecentTransactions() {
+  async syncRecentTransactionsDaily() {
     if (!this.enableScheduledSync) {
       return;
     }

@@ -19,7 +19,6 @@ import { SlashSyncJob } from './jobs/slash-sync.job';
 // Controllers
 import { SlashWebhookController } from './controllers/slash-webhook.controller';
 import { SlashSyncController } from './controllers/slash-sync.controller';
-import { NotificationsService } from 'src/domain/notifications/notifications.service';
 import { NotificationsModule } from 'src/domain/notifications/notifications.module';
 
 /**
@@ -50,11 +49,11 @@ import { NotificationsModule } from 'src/domain/notifications/notifications.modu
     SlashSyncService,
     SlashSyncJob,
     BotService,
-    NotificationsService
   ],
   exports: [
     SlashApiService,
     SlashSyncService,
+    BotService,
   ],
 })
 export class SlashIntegrationModule {}
