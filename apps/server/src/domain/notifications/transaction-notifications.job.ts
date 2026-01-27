@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { TransactionNotificationsService } from './transaction-notifications.service';
 
@@ -13,7 +13,7 @@ export class TransactionNotificationsJob {
   ) {
   }
 
-  @Cron('*/1 * * * *')
+  @Cron(CronExpression.EVERY_30_SECONDS)
   async checkAndNotifyNewTransactions() {
     this.logger.log('Starting transaction notifications check...');
     try {
