@@ -13,7 +13,7 @@ export class TransactionNotificationsJob {
   ) {
   }
 
-  @Cron(CronExpression.EVERY_30_SECONDS)
+  @Cron(CronExpression.EVERY_10_SECONDS)
   async checkAndNotifyNewTransactions() {
     this.logger.log('Starting transaction notifications check...');
     try {

@@ -27,8 +27,8 @@ export class TransactionNotificationsService {
   async checkAndNotifyNewTransactions(): Promise<void> {
     this.logger.log('Scanning database for new transactions to notify...');
 
-    const lookbackMinutes = 1.5;
-    const lookbackDate = new Date(Date.now() - lookbackMinutes * 60 * 1000);
+    const lookbackSeconds = 30;
+    const lookbackDate = new Date(Date.now() - lookbackSeconds * 1000);
 
     const recentTransactions = await this.transactionRepository.find({
       startDate: lookbackDate,
