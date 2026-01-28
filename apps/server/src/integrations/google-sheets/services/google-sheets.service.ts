@@ -851,5 +851,136 @@ export class GoogleSheetsService implements OnModuleInit {
     }
   }
 
+  /**
+   * Apply conditional formatting to Card sheet to highlight cells with amount > 1000
+   * Note: Values in Card sheet are negative (e.g., -5000 means amount is 5000)
+   * So we highlight cells with value < -1000 (more negative = larger amount)
+   * @param spreadsheetId - The spreadsheet ID
+   * @param sheetName - The sheet name (default: 'Card')
+   */
+  async applyCardSheetConditionalFormatting(
+    spreadsheetId: string,
+    sheetName: string = 'Card',
+  ): Promise<void> {
+    if (!this.isInitialized) {
+      throw new Error(
+        'Google Sheets is not initialized. Please configure GOOGLE_SERVICE_ACCOUNT_KEY environment variable.',
+      );
+    }
+
+    try {
+      // Get sheet ID
+      const spreadsheet = await this.sheetsApi.spreadsheets.get({ spreadsheetId });
+      const sheet = spreadsheet.data.sheets?.find((s) => s.properties?.title === sheetName);
+
+      if (!sheet || !sheet.properties?.sheetId) {
+        this.logger.warn(`Sheet "${sheetName}" not found in spreadsheet ${spreadsheetId}`);
+        return;
+      }
+
+      const sheetId = sheet.properties.sheetId;
+      const gridProperties = sheet.properties.gridProperties;
+      
+      if (!gridProperties) {
+        this.logger.warn(`Sheet "${sheetName}" has no grid properties`);
+        return;
+      }
+
+      const rowCount = gridProperties.rowCount || 1000;
+      const columnCount = gridProperties.columnCount || 25;
+
+      // First, get existing conditional format rules for this sheet
+      const spreadsheetWithRules = await this.sheetsApi.spreadsheets.get({
+        spreadsheetId,
+        fields: 'sheets(properties(sheetId,title),conditionalFormats)',
+      });
+
+      const existingSheet = spreadsheetWithRules.data.sheets?.find(
+        (s) => s.properties?.sheetId === sheetId,
+      );
+
+      // Delete existing conditional format rules for this sheet (delete from highest index to lowest to avoid index shifting)
+      if (existingSheet?.conditionalFormats && existingSheet.conditionalFormats.length > 0) {
+        const ruleCount = existingSheet.conditionalFormats.length;
+        this.logger.debug(
+          `Found ${ruleCount} existing conditional format rule(s) for sheet "${sheetName}", deleting...`,
+        );
+        
+        const deleteRequests: any[] = [];
+        for (let i = ruleCount - 1; i >= 0; i--) {
+          deleteRequests.push({
+            deleteConditionalFormatRule: {
+              sheetId,
+              index: i,
+            },
+          });
+        }
+
+        if (deleteRequests.length > 0) {
+          await this.sheetsApi.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: { requests: deleteRequests },
+          });
+          this.logger.debug(`Deleted ${deleteRequests.length} existing conditional format rule(s)`);
+        }
+      }
+
+      // Add new conditional format rule: highlight cells with amount > 1000
+      // Note: Values in Card sheet are negative (e.g., -5000 means amount is 5000)
+      // So we use NUMBER_LESS with -1000 to highlight large amounts (more negative = larger amount)
+      // Apply from row 3 onwards (row 2 is "Total" row, so skip it)
+      // Apply to all data cells (B3:Z, excluding column A which contains card names)
+      const addRequest = {
+        addConditionalFormatRule: {
+          rule: {
+            ranges: [
+              {
+                sheetId,
+                startRowIndex: 2, // Row 3 (0-based, so 2 = row 3), skip row 2 which is "Total"
+                endRowIndex: rowCount,
+                startColumnIndex: 1, // Column B (0-based, so 1 = column B)
+                endColumnIndex: columnCount,
+              },
+            ],
+            booleanRule: {
+              condition: {
+                type: 'NUMBER_LESS',
+                values: [
+                  {
+                    userEnteredValue: '-1000',
+                  },
+                ],
+              },
+              format: {
+                backgroundColor: {
+                  red: 1.0, // Red
+                  green: 0.8, // Light green
+                  blue: 0.8, // Light blue (pink/light red color)
+                },
+                textFormat: {
+                  bold: true,
+                },
+              },
+            },
+          },
+          index: 0,
+        },
+      };
+
+      await this.sheetsApi.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: { requests: [addRequest] },
+      });
+
+      this.logger.log(
+        `Applied conditional formatting to sheet "${sheetName}" (highlight cells < -1000, i.e., amount > 1000) ` +
+        `for range B3:${String.fromCharCode(64 + columnCount)}${rowCount} (excluding row 2 "Total")`,
+      );
+    } catch (error) {
+      this.logger.warn(`Error applying conditional formatting to sheet "${sheetName}":`, error);
+      // Don't throw error, just log warning so it doesn't break the sync process
+    }
+  }
+
 }
 

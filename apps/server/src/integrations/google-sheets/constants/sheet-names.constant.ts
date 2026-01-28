@@ -6,4 +6,5 @@ export enum SheetName {
   TRANSACTIONS_HISTORY = 'Transactions History',
   REVERSED = 'Reversed',
   REFUNDED = 'Refund',
+  CARD = 'Card',
 }

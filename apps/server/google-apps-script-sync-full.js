@@ -129,13 +129,13 @@ function getAllReports() {
     
     const data = JSON.parse(responseText);
     
-    if (!data.success || !data.data || !Array.isArray(data.data)) {
+    if (!data.success || !data.data.data || !Array.isArray(data.data.data)) {
       console.warn('Invalid response format from getAllReports');
       return {};
     }
     
     const reportsMap = {};
-    data.data.forEach(report => {
+    data.data.data.forEach(report => {
       if (report.virtualAccountId) {
         reportsMap[report.virtualAccountId] = report;
       }
@@ -447,6 +447,38 @@ function setupFinanceSheetsForSpreadsheet(spreadsheet) {
 `.trim());
   
   card.getRange('B2:Z').setNumberFormat('$#,##0.00');
+  
+  // Freeze column A and row 1
+  card.setFrozenRows(1);
+  card.setFrozenColumns(1);
+  
+  // Apply conditional formatting: highlight cells with amount > 1000
+  // Note: Values are negative (e.g., -5000 means amount is 5000)
+  // So we highlight cells with value < -1000 (more negative = larger amount)
+  // Apply from row 3 onwards (row 2 is "Total" row, so skip it)
+  const cardLastRow = card.getLastRow();
+  const cardLastCol = card.getLastColumn();
+  if (cardLastRow >= 3 && cardLastCol >= 2) {
+    const cardRange = card.getRange(3, 2, cardLastRow - 2, cardLastCol - 1); // B3 to last row/col
+    const rules = card.getConditionalFormatRules();
+    
+    // Remove existing rules for Card sheet (if any)
+    const filteredRules = rules.filter(rule => {
+      const ranges = rule.getRanges();
+      return !ranges.some(range => range.getSheet().getName() === 'Card');
+    });
+    
+    // Add new rule: highlight cells with value < -1000
+    const newRule = SpreadsheetApp.newConditionalFormatRule()
+      .setRanges([cardRange])
+      .whenNumberLessThan(-1000)
+      .setBackground('#FFCCCC') // Light pink/red color (RGB: 255, 204, 204)
+      .setBold(true)
+      .build();
+    
+    filteredRules.push(newRule);
+    card.setConditionalFormatRules(filteredRules);
+  }
 
   // =========================
   // 5. Hold
@@ -713,6 +745,178 @@ function deleteTriggers() {
     ScriptApp.deleteTrigger(trigger);
   });
   console.log('All triggers deleted');
+}
+
+//==================== CONDITIONAL FORMATTING FUNCTIONS ====================
+
+/**
+ * Freeze column A and row 1 in Card sheet
+ * @param {Sheet} cardSheet - The Card sheet object
+ */
+function freezeCardSheetPanes(cardSheet) {
+  try {
+    // Freeze row 1 (header row)
+    cardSheet.setFrozenRows(1);
+    // Freeze column A (card names column)
+    cardSheet.setFrozenColumns(1);
+    console.log(`  [OK] Frozen column A and row 1`);
+    return true;
+  } catch (error) {
+    console.error(`  [ERROR] Failed to freeze panes:`, error);
+    return false;
+  }
+}
+
+/**
+ * Apply conditional formatting to Card sheet
+ * Highlight cells with amount > 1000 (value < -1000 since values are negative)
+ * @param {Sheet} cardSheet - The Card sheet object
+ */
+function applyCardConditionalFormatting(cardSheet) {
+  try {
+    const cardLastRow = cardSheet.getLastRow();
+    const cardLastCol = cardSheet.getLastColumn();
+    
+    if (cardLastRow < 3 || cardLastCol < 2) {
+      console.log(`  [SKIP] Card sheet has insufficient data (rows: ${cardLastRow}, cols: ${cardLastCol})`);
+      return false;
+    }
+    
+    const cardRange = cardSheet.getRange(3, 2, cardLastRow - 2, cardLastCol - 1); // B3 to last row/col
+    const rules = cardSheet.getConditionalFormatRules();
+    
+    // Check if rule already exists (check by condition type and value)
+    const hasExistingRule = rules.some(rule => {
+      const condition = rule.getBooleanCondition();
+      if (condition) {
+        const conditionType = condition.getCriteriaType();
+        const conditionValues = condition.getCriteriaValues();
+        return conditionType === SpreadsheetApp.BooleanCriteria.NUMBER_LESS_THAN &&
+               conditionValues && conditionValues.length > 0 &&
+               conditionValues[0].getValue() === '-1000';
+      }
+      return false;
+    });
+    
+    if (hasExistingRule) {
+      console.log(`  [SKIP] Conditional formatting rule already exists`);
+      return false;
+    }
+    
+    // Remove existing rules for Card sheet (if any)
+    const filteredRules = rules.filter(rule => {
+      const ranges = rule.getRanges();
+      return !ranges.some(range => range.getSheet().getName() === 'Card');
+    });
+    
+    // Add new rule: highlight cells with value < -1000
+    const newRule = SpreadsheetApp.newConditionalFormatRule()
+      .setRanges([cardRange])
+      .whenNumberLessThan(-1000)
+      .setBackground('#FFCCCC') // Light pink/red color (RGB: 255, 204, 204)
+      .setBold(true)
+      .build();
+    
+    filteredRules.push(newRule);
+    cardSheet.setConditionalFormatRules(filteredRules);
+    
+    console.log(`  [OK] Applied conditional formatting to Card sheet`);
+    return true;
+  } catch (error) {
+    console.error(`  [ERROR] Failed to apply conditional formatting:`, error);
+    return false;
+  }
+}
+
+/**
+ * Update conditional formatting and freeze panes for all existing sheets in FinApp folder
+ * This function will apply conditional formatting and freeze column A + row 1 to Card sheets
+ */
+function updateConditionalFormattingForExistingSheets() {
+  console.log('Starting to update conditional formatting for existing sheets in FinApp folder...\n');
+  
+  try {
+    const finAppFolder = getOrCreateFinAppFolder();
+    
+    if (!finAppFolder) {
+      console.error('Cannot access FinApp folder');
+      return;
+    }
+    
+    // Get all Google Sheets files in FinApp folder
+    const files = finAppFolder.getFilesByType(MimeType.GOOGLE_SHEETS);
+    const fileArray = [];
+    
+    while (files.hasNext()) {
+      fileArray.push(files.next());
+    }
+    
+    console.log(`Found ${fileArray.length} Google Sheets files in FinApp folder\n`);
+    
+    if (fileArray.length === 0) {
+      console.log('No files found to update');
+      return;
+    }
+    
+    let processed = 0;
+    let updated = 0;
+    let skipped = 0;
+    let errors = 0;
+    
+    // Process each file
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      const fileName = file.getName();
+      const spreadsheetId = file.getId();
+      
+      console.log(`[${i + 1}/${fileArray.length}] Processing: ${fileName} (ID: ${spreadsheetId})`);
+      
+      try {
+        const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+        const cardSheet = spreadsheet.getSheetByName('Card');
+        
+        if (!cardSheet) {
+          console.log(`  [SKIP] No Card sheet found`);
+          skipped++;
+          continue;
+        }
+        
+        processed++;
+        
+        // Apply conditional formatting
+        const formattingResult = applyCardConditionalFormatting(cardSheet);
+        
+        // Freeze column A and row 1
+        freezeCardSheetPanes(cardSheet);
+        
+        if (formattingResult) {
+          updated++;
+        } else {
+          skipped++;
+        }
+        
+        // Add small delay every 10 files to avoid rate limit
+        if ((i + 1) % 10 === 0) {
+          console.log(`\nProcessed ${i + 1}/${fileArray.length} files... (${updated} updated, ${skipped} skipped, ${errors} errors)\n`);
+          Utilities.sleep(500); // 500ms delay every 10 files
+        }
+      } catch (error) {
+        console.error(`  [ERROR] Failed to process file:`, error);
+        errors++;
+      }
+    }
+    
+    console.log(`\n=== Update Summary ===`);
+    console.log(`Total files: ${fileArray.length}`);
+    console.log(`Processed: ${processed}`);
+    console.log(`Updated: ${updated}`);
+    console.log(`Skipped: ${skipped} (no Card sheet or rule already exists)`);
+    console.log(`Errors: ${errors}`);
+    console.log(`\nUpdate completed!`);
+    
+  } catch (error) {
+    console.error('Error updating conditional formatting:', error);
+  }
 }
 
 //==================== TEST FUNCTIONS ====================
