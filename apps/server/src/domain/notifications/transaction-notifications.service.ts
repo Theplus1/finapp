@@ -98,6 +98,16 @@ export class TransactionNotificationsService {
       declineReason: transaction.metadata?.declineReason,
     };
 
+    // Nếu không có tên thẻ hoặc description (null) thì không gửi thông báo
+    const hasCardName = !!card?.name;
+    const description = transactionDto.merchantData?.description;
+    if (!hasCardName || !description) {
+      this.logger.log(
+        `Skip sending notification for transaction ${transaction.slashId} because card name or description is missing`,
+      );
+      return;
+    }
+
     const notification = Messages.transactionCreated(transactionDto, card);
     await this.botService.sendMessageToMultiple(
       destinations,
