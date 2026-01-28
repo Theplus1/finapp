@@ -357,6 +357,16 @@ export class SlashWebhookController {
         }
       }
 
+      // Nếu không có tên thẻ hoặc description (null) thì không gửi thông báo
+      const hasCardName = !!card?.name;
+      const description = transactionData.merchantData?.description;
+      if (!hasCardName || !description) {
+        this.logger.log(
+          `Skip sending notification for transaction ${transactionData.id} because card name or description is missing`,
+        );
+        return;
+      }
+
       const notification = Messages.transactionCreated(transactionData, card);
       await this.botService.sendMessageToMultiple(
         destinations,
