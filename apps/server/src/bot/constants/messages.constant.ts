@@ -345,4 +345,23 @@ export const Messages = {
     text: `⚠️ Balance của tài khoản "${HtmlUtil.escape(vaName)}" đang có số dư ${balanceUsd}USD, cần topup thêm để tránh lỗi thanh toán`,
     parse_mode: 'HTML' as const,
   }),
+
+  // Card Spending Alert
+  cardSpendingAlert: (
+    cards: Array<{ cardName: string; amount: number | null }>,
+    date: string,
+    threshold: number,
+  ) => {
+    const dateVN = format(new Date(date), 'dd/MM/yyyy');
+
+    const lines = cards.map((card) => {
+      const cardName = HtmlUtil.escape(card.cardName);
+      return `⚠️ ${dateVN}: Thẻ <b>\"${cardName}\"</b> đang có chi tiêu >${threshold}USD/ngày`;
+    });
+
+    return {
+      text: lines.join('\n'),
+      parse_mode: 'HTML' as const,
+    };
+  },
 };

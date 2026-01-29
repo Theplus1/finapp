@@ -36,8 +36,8 @@ export default () => ({
     enableScheduledSync: process.env.GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC !== 'true', // disable sync monthly
     enableScheduledSyncFull: process.env.GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC_FULL !== 'false', // enable sync full daily
     syncCron: process.env.GOOGLE_SHEETS_SYNC_CRON || '*/15 * * * *',
-    syncDelayBetweenAccounts: process.env.GOOGLE_SHEETS_SYNC_DELAY_BETWEEN_ACCOUNTS || '30000', // milliseconds
     chunkSize: process.env.GOOGLE_SHEETS_CHUNK_SIZE || '5000', // rows per chunk
+    syncDelayBetweenAccounts: process.env.GOOGLE_SHEETS_SYNC_DELAY_BETWEEN_ACCOUNTS || '20000', // milliseconds
   },
   cardDetailTimeout: 60000,
   balanceAlert: {
@@ -45,5 +45,11 @@ export default () => ({
     cron: process.env.BALANCE_ALERT_CRON || '0 * * * *', // Default: every hour
     thresholdUsd: parseFloat(process.env.BALANCE_ALERT_THRESHOLD_USD || '5000'), // Default: 5000 USD
     cooldownHours: parseFloat(process.env.BALANCE_ALERT_COOLDOWN_HOURS || '0'), // Default: 0 hours (supports decimals, e.g., 0.1 = 6 minutes)
+  },
+  cardSpendingAlert: {
+    enable: process.env.CARD_SPENDING_ALERT_ENABLE !== 'false', // Default: true
+    cron: process.env.CARD_SPENDING_ALERT_CRON || '0 * * * *', // Default: every hour
+    thresholdUsd: parseFloat(process.env.CARD_SPENDING_ALERT_THRESHOLD_USD || '1000'), // Default: 1000 USD
+    cooldownHours: parseFloat(process.env.CARD_SPENDING_ALERT_COOLDOWN_HOURS || '0'), // Default: 0 hours
   },
 });
