@@ -16,6 +16,7 @@ export enum NotificationType {
   ALERT = 'alert',
   SYSTEM = 'system',
   BALANCE_ALERT = 'balance_alert',
+  CARD_SPENDING_ALERT = 'card_spending_alert',
 }
 
 @Schema({ timestamps: true, collection: 'notifications' })
