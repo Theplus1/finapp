@@ -10,21 +10,20 @@ export class NotificationsHandler {
 
   constructor(private readonly usersService: UsersService) {}
 
+  /**
+   * Handle /connect command - Link current chat as notification destination
+   */
   private async isChatAdmin(
     telegram: BotContext['telegram'],
     chatId: number,
     userId: number,
   ): Promise<boolean> {
     try {
-      const member = await telegram.getChatMember(chatId, userId);
-      const status = (member as { status?: string }).status;
-      if (status === 'creator' || status === 'administrator') return true;
-      const admins = await telegram.getChatAdministrators(chatId);
-      return admins.some(
-        (a) => (a as { user: { id: number } }).user?.id === userId,
-      );
-    } catch (e) {
-      this.logger.warn(`isChatAdmin failed chat=${chatId} user=${userId}`, e);
+      const chatMember = await telegram.getChatMember(chatId, userId);
+      const status = (chatMember as { status?: string }).status;
+      this.logger.log(`------------------Chat member status of chatId=${chatId} userId=${userId} is ${status}`);
+      return status === 'creator' || status === 'administrator';
+    } catch {
       return false;
     }
   }
@@ -44,24 +43,25 @@ export class NotificationsHandler {
       return;
     }
 
-    const user = await this.usersService.findByTelegramId(userId);
+    // For groups and channels, verify user is admin
+    const admin = await this.isChatAdmin(ctx.telegram, chatId, userId);
+    if (!admin) {
+      await ctx.reply(Messages.connectNotAdminError);
+      return;
+    }
+
+    const user = await this.usersService.findByTelegramId(Math.abs(chatId));
     if (!user) {
       await ctx.reply(Messages.connectUserNotFound());
       return;
     }
 
     try {
-      const isAdmin = await this.isChatAdmin(ctx.telegram, chatId, userId);
-      if (!isAdmin) {
-        await ctx.reply(Messages.connectNotAdminError);
-        return;
-      }
-
-      // Add this chat as notification destination
-      await this.usersService.addNotificationDestination(userId, chatId);
+      const groupUserId = Math.abs(chatId);
+      await this.usersService.addNotificationDestination(groupUserId, chatId);
       await ctx.reply(Messages.connectSuccess(ctx.chat.title || 'this chat'));
     } catch (error) {
-      this.logger.error(`addNotificationDestination failed user=${userId} chat=${chatId}`, error);
+      this.logger.error(`addNotificationDestination failed chat=${chatId}`, error);
       await ctx.reply(Messages.errorGeneric);
     }
   }
@@ -86,7 +86,14 @@ export class NotificationsHandler {
       return;
     }
 
-    const user = await this.usersService.findByTelegramId(userId);
+    const admin = await this.isChatAdmin(ctx.telegram, chatId, userId);
+    if (!admin) {
+      await ctx.reply(Messages.connectNotAdminError);
+      return;
+    }
+
+    const groupUserId = Math.abs(chatId);
+    const user = await this.usersService.findByTelegramId(groupUserId);
     if (!user) {
       await ctx.reply(Messages.connectUserNotFound());
       return;
@@ -121,17 +128,11 @@ export class NotificationsHandler {
     }
 
     try {
-      const isAdmin = await this.isChatAdmin(ctx.telegram, chatId, userId);
-      if (!isAdmin) {
-        await ctx.reply(Messages.connectNotAdminError);
-        return;
-      }
-
-      await this.usersService.setWarningThreadId(userId, chatId, threadId);
+      await this.usersService.setWarningThreadId(groupUserId, chatId, threadId);
       await ctx.reply(Messages.topicalertSuccess(threadId));
-      this.logger.log(`User ${userId} set warning thread ${threadId} for chat ${chatId}`);
+      this.logger.log(`Group ${groupUserId} set warning thread ${threadId} for chat ${chatId}`);
     } catch (error) {
-      this.logger.error(`setWarningThreadId failed user=${userId} chat=${chatId}`, error);
+      this.logger.error(`setWarningThreadId failed chat=${chatId}`, error);
       await ctx.reply(Messages.errorGeneric);
     }
   }
@@ -154,12 +155,18 @@ export class NotificationsHandler {
       return;
     }
 
+    const admin = await this.isChatAdmin(ctx.telegram, chatId, userId);
+    if (!admin) {
+      await ctx.reply(Messages.connectNotAdminError);
+      return;
+    }
+
     try {
-      // Remove this chat from notification destinations
-      await this.usersService.removeNotificationDestination(userId, chatId);
+      const groupUserId = Math.abs(chatId);
+      await this.usersService.removeNotificationDestination(groupUserId, chatId);
       await ctx.reply(Messages.disconnectSuccess(ctx.chat.title || 'this chat'));
     } catch (error) {
-      this.logger.error(`removeNotificationDestination failed user=${userId} chat=${chatId}`, error);
+      this.logger.error(`removeNotificationDestination failed chat=${chatId}`, error);
       await ctx.reply(Messages.errorGeneric);
     }
   }
@@ -168,6 +175,7 @@ export class NotificationsHandler {
    * Handle /destinations command - List all connected notification destinations
    */
   async handleDestinationsCommand(ctx: BotContext) {
+    const chatId = ctx.chat?.id;
     const userId = ctx.from?.id;
 
     if (!userId) {
@@ -175,9 +183,18 @@ export class NotificationsHandler {
       return;
     }
 
+    const isGroup = chatId != null && ctx.chat?.type !== 'private';
+    if (isGroup) {
+      const admin = await this.isChatAdmin(ctx.telegram, chatId, userId);
+      if (!admin) {
+        await ctx.reply(Messages.connectNotAdminError);
+        return;
+      }
+    }
+
     try {
-      const user = await this.usersService.findByTelegramId(userId);
-      
+      const groupUserId = isGroup ? Math.abs(chatId!) : userId;
+      const user = await this.usersService.findByTelegramId(groupUserId);
       if (!user) {
         await ctx.reply(Messages.userNotFound);
         return;
@@ -220,7 +237,7 @@ export class NotificationsHandler {
         parse_mode: 'Markdown',
       });
     } catch (error) {
-      this.logger.error(`listDestinations failed user=${userId}`, error);
+      this.logger.error(`listDestinations failed`, error);
       await ctx.reply(Messages.errorGeneric);
     }
   }
@@ -247,23 +264,24 @@ export class NotificationsHandler {
     }
 
     try {
-      const user = await this.usersService.findByTelegramId(userId);
+      const admin = await this.isChatAdmin(ctx.telegram, chatId, userId);
+      if (!admin) {
+        await ctx.reply(Messages.connectNotAdminError);
+        ctx.session = undefined;
+        return;
+      }
+      const groupUserId = Math.abs(chatId);
+      const user = await this.usersService.findByTelegramId(groupUserId);
       if (!user) {
         await ctx.reply(Messages.connectUserNotFound());
         ctx.session = undefined;
         return;
       }
-      const isAdmin = await this.isChatAdmin(ctx.telegram, chatId, userId);
-      if (!isAdmin) {
-        await ctx.reply(Messages.connectNotAdminError);
-        ctx.session = undefined;
-        return;
-      }
-      await this.usersService.setWarningThreadId(userId, chatId, threadId);
+      await this.usersService.setWarningThreadId(groupUserId, chatId, threadId);
       await ctx.reply(Messages.topicalertSuccess(threadId));
       ctx.session = undefined;
     } catch (error) {
-      this.logger.error(`setWarningThreadId failed user=${userId} chat=${chatId}`, error);
+      this.logger.error(`setWarningThreadId failed chat=${chatId}`, error);
       await ctx.reply(Messages.errorGeneric);
       ctx.session = undefined;
     }
