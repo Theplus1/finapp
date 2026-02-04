@@ -17,6 +17,7 @@ import { useState } from "react";
 type Props = {
   onVirtualAccountChange: (virtualAccountId: string) => void;
 };
+const limitPerRequest = 20;
 
 const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
   const [value, setValue] = useState("all");
@@ -24,8 +25,22 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
     useQuery({
       queryKey: ["virtual-account-infos"],
       queryFn: async () => {
-        const res = await api.virtualAccounts.getVirtualAccounts();
-        return res;
+        let totalVirtualAccounts: VirtualAccount[] = [];
+        let hasNext = true;
+        let page = 1;
+        while (hasNext) {
+          const res = await api.virtualAccounts.getVirtualAccounts({
+            page,
+            limit: limitPerRequest,
+          });
+          const { pagination: paginationRes, data } = res;
+          totalVirtualAccounts = [...totalVirtualAccounts, ...data];
+          hasNext =
+            (paginationRes?.total || 0) >=
+            (paginationRes?.page || 1) * (paginationRes?.limit || 1);
+          page++;
+        }
+        return totalVirtualAccounts;
       },
     });
 
@@ -34,7 +49,7 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
     onVirtualAccountChange(value === "all" ? "" : value);
   };
 
-  const virtualAccountData = virtualAccountInfos?.data ?? [];
+  const virtualAccountData = virtualAccountInfos ?? [];
 
   return (
     <>
