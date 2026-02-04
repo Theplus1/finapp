@@ -40,24 +40,24 @@ export class UserValidationInterceptor implements NestInterceptor {
     // Get bot context
     const ctx = context.getArgByIndex(0) as BotContext;
     
-    // Get telegram user
-    const chatGroup = ctx.chat;
-    if (!chatGroup) {
+    // Get telegram user (not chat group!)
+    const telegramUser = ctx.from;
+    if (!telegramUser) {
       if (options.answerCallback && ctx.callbackQuery) {
         await ctx.answerCbQuery('User information not available');
       }
       await ctx.reply(Messages.accessDenied());
-      throw new Error(`Chat group not available`);
+      throw new Error(`Telegram user not available`);
     }
 
-    // Find user by telegram ID
-    const user = await this.usersService.findByTelegramId(Math.abs(chatGroup.id));
+    // Find user by telegram ID (user's ID, not chat ID)
+    const user = await this.usersService.findByTelegramId(telegramUser.id);
     
     if (!user || !user.virtualAccountId) {
       if (options.answerCallback && ctx.callbackQuery) {
         await ctx.answerCbQuery('Please use /start first');
       }
-      await ctx.reply(Messages.accessDenied(`User with Telegram ID ${chatGroup.id} not found.`));
+      await ctx.reply(Messages.accessDenied(`User with Telegram ID ${telegramUser.id} not found.`));
       throw new Error('User not found');
     }
 

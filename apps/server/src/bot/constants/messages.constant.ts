@@ -41,6 +41,7 @@ export const Messages = {
     `/connect - Connect group/channel for notifications\n` +
     `/disconnect - Disconnect current group/channel\n` +
     `/destinations - List all connected chats\n\n` +
+    `/topicalert - Set this topic as destination for balance/card alerts\n\n` +
     `*Other:*\n` +
     `/feedback - Send feedback (multi-step conversation)`,
 
@@ -306,6 +307,32 @@ export const Messages = {
   connectSuccess: (chatTitle: string) =>
     `✅ *Connected Successfully!*\n\n` +
     `This chat (*${chatTitle}*) will now receive transaction notifications.`,
+
+  connectUserNotFound: () =>
+    `❌ *Không thể kết nối*\n\n` +
+    `Không tìm thấy user hợp lệ với Telegram ID này. Vui lòng liên hệ admin để được thêm vào hệ thống.`,
+
+  topicalertSuccess: (threadId: number) =>
+    `✅ *Đã lưu topic cảnh báo*\n\n` +
+    `Cảnh báo (balance/card) sẽ được gửi vào topic này (thread ID: ${threadId}).`,
+
+  topicalertNotForum:
+    '⚠️ Group này không phải forum group. Lệnh /topicalert chỉ hoạt động với forum groups.',
+
+  topicalertInvalidThreadId:
+    '❌ *Thread ID không hợp lệ*\n\n' +
+    'Vui lòng nhập một số nguyên dương (ví dụ: 1, 2, 3...)\n\n' +
+    'Gửi `/cancel` để hủy.',
+
+  topicalertThreadIdPrompt: () =>
+    `📝 *Nhập Thread ID*\n\n` +
+    `Vui lòng nhập thread ID của topic bạn muốn chọn.\n\n` +
+    `💡 *Cách lấy Thread ID:*\n` +
+    `1. Vào topic bạn muốn chọn\n` +
+    `2. Kiểm tra link của topic (ví dụ: \`t.me/c/.../85\`)\n` +
+    `3. Số cuối cùng trong link chính là thread ID (ví dụ: 85)\n\n` +
+    `Hoặc reply một message trong topic đó rồi gửi lại \`/topicalert\`.\n\n` +
+    `(Gửi /cancel để hủy)`,
 
   disconnectPrivateChatError:
     '⚠️ *Cannot Disconnect Private Chat*\n\n' +
