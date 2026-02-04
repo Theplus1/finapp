@@ -5,7 +5,6 @@ import { CardsService } from 'src/domain/cards/cards.service';
 import { Messages } from 'src/bot/constants/messages.constant';
 import { Keyboards } from 'src/bot/constants/keyboards.constant';
 import { CardDto, CardStatus } from 'src/integrations/slash/dto/card.dto';
-import { MarkdownUtil } from 'src/shared/utils/markdown.util';
 import { HtmlUtil } from 'src/shared/utils/html.util';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
 import { ExportType } from 'src/database/schemas/export-job.schema';
@@ -170,14 +169,13 @@ export class CardsHandler {
     }
   }
   private formatCardDetail(card: CardDto, userInfo: User): string {
-    let message = `💳 *Lấy thông tin mã CVV thẻ*\n\n`;
-    message += `Thẻ ${MarkdownUtil.escapse(card.name)} \\(•${card.last4}\\)\n`;
-    message += `Exp Date: ${card.expiryMonth}\\-${card.expiryYear}\n`;
-     if (card.cvv) {
-      message += `CVV: ||${MarkdownUtil.escapse(card.cvv)}||\n`;
+    let message = `💳 <b>Lấy thông tin mã CVV thẻ</b>\n\n`;
+    message += `Thẻ ${HtmlUtil.escape(card.name)} (••••${HtmlUtil.escape(card.last4)})\n`;
+    message += `Exp Date: ${card.expiryMonth}-${card.expiryYear}\n`;
+    if (card.cvv) {
+      message += `CVV: <tg-spoiler>${HtmlUtil.escape(card.cvv)}</tg-spoiler>\n`;
     }
-    message += `Người thực hiện: ${MarkdownUtil.escapse(userInfo.username || String(userInfo.id))}\n`;
-
+    message += `Người thực hiện: ${ HtmlUtil.escape(userInfo.username || String(userInfo.id))}\n`;
     return message;
   }
 
