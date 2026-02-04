@@ -196,12 +196,6 @@ export class BotUpdate {
     return this.notificationsHandler.handleDestinationsCommand(ctx);
   }
 
-  @Command('topicalert')
-  async onTopicalertCommand(@Ctx() ctx: BotContext) {
-    await ctx.sendChatAction('typing');
-    return this.notificationsHandler.handleTopicalertCommand(ctx);
-  }
-
   // ==================== Admin Actions ====================
   // Note: Admin operations are now handled via REST API
   // See /admin endpoints in AdminController
@@ -209,10 +203,9 @@ export class BotUpdate {
   @ValidateUser({ answerCallback: true })
   @On('text')
   async onText(@Ctx() ctx: BotContext) {
+    // In groups, only process if user is replying to bot's message
     const isPrivate = ctx.chat?.type === 'private';
-    const isAwaitingTopicalertReply = ctx.session?.step === SessionSteps.AWAITING_TOPICALERT_REPLY;
-    
-    if (!isPrivate && !isAwaitingTopicalertReply) {
+    if (!isPrivate) {
       const replyTo = (ctx.message as any)?.reply_to_message;
       const isReplyToBot = replyTo?.from?.id === ctx.botInfo?.id;
       
@@ -257,9 +250,6 @@ export class BotUpdate {
         break;
       case SessionSteps.AWAITING_EXPORT_DATE:
         await this.transactionsHandler.handleExportDateInput(ctx, text);
-        break;
-      case SessionSteps.AWAITING_TOPICALERT_REPLY:
-        await this.notificationsHandler.handleTopicalertThreadIdInput(ctx, text);
         break;
     }
   }

@@ -108,6 +108,8 @@ jobs:
               -e "GOOGLE_SERVICE_ACCOUNT_KEY=${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" \
               -e "OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318" \
               -e "BALANCE_ALERT_CRON=${{ vars.BALANCE_ALERT_CRON }}" \
+              -e "CARD_SPENDING_ALERT_CRON=${{ vars.CARD_SPENDING_ALERT_CRON }}" \
+              -e "GOOGLE_SHEETS_SYNC_CRON=${{ vars.GOOGLE_SHEETS_SYNC_CRON }}" \
               -e "NODE_ENV=production" \
               ${IMAGE_NAME}
 

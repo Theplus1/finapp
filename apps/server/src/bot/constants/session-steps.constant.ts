@@ -7,7 +7,6 @@ export const SessionSteps = {
   AWAITING_LOCK_CARD_ID: 'awaiting_lock_card_id',
   AWAITING_UNLOCK_CARD_ID: 'awaiting_unlock_card_id',
   AWAITING_EXPORT_DATE: 'awaiting_export_date',
-  AWAITING_TOPICALERT_REPLY: 'awaiting_topicalert_reply',
 } as const;
 
 export type SessionStep = (typeof SessionSteps)[keyof typeof SessionSteps];

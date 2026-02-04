@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { UsersService } from 'src/users/users.service';
 import { Messages } from 'src/bot/constants/messages.constant';
 import { BotContext } from 'src/bot/interfaces/bot-context.interface';
-import { SessionSteps } from 'src/bot/constants/session-steps.constant';
 
 @Injectable()
 export class NotificationsHandler {
@@ -200,7 +199,8 @@ export class NotificationsHandler {
         return;
       }
 
-      const destinations = this.usersService.getDestinations(user);
+      const destinations = user.notificationChatIds || [];
+
       if (destinations.length === 0) {
         await ctx.reply(Messages.noDestinations);
         return;
@@ -208,22 +208,19 @@ export class NotificationsHandler {
 
       // Fetch chat details for each destination
       const chatDetails = await Promise.allSettled(
-        destinations.map(async (dest) => {
-          const chatId = dest.chatId;
+        destinations.map(async (chatId) => {
           try {
             const chat = await ctx.telegram.getChat(chatId);
             return {
               id: chatId,
-              title: chat.type === 'private' ? 'Private Chat' : (chat as { title?: string }).title || 'Unknown',
+              title: chat.type === 'private' ? 'Private Chat' : (chat as any).title || 'Unknown',
               type: chat.type,
-              warningThreadId: dest.warningThreadId,
             };
           } catch (error) {
             return {
               id: chatId,
               title: 'Unknown (Bot may have been removed)',
               type: 'unknown',
-              warningThreadId: dest.warningThreadId,
             };
           }
         })
@@ -283,7 +280,6 @@ export class NotificationsHandler {
     } catch (error) {
       this.logger.error(`setWarningThreadId failed chat=${chatId}`, error);
       await ctx.reply(Messages.errorGeneric);
-      ctx.session = undefined;
     }
   }
 }

@@ -137,9 +137,9 @@ export class BalanceAlertsService {
       }
 
       // Check if user has notification destinations
-      const destinations = this.usersService.getDestinations(user);
+      const destinations = user.notificationChatIds || [];
       if (destinations.length === 0) {
-        this.logger.log(
+          this.logger.log(
           `User ${user.telegramId} has no notification destinations for VA ${report.virtualAccountId}. Skipping alert.`,
         );
         return 'skipped';
@@ -162,14 +162,10 @@ export class BalanceAlertsService {
       const thresholdUsd = this.thresholdCents / 100;
       const message = Messages.balanceAlert(va.name, balanceCents / 100);
       
-      // Gửi vào topic Warning nếu đã set warningThreadId, ngược lại gửi vào General (không thread)
-      // Chỉ truyền message_thread_id khi gửi vào topic khác General. General = không truyền (thread 1 gây lỗi "message thread not found").
       const results = await Promise.allSettled(
-        destinations.map((dest) =>
-          this.botService.sendMessage(dest.chatId, message.text, {
+        destinations.map((chatId) =>
+          this.botService.sendMessage(chatId, message.text, {
             parse_mode: message.parse_mode,
-            ...(dest.warningThreadId != null &&
-              dest.warningThreadId !== 1 && { message_thread_id: dest.warningThreadId }),
           }),
         ),
       );
