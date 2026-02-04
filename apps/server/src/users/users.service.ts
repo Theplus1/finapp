@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { User, UserDocument, AccessStatus } from './users.schema';
+import { User, UserDocument, AccessStatus, NotificationDestination } from './users.schema';
 
 @Injectable()
 export class UsersService {
@@ -217,20 +217,79 @@ export class UsersService {
   // ==================== Notification Destination Methods ====================
 
   /**
-   * Add a notification destination (group/channel) for a user
+   * Get destinations for sending notifications.
+   * Ưu tiên notificationDestinations nếu có, fallback notificationChatIds.
+   */
+  getDestinations(user: UserDocument): NotificationDestination[] {
+    const dests = user.notificationDestinations;
+    if (dests && dests.length > 0) {
+      return dests.map((d) => ({ chatId: d.chatId, warningThreadId: d.warningThreadId }));
+    }
+    const chatIds = user.notificationChatIds || [];
+    return chatIds.map((chatId) => ({ chatId }));
+  }
+
+  /**
+   * Add a notification destination (chỉ chatId). User phải tồn tại; không tạo mới.
    */
   async addNotificationDestination(
     telegramId: number,
     chatId: number,
   ): Promise<UserDocument | null> {
-    const user = await this.userModel.findOneAndUpdate(
+    const user = await this.findByTelegramId(telegramId);
+    if (!user) return null;
+
+    const dests = user.notificationDestinations || [];
+    if (dests.some((d) => d.chatId === chatId)) {
+      this.logger.log(`User ${telegramId} already has destination ${chatId}`);
+      return user;
+    }
+
+    const updated = await this.userModel.findOneAndUpdate(
       { telegramId },
-      { $addToSet: { notificationChatIds: chatId } },
+      {
+        $push: { notificationDestinations: { chatId } },
+        $addToSet: { notificationChatIds: chatId },
+      },
       { new: true },
     );
 
     this.logger.log(`User ${telegramId} added notification destination: ${chatId}`);
-    return user;
+    return updated;
+  }
+
+  /**
+   * Set warning thread id for a destination (topic cho balance/card alert).
+   */
+  async setWarningThreadId(
+    telegramId: number,
+    chatId: number,
+    threadId: number,
+  ): Promise<UserDocument | null> {
+    const user = await this.findByTelegramId(telegramId);
+    if (!user) return null;
+
+    const dests = user.notificationDestinations || [];
+    const hasChat = dests.some((d) => d.chatId === chatId);
+    if (!hasChat) {
+      await this.userModel.findOneAndUpdate(
+        { telegramId },
+        {
+          $push: { notificationDestinations: { chatId, warningThreadId: threadId } },
+          $addToSet: { notificationChatIds: chatId },
+        },
+        { new: true },
+      );
+    } else {
+      await this.userModel.findOneAndUpdate(
+        { telegramId, 'notificationDestinations.chatId': chatId },
+        { $set: { 'notificationDestinations.$.warningThreadId': threadId } },
+        { new: true },
+      );
+    }
+
+    this.logger.log(`User ${telegramId} set warning thread ${threadId} for chat ${chatId}`);
+    return this.findByTelegramId(telegramId);
   }
 
   /**
@@ -242,7 +301,9 @@ export class UsersService {
   ): Promise<UserDocument | null> {
     const user = await this.userModel.findOneAndUpdate(
       { telegramId },
-      { $pull: { notificationChatIds: chatId } },
+      {
+        $pull: { notificationChatIds: chatId, notificationDestinations: { chatId } },
+      },
       { new: true },
     );
 
@@ -251,13 +312,12 @@ export class UsersService {
   }
 
   /**
-   * Get all notification destinations for a user (groups/channels only)
+   * Get all notification destinations for a user (groups/channels only) - legacy, prefer getDestinations(user).
    */
   async getNotificationDestinations(telegramId: number): Promise<number[]> {
     const user = await this.findByTelegramId(telegramId);
     if (!user) return [];
-    
-    // Return only additional destinations (groups/channels), not personal chat
-    return user.notificationChatIds || [];
+    const dests = this.getDestinations(user);
+    return dests.map((d) => d.chatId);
   }
 }
