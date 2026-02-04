@@ -113,7 +113,7 @@ export class CardSpendingAlertsService {
         return 'skipped';
       }
 
-      const destinations = user.notificationChatIds;
+      const destinations = this.usersService.getDestinations(user);
       if (destinations.length === 0) {
         this.logger.log(
           `User ${user.telegramId} has no notification destinations for VA ${report.virtualAccountId}. Skipping alert.`,
@@ -162,10 +162,21 @@ export class CardSpendingAlertsService {
 
       const message = Messages.cardSpendingAlert(highSpendingCards, today, this.thresholdAmount);
 
+      // Gửi vào topic Warning nếu đã set warningThreadId, ngược lại gửi vào General (không thread)
+      for (const dest of destinations) {
+        const threadLabel =
+          dest.warningThreadId != null && dest.warningThreadId !== 1
+            ? `, threadId=${dest.warningThreadId}`
+            : ' (General)';
+        this.logger.log(`Sending card spending alert to chatId=${dest.chatId}${threadLabel}`);
+      }
       const results = await Promise.allSettled(
-        destinations.map((chatId) =>
-          this.botService.sendMessage(chatId, message.text, {
+        destinations.map((dest) =>
+          this.botService.sendMessage(dest.chatId, message.text, {
             parse_mode: message.parse_mode,
+            // Chỉ truyền message_thread_id khi gửi vào topic khác General. General = không truyền (thread 1 gây lỗi "message thread not found").
+            ...(dest.warningThreadId != null &&
+              dest.warningThreadId !== 1 && { message_thread_id: dest.warningThreadId }),
           }),
         ),
       );
