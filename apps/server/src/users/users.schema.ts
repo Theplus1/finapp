@@ -3,13 +3,6 @@ import { HydratedDocument } from 'mongoose';
 
 export type UserDocument = HydratedDocument<User>;
 
-/** Một destination nhận thông báo: chatId + optional thread cho warning (balance/card alert). */
-export interface NotificationDestination {
-  chatId: number;
-  /** Thread id trong group (forum); nếu có thì balance/card alert gửi vào topic này. */
-  warningThreadId?: number;
-}
-
 export enum AccessStatus {
   PENDING = 'pending',
   APPROVED = 'approved',
@@ -47,14 +40,6 @@ export class User {
   // Notification Destinations
   @Prop({ type: [Number], default: [] })
   notificationChatIds: number[];
-
-  /** Chat + thread cho warning; ưu tiên đọc. Nếu rỗng thì fallback notificationChatIds. */
-  @Prop({
-    type: [{ chatId: Number, warningThreadId: Number }],
-    default: [],
-    _id: false,
-  })
-  notificationDestinations?: NotificationDestination[];
 
   // Access Control Fields
   @Prop({ 
