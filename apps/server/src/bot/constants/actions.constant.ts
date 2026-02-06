@@ -30,6 +30,9 @@ export const Actions = {
     detail: 'cards.action.detail',
     lock: 'cards.action.lock',
     unlock: 'cards.action.unlock',
+    setDailyLimit: 'cards.action.setDailyLimit',
+    unsetDailyLimit: 'cards.action.unsetDailyLimit',
+    limitPreset: 'cards.action.limitPreset',
   },
   feedback: {
     start: 'feedback.action.start',

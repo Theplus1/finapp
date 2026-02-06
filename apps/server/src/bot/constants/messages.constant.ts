@@ -111,6 +111,61 @@ export const Messages = {
     'Please *REPLY* to this message with the card ID you want to lock.\n\n(Send /cancel to cancel)',
   cardUnlockStart: '💬 *Card Unlock Form*\n\n' +
     'Please *REPLY* to this message with the card ID you want to unlock.\n\n(Send /cancel to cancel)',
+  cardDailyLimitStart:
+    '💬 *Card Spending Limit Form*\n\n' +
+    'Please *REPLY* to this message with the card ID you want to set a *spending limit* for.\n\n' +
+    '(Send /cancel to cancel)',
+  cardLimitPresetPrompt: (cardName: string, last4: string) =>
+    '⚙️ *Chọn loại limit*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'Chọn chu kỳ reset limit:',
+  cardDailyLimitAmountPrompt: (
+    cardName: string,
+    last4: string,
+    presetLabel: string,
+  ) =>
+    '💬 *Nhập số tiền limit (USD)*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n` +
+    `Loại: ${MarkdownUtil.escapse(presetLabel)}\n\n` +
+    'Vui lòng *REPLY* với số tiền giới hạn.\n\n' +
+    'Ví dụ: `10000`, `500`, `10000.50`\n\n' +
+    '(Send /cancel to cancel)',
+  cardDailyLimitInvalidAmount:
+    '❌ Invalid amount format.\n\n' +
+    'Please enter a positive number. Examples: `10000`, `500`, `10000.50`.\n\n' +
+    '(Send /cancel to cancel)',
+  cardLimitSuccess: (
+    cardName: string,
+    last4: string,
+    amount: number,
+    presetLabel: string,
+  ) =>
+    '✅ *Limit đã thiết lập*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n` +
+    `Limit: $${amount.toLocaleString('en-US', { maximumFractionDigits: 2 })} — ${presetLabel}\n\n` +
+    'Limit sẽ áp dụng cho giao dịch sau.',
+
+  /** Nhãn hiển thị cho từng loại limit (Slash API: daily | weekly | monthly | yearly | collective) */
+  limitPresetLabels: {
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    yearly: 'Yearly',
+    collective: 'Collective',
+  } as const,
+
+  cardDailyLimitUnsetStart:
+    '💬 *Unset Card Daily Limit Form*\n\n' +
+    'Please *REPLY* to this message with the card ID you want to *remove the daily spending limit* for.\n\n' +
+    '(Send /cancel to cancel)',
+  cardDailyLimitUnsetSuccess: (cardName: string, last4: string) =>
+    '✅ *Limit Removed Successfully!*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'This card no longer has a spending limit configured.',
+  cardDailyLimitUnsetNoConstraint: (cardName: string, last4: string) =>
+    'ℹ️ *No Limit Found*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'This card does not currently have a spending limit. Nothing to remove.',
   // Transactions
   transactionsMenu: '📋 *Transactions Menu*\n\nChoose an option:',
   transactionNotificationMenu: (isSubscribed: boolean) =>

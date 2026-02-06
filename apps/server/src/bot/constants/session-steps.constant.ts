@@ -8,6 +8,10 @@ export const SessionSteps = {
   AWAITING_UNLOCK_CARD_ID: 'awaiting_unlock_card_id',
   AWAITING_EXPORT_DATE: 'awaiting_export_date',
   AWAITING_TOPICALERT_REPLY: 'awaiting_topicalert_reply',
+  AWAITING_SET_LIMIT_CARD_ID: 'awaiting_set_limit_card_id',
+  AWAITING_SET_LIMIT_PRESET: 'awaiting_set_limit_preset',
+  AWAITING_SET_LIMIT_AMOUNT: 'awaiting_set_limit_amount',
+  AWAITING_UNSET_LIMIT_CARD_ID: 'awaiting_unset_limit_card_id',
 } as const;
 
 export type SessionStep = (typeof SessionSteps)[keyof typeof SessionSteps];

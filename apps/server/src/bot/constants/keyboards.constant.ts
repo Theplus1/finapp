@@ -109,6 +109,10 @@ export const Keyboards = {
     Markup.inlineKeyboard([
       [Markup.button.callback('Card Detail', Actions.cards.detail)],
       [Markup.button.callback('Lock Card', Actions.cards.lock), Markup.button.callback('Unlock Card', Actions.cards.unlock)],
+      [
+        Markup.button.callback('Set Limit', Actions.cards.setDailyLimit),
+        Markup.button.callback('Unset Limit', Actions.cards.unsetDailyLimit),
+      ],
       [Markup.button.callback('« Back to Menu', Actions.menu.main)],
     ]),
   cardsList: (cards: any[], currentCursor?: string, nextCursor?: string) => {
@@ -139,6 +143,20 @@ export const Keyboards = {
       // [Markup.button.callback(isActive ? '🔒 Lock' : '🔓 Unlock', `card_${cardId}_${isActive ? 'lock' : 'unlock'}`)],
       [Markup.button.callback('« Back', Actions.menu.cards)],
       [Markup.button.callback('« Back to Menu', Actions.menu.main)],
+    ]),
+
+  /** Inline keyboard chọn loại limit (daily, weekly, monthly, yearly, collective) */
+  limitPresetSelect: () =>
+    Markup.inlineKeyboard([
+      [
+        Markup.button.callback('Daily', `${Actions.cards.limitPreset}.daily`),
+        Markup.button.callback('Weekly', `${Actions.cards.limitPreset}.weekly`),
+      ],
+      [
+        Markup.button.callback('Monthly', `${Actions.cards.limitPreset}.monthly`),
+        Markup.button.callback('Yearly', `${Actions.cards.limitPreset}.yearly`),
+      ],
+      [Markup.button.callback('Collective', `${Actions.cards.limitPreset}.collective`)],
     ]),
 
   // ==================== Admin Keyboards ====================

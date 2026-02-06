@@ -25,11 +25,25 @@ export interface CardDto {
   cardProductId?: string;
 }
 
+
+export interface UtilizationLimitDto {
+  timezone?: string;
+  limitAmount: { amountCents: number };
+  preset: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'collective';
+  startDate?: string;
+}
+
+export interface SpendingConstraintSpendingRuleDto {
+  utilizationLimit?: UtilizationLimitDto;
+  utilizationLimitV2?: UtilizationLimitDto[];
+  transactionSizeLimit?: {
+    minimum?: { amountCents: number };
+    maximum?: { amountCents: number };
+  };
+}
+
 export interface SpendingConstraintDto {
-  amount?: number;
-  currency?: string;
-  interval?: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'lifetime';
-  categories?: string[];
+  spendingRule?: SpendingConstraintSpendingRuleDto;
 }
 
 export interface CreateCardDto {
@@ -45,5 +59,6 @@ export interface CreateCardDto {
 export interface UpdateCardDto {
   name?: string;
   status?: CardStatus;
+  spendingConstraint?: SpendingConstraintDto | null;
   userData?: Record<string, any>;
 }

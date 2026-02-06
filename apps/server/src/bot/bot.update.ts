@@ -102,6 +102,40 @@ export class BotUpdate {
     });
   }
 
+  @ValidateUser({ answerCallback: true })
+  @Action(Actions.cards.setDailyLimit)
+  async onCardSetDailyLimitAction(@Ctx() ctx: BotContext) {
+    ctx.session = { step: SessionSteps.AWAITING_SET_LIMIT_CARD_ID, data: {} };
+    await ctx.reply(Messages.cardDailyLimitStart, {
+      parse_mode: 'Markdown',
+      reply_markup: { force_reply: true, selective: true },
+    });
+  }
+
+  @ValidateUser({ answerCallback: true })
+  @Action(Actions.cards.unsetDailyLimit)
+  async onCardUnsetDailyLimitAction(@Ctx() ctx: BotContext) {
+    ctx.session = {
+      step: SessionSteps.AWAITING_UNSET_LIMIT_CARD_ID,
+      data: {},
+    };
+    await ctx.reply(Messages.cardDailyLimitUnsetStart, {
+      parse_mode: 'Markdown',
+      reply_markup: { force_reply: true, selective: true },
+    });
+  }
+
+  @ValidateUser({ answerCallback: true })
+  @Action(actionWithPayloadRegex(Actions.cards.limitPreset, '(daily|weekly|monthly|yearly|collective)'))
+  async onCardLimitPresetAction(@Ctx() ctx: BotContext) {
+    const callbackData = (ctx.callbackQuery as { data?: string })?.data ?? '';
+    const preset = callbackData.match(
+      actionWithPayloadRegex(Actions.cards.limitPreset, '(daily|weekly|monthly|yearly|collective)'),
+    )?.[1] as 'daily' | 'weekly' | 'monthly' | 'yearly' | 'collective' | undefined;
+    if (!preset) return;
+    await this.cardHandler.handleLimitPresetSelected(ctx, preset);
+  }
+
   // @Action('card.action.unlock')
   // async onCardUnlockAction(@Ctx() ctx: BotContext) {
   //   await ctx.answerCbQuery();
@@ -257,6 +291,15 @@ export class BotUpdate {
         break;
       case SessionSteps.AWAITING_EXPORT_DATE:
         await this.transactionsHandler.handleExportDateInput(ctx, text);
+        break;
+      case SessionSteps.AWAITING_SET_LIMIT_CARD_ID:
+        await this.cardHandler.handleSetDailyLimitCardIdInput(ctx, text);
+        break;
+      case SessionSteps.AWAITING_SET_LIMIT_AMOUNT:
+        await this.cardHandler.handleSetDailyLimitAmountInput(ctx, text); 
+        break;
+      case SessionSteps.AWAITING_UNSET_LIMIT_CARD_ID:
+        await this.cardHandler.handleUnsetDailyLimitCardIdInput(ctx, text);
         break;
       case SessionSteps.AWAITING_TOPICALERT_REPLY:
         await this.notificationsHandler.handleTopicalertThreadIdInput(ctx, text);

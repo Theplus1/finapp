@@ -9,7 +9,7 @@ export interface SpendingRuleDto {
     limitAmount: {
       amountCents: number;
     };
-    preset: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'lifetime';
+    preset: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'collective';
     startDate?: string;
   };
   utilizationLimitV2?: Array<{
@@ -17,7 +17,7 @@ export interface SpendingRuleDto {
     limitAmount: {
       amountCents: number;
     };
-    preset: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'lifetime';
+    preset: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'collective';
     startDate?: string;
   }>;
   transactionSizeLimit?: {
