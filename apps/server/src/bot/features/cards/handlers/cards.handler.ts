@@ -310,6 +310,116 @@ export class CardsHandler {
     }
   }
 
+  async handleSetRecurringOnlyModifierCardIdInput(ctx: BotContext, rawCardId: string) {
+    const userData = ctx.userData;
+    if (!userData?.virtualAccountId) {
+      await ctx.reply(Messages.accountNotLinked);
+      ctx.session = undefined;
+      return;
+    }
+
+    const cardId = rawCardId.trim();
+
+    try {
+      const card = await this.verifyCardOwnership(
+        ctx,
+        cardId,
+        userData.virtualAccountId,
+      );
+      if (!card) {
+        ctx.session = undefined;
+        return;
+      }
+
+      const modifiers = await this.slashApiService.getCardModifiers(card.id);
+      const existing = modifiers.find(
+        (modifier) => modifier.name === 'only_allow_recurring_payments',
+      );
+
+      if (existing?.value === true) {
+        ctx.session = undefined;
+        await ctx.reply(
+          Messages.cardModifierAlreadyEnabled(card.name, card.last4),
+          { parse_mode: 'Markdown' },
+        );
+        return;
+      }
+
+      await this.slashApiService.setCardModifier(card.id, {
+        name: 'only_allow_recurring_payments',
+        value: true,
+      });
+
+      ctx.session = undefined;
+      await ctx.reply(
+        Messages.cardModifierSetRecurringOnlySuccess(card.name, card.last4),
+        { parse_mode: 'Markdown' },
+      );
+    } catch (error) {
+      this.logger.error(
+        `[Bot] Error setting recurring-only modifier for card ${cardId}:`,
+        error,
+      );
+      ctx.session = undefined;
+      await ctx.reply(Messages.errorGeneric);
+    }
+  }
+
+  async handleUnsetRecurringOnlyModifierCardIdInput(ctx: BotContext, rawCardId: string) {
+    const userData = ctx.userData;
+    if (!userData?.virtualAccountId) {
+      await ctx.reply(Messages.accountNotLinked);
+      ctx.session = undefined;
+      return;
+    }
+
+    const cardId = rawCardId.trim();
+
+    try {
+      const card = await this.verifyCardOwnership(
+        ctx,
+        cardId,
+        userData.virtualAccountId,
+      );
+      if (!card) {
+        ctx.session = undefined;
+        return;
+      }
+
+      const modifiers = await this.slashApiService.getCardModifiers(card.id);
+      const existing = modifiers.find(
+        (modifier) => modifier.name === 'only_allow_recurring_payments',
+      );
+
+      if (!existing || existing.value === false) {
+        ctx.session = undefined;
+        await ctx.reply(
+          Messages.cardModifierAlreadyDisabled(card.name, card.last4),
+          { parse_mode: 'Markdown' },
+        );
+        return;
+      }
+
+      await this.slashApiService.setCardModifier(card.id, {
+        name: 'only_allow_recurring_payments',
+        value: false,
+      });
+
+      ctx.session = undefined;
+      await ctx.reply(
+        Messages.cardModifierUnsetRecurringOnlySuccess(card.name, card.last4),
+        { parse_mode: 'Markdown' },
+      );
+    } catch (error) {
+      this.logger.error(
+        `[Bot] Error unsetting recurring-only modifier for card ${cardId}:`,
+        error,
+      );
+      ctx.session = undefined;
+      await ctx.reply(Messages.errorGeneric);
+    }
+  }
+
   async exportCardsList(ctx: BotContext) {
     try {
       await ctx.reply(

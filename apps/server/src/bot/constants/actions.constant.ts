@@ -33,6 +33,8 @@ export const Actions = {
     setDailyLimit: 'cards.action.setDailyLimit',
     unsetDailyLimit: 'cards.action.unsetDailyLimit',
     limitPreset: 'cards.action.limitPreset',
+    setRecurringOnly: 'cards.action.setRecurringOnly',
+    unsetRecurringOnly: 'cards.action.unsetRecurringOnly',
   },
   feedback: {
     start: 'feedback.action.start',
