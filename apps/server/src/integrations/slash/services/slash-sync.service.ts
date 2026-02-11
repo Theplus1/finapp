@@ -446,6 +446,44 @@ export class SlashSyncService {
   }
 
   /**
+   * Incremental sync - only sync recent transactions by minutes
+   */
+  async syncRecentTransactionsByMinutes(minutesBack: number = SYNC_CONSTANTS.DEFAULT_MINUTES_BACK): Promise<void> {
+    const syncLog = await this.createSyncLog(
+      SYNC_CONSTANTS.ENTITY_TYPE.TRANSACTION,
+      SYNC_CONSTANTS.SYNC_TYPE.SCHEDULED_INCREMENTAL,
+    );
+    const startDate = new Date(Date.now() - minutesBack * 60 * 1000);
+
+    try {
+      await this.syncAllTransactions(startDate);
+      await this.completeSyncLog(syncLog._id as Types.ObjectId, SYNC_CONSTANTS.SYNC_STATUS.COMPLETED, {});
+    } catch (error) {
+      await this.failSyncLog(syncLog._id as Types.ObjectId, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Incremental sync - only sync recent transactions by seconds
+   */
+  async syncRecentTransactionsBySeconds(secondsBack: number = SYNC_CONSTANTS.DEFAULT_SECONDS_BACK): Promise<void> {
+    const syncLog = await this.createSyncLog(
+      SYNC_CONSTANTS.ENTITY_TYPE.TRANSACTION,
+      SYNC_CONSTANTS.SYNC_TYPE.SCHEDULED_INCREMENTAL,
+    );
+    const startDate = new Date(Date.now() - secondsBack * 1000);
+
+    try {
+      await this.syncAllTransactions(startDate);
+      await this.completeSyncLog(syncLog._id as Types.ObjectId, SYNC_CONSTANTS.SYNC_STATUS.COMPLETED, {});
+    } catch (error) {
+      await this.failSyncLog(syncLog._id as Types.ObjectId, error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Sync all virtual accounts
    */
   async syncAllVirtualAccounts(): Promise<void> {

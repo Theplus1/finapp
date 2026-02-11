@@ -7,8 +7,8 @@ export interface TransactionFilters {
   virtualAccountId?: string;
   cardId?: string;
   status?: string;
-  detailedStatus?: string;
-  amountCents?: number;
+  detailedStatus?: string | any;
+  amountCents?: number | any;
   type?: string;
   startDate?: Date;
   endDate?: Date;

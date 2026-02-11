@@ -3,6 +3,7 @@ import { TransactionDataDTO } from "src/integrations/slash/dto/webhook.dto";
 import { CardDto, TransactionDetailedStatus } from "src/integrations/slash/types";
 import { formatCurrency } from "src/shared/utils/formatCurrency.util";
 import { MarkdownUtil } from "src/shared/utils/markdown.util";
+import { HtmlUtil } from "src/shared/utils/html.util";
 import type { UserDocument } from "src/users/users.schema";
 import type { AccessStatus } from "src/users/users.schema";
 
@@ -40,6 +41,7 @@ export const Messages = {
     `/connect - Connect group/channel for notifications\n` +
     `/disconnect - Disconnect current group/channel\n` +
     `/destinations - List all connected chats\n\n` +
+    `/topicalert - Set this topic as destination for balance/card alerts\n\n` +
     `*Other:*\n` +
     `/feedback - Send feedback (multi-step conversation)`,
 
@@ -109,6 +111,85 @@ export const Messages = {
     'Please *REPLY* to this message with the card ID you want to lock.\n\n(Send /cancel to cancel)',
   cardUnlockStart: '💬 *Card Unlock Form*\n\n' +
     'Please *REPLY* to this message with the card ID you want to unlock.\n\n(Send /cancel to cancel)',
+  cardDailyLimitStart:
+    '💬 *Card Spending Limit Form*\n\n' +
+    'Please *REPLY* to this message with the card ID you want to set a *spending limit* for.\n\n' +
+    '(Send /cancel to cancel)',
+  cardLimitPresetPrompt: (cardName: string, last4: string) =>
+    '⚙️ *Chọn loại limit*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'Chọn chu kỳ reset limit:',
+  cardDailyLimitAmountPrompt: (
+    cardName: string,
+    last4: string,
+    presetLabel: string,
+  ) =>
+    '💬 *Nhập số tiền limit (USD)*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n` +
+    `Loại: ${MarkdownUtil.escapse(presetLabel)}\n\n` +
+    'Vui lòng *REPLY* với số tiền giới hạn.\n\n' +
+    'Ví dụ: `10000`, `500`, `10000.50`\n\n' +
+    '(Send /cancel to cancel)',
+  cardDailyLimitInvalidAmount:
+    '❌ Invalid amount format.\n\n' +
+    'Please enter a positive number. Examples: `10000`, `500`, `10000.50`.\n\n' +
+    '(Send /cancel to cancel)',
+  cardLimitSuccess: (
+    cardName: string,
+    last4: string,
+    amount: number,
+    presetLabel: string,
+  ) =>
+    '✅ *Limit đã thiết lập*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n` +
+    `Limit: $${amount.toLocaleString('en-US', { maximumFractionDigits: 2 })} — ${presetLabel}\n\n` +
+    'Limit sẽ áp dụng cho giao dịch sau.',
+
+  /** Nhãn hiển thị cho từng loại limit (Slash API: daily | weekly | monthly | yearly | collective) */
+  limitPresetLabels: {
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    yearly: 'Yearly',
+    collective: 'Collective',
+  } as const,
+
+  cardDailyLimitUnsetStart:
+    '💬 *Unset Card Daily Limit Form*\n\n' +
+    'Please *REPLY* to this message with the card ID you want to *remove the daily spending limit* for.\n\n' +
+    '(Send /cancel to cancel)',
+  cardDailyLimitUnsetSuccess: (cardName: string, last4: string) =>
+    '✅ *Limit Removed Successfully!*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'This card no longer has a spending limit configured.',
+  cardDailyLimitUnsetNoConstraint: (cardName: string, last4: string) =>
+    'ℹ️ *No Limit Found*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'This card does not currently have a spending limit. Nothing to remove.',
+  cardModifierSetRecurringOnlyStart:
+    '💬 *Enable Recurring-Only Modifier*\n\n' +
+    'Please *REPLY* to this message with the card ID you want to enable *recurring-only payments* for.\n\n' +
+    '(Send /cancel to cancel)',
+  cardModifierUnsetRecurringOnlyStart:
+    '💬 *Disable Recurring-Only Modifier*\n\n' +
+    'Please *REPLY* to this message with the card ID you want to disable *recurring-only payments* for.\n\n' +
+    '(Send /cancel to cancel)',
+  cardModifierSetRecurringOnlySuccess: (cardName: string, last4: string) =>
+    '✅ *Recurring-Only Enabled*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'This card is now restricted to recurring payments only.',
+  cardModifierUnsetRecurringOnlySuccess: (cardName: string, last4: string) =>
+    '✅ *Recurring-Only Disabled*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'This card is no longer restricted to recurring payments only.',
+  cardModifierAlreadyEnabled: (cardName: string, last4: string) =>
+    'ℹ️ *Modifier Already Enabled*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'The recurring-only modifier is already enabled for this card.',
+  cardModifierAlreadyDisabled: (cardName: string, last4: string) =>
+    'ℹ️ *Modifier Already Disabled*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'The recurring-only modifier is already disabled for this card.',
   // Transactions
   transactionsMenu: '📋 *Transactions Menu*\n\nChoose an option:',
   transactionNotificationMenu: (isSubscribed: boolean) =>
@@ -166,13 +247,16 @@ export const Messages = {
     }
     const cardInfo = card ? `${card.name} (••••${card.last4})` : 'N/A';
     const formattedDate = format(new Date(transaction.date), 'dd-MM-yy HH:mm:ss');
-    // const description = transaction.merchantData?.description || 'N/A';
     const declineReason = transaction.declineReason || 'No reason provided';
 
     let message = `<b>${escapeHtml(title)}</b>\n\n` +
       `Thẻ ${escapeHtml(cardInfo)} có giao dịch ${status}\n` +
       `Amount: ${formatCurrency(Math.abs(transaction.amountCents || 0), transaction.originalCurrency?.code)}\n`;
-    // `Description: ${isBoldDescription ? `<b>${escapeHtml(description)}</b>` : escapeHtml(description)}\n`
+
+    if (transaction.amountCents !== -100) {
+      const description = transaction.merchantData?.description || 'N/A';
+      message += `Description: ${isBoldDescription ? `<b>${escapeHtml(description)}</b>` : escapeHtml(description)}\n`;
+    }
     if (isDeclined) {
       message += `Declined Reason: ${escapeHtml(declineReason)}\n`;
     }
@@ -303,6 +387,32 @@ export const Messages = {
     `✅ *Connected Successfully!*\n\n` +
     `This chat (*${chatTitle}*) will now receive transaction notifications.`,
 
+  connectUserNotFound: () =>
+    `❌ *Không thể kết nối*\n\n` +
+    `Không tìm thấy user hợp lệ với Telegram ID này. Vui lòng liên hệ admin để được thêm vào hệ thống.`,
+
+  topicalertSuccess: (threadId: number) =>
+    `✅ *Đã lưu topic cảnh báo*\n\n` +
+    `Cảnh báo (balance/card) sẽ được gửi vào topic này (thread ID: ${threadId}).`,
+
+  topicalertNotForum:
+    '⚠️ Group này không phải forum group. Lệnh /topicalert chỉ hoạt động với forum groups.',
+
+  topicalertInvalidThreadId:
+    '❌ *Thread ID không hợp lệ*\n\n' +
+    'Vui lòng nhập một số nguyên dương (ví dụ: 1, 2, 3...)\n\n' +
+    'Gửi `/cancel` để hủy.',
+
+  topicalertThreadIdPrompt: () =>
+    `📝 *Nhập Thread ID*\n\n` +
+    `Vui lòng nhập thread ID của topic bạn muốn chọn.\n\n` +
+    `💡 *Cách lấy Thread ID:*\n` +
+    `1. Vào topic bạn muốn chọn\n` +
+    `2. Kiểm tra link của topic (ví dụ: \`t.me/c/.../85\`)\n` +
+    `3. Số cuối cùng trong link chính là thread ID (ví dụ: 85)\n\n` +
+    `Hoặc reply một message trong topic đó rồi gửi lại \`/topicalert\`.\n\n` +
+    `(Gửi /cancel để hủy)`,
+
   disconnectPrivateChatError:
     '⚠️ *Cannot Disconnect Private Chat*\n\n' +
     'This command can only be used in groups or channels.',
@@ -338,7 +448,26 @@ export const Messages = {
 
   // Balance Alert
   balanceAlert: (vaName: string, balanceUsd: number) => ({
-    text: `⚠️ Balance của tài khoản "${MarkdownUtil.escapse(vaName)}" đang có số dư ${balanceUsd}USD, cần topup thêm để tránh lỗi thanh toán`,
-    parse_mode: 'Markdown' as const,
+    text: `⚠️ Balance của tài khoản "${HtmlUtil.escape(vaName)}" đang có số dư ${balanceUsd}USD, cần topup thêm để tránh lỗi thanh toán`,
+    parse_mode: 'HTML' as const,
   }),
+
+  // Card Spending Alert
+  cardSpendingAlert: (
+    cards: Array<{ cardName: string; amount: number | null }>,
+    date: string,
+    threshold: number,
+  ) => {
+    const dateVN = format(new Date(date), 'dd/MM/yyyy');
+
+    const lines = cards.map((card) => {
+      const cardName = HtmlUtil.escape(card.cardName);
+      return `⚠️ ${dateVN}: Thẻ <b>\"${cardName}\"</b> đang có chi tiêu >${threshold}USD/ngày`;
+    });
+
+    return {
+      text: lines.join('\n'),
+      parse_mode: 'HTML' as const,
+    };
+  },
 };

@@ -5,6 +5,7 @@ import {
   CardDto,
   CardStatus,
   CreateCardDto,
+  SpendingConstraintDto,
   UpdateCardDto,
 } from '../dto/card.dto';
 import {
@@ -32,6 +33,7 @@ import {
   UpdateCardGroupDto,
   ListCardGroupsQuery,
 } from '../dto/card-group.dto';
+import { CardModifierDto, CardModifiersResponseDto } from '../dto/card-modifier.dto';
 import { SlashApiResponse, PaginatedResponse, ListResponse } from '../interfaces/slash-response.interface';
 
 /**
@@ -134,11 +136,52 @@ export class SlashApiService {
 
   private async request<T>(config: AxiosRequestConfig): Promise<T> {
     try {
-      const response = await this.axiosInstance.request<T>(config);
-      return response.data;
+      const response = await this.axiosInstance.request<{ data?: T } & Record<string, unknown>>(config);
+      const body = response.data;
+      if (body != null && typeof body === 'object' && 'data' in body && body.data !== undefined) {
+        return body.data as T;
+      }
+      return (body ?? response.data) as T;
     } catch (error) {
       throw error;
     }
+  }
+
+  private mergeSpendingConstraint(
+    existing: Record<string, unknown>,
+    incoming: SpendingConstraintDto | null,
+  ): SpendingConstraintDto | null {
+    const existingRule = (existing.spendingRule ?? {}) as Record<string, unknown>;
+
+    if (incoming === null) {
+      const { utilizationLimit: _u, utilizationLimitV2: _v, ...restRule } = existingRule;
+      const mergedRule = { ...restRule };
+      const hasOtherConstraintFields = Object.keys(existing).some((k) => k !== 'spendingRule');
+      const hasOtherRuleFields = Object.keys(mergedRule).length > 0;
+      if (!hasOtherConstraintFields && !hasOtherRuleFields) {
+        return null;
+      }
+      return { ...existing, spendingRule: mergedRule } as SpendingConstraintDto;
+    }
+
+    const newLimit = incoming.spendingRule?.utilizationLimit;
+    const mergedRule: Record<string, unknown> = {
+      ...existingRule,
+    };
+    if (newLimit) {
+      const existingLimit = existingRule.utilizationLimit as Record<string, unknown> | undefined;
+      const mergedLimit = {
+        ...newLimit,
+        timezone: newLimit.timezone ?? existingLimit?.timezone,
+      };
+      mergedRule.utilizationLimit = mergedLimit;
+      mergedRule.utilizationLimitV2 = [mergedLimit];
+    } else {
+      delete mergedRule.utilizationLimit;
+      delete mergedRule.utilizationLimitV2;
+    }
+
+    return { ...existing, spendingRule: mergedRule } as SpendingConstraintDto;
   }
 
   // ==================== Account Methods ====================
@@ -263,10 +306,64 @@ export class SlashApiService {
     });
   }
 
+  async updateCardSpendingConstraint(
+    cardId: string,
+    spendingConstraint: SpendingConstraintDto | null,
+  ): Promise<CardDto> {
+    this.logger.log(
+      `[Slash] updateCardSpendingConstraint called: cardId=${cardId}, payload=${JSON.stringify(spendingConstraint)}`,
+    );
+    try {
+      const current = await this.getCard(cardId);
+      const mergedConstraint = this.mergeSpendingConstraint(
+        (current.spendingConstraint ?? {}) as Record<string, unknown>,
+        spendingConstraint,
+      );
+      const updatePayload: UpdateCardDto = {
+        name: current.name,
+        status: current.status,
+        spendingConstraint: mergedConstraint,
+      };
+      if (current.userData != null && Object.keys(current.userData).length > 0) {
+        updatePayload.userData = current.userData;
+      }
+      const card = await this.updateCard(cardId, updatePayload);
+      this.logger.log(
+        `[Slash] updateCardSpendingConstraint success: cardId=${cardId}, constraint=${JSON.stringify(card.spendingConstraint ?? null)}`,
+      );
+      return card;
+    } catch (err) {
+      const e = err as Error & { getResponse?: () => unknown; getStatus?: () => number; response?: { status?: number; data?: unknown } };
+      const status = typeof e.getStatus === 'function' ? e.getStatus() : e.response?.status;
+      const body = typeof e.getResponse === 'function' ? e.getResponse() : e.response?.data;
+      this.logger.error(
+        `[Slash] updateCardSpendingConstraint failed: cardId=${cardId}, status=${status}, response=${JSON.stringify(body)}`,
+        e.stack,
+      );
+      throw err;
+    }
+  }
+
   async getCardUtilization(cardId: string): Promise<any> {
     return this.request<any>({
       method: 'GET',
-      url: `/cards/${cardId}/utilization`,
+      url: `/card/${cardId}/utilization`,
+    });
+  }
+
+  async getCardModifiers(cardId: string): Promise<CardModifierDto[]> {
+    const response = await this.request<CardModifiersResponseDto>({
+      method: 'GET',
+      url: `/card/${cardId}/modifier`,
+    });
+    return response.modifiers;
+  }
+
+  async setCardModifier(cardId: string, modifier: CardModifierDto): Promise<void> {
+    await this.request<{ success: boolean }>({
+      method: 'PUT',
+      url: `/card/${cardId}/modifier`,
+      data: modifier,
     });
   }
 

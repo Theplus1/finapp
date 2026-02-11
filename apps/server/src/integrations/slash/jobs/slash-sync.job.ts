@@ -25,7 +25,7 @@ export class SlashSyncJob {
   /**
    * Sync cards daily at midnight
    */
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  @Cron(CronExpression.EVERY_30_SECONDS)
   async syncCards() {
     if (!this.enableScheduledSync) {
       return;
@@ -41,10 +41,29 @@ export class SlashSyncJob {
   }
 
   /**
-   * Sync recent transactions every hour
+   * Sync recent transactions every 10 seconds
+   */
+  @Cron(CronExpression.EVERY_10_SECONDS)
+  async syncRecentTransactions() {
+    if (!this.enableScheduledSync) {
+      return;
+    }
+
+    this.logger.log('Starting scheduled recent transaction sync...');
+    try {
+      // Sync transactions from last 30 seconds (runs every 10s for 3x overlap)
+      await this.slashSyncService.syncRecentTransactionsBySeconds(30);
+      this.logger.log('Scheduled recent transaction sync completed successfully');
+    } catch (error) {
+      this.logger.error('Scheduled recent transaction sync failed:', error);
+    }
+  }
+
+  /**
+   * Sync recent transactions every day
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async syncRecentTransactions() {
+  async syncRecentTransactionsDaily() {
     if (!this.enableScheduledSync) {
       return;
     }

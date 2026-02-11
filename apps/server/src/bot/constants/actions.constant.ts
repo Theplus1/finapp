@@ -30,6 +30,11 @@ export const Actions = {
     detail: 'cards.action.detail',
     lock: 'cards.action.lock',
     unlock: 'cards.action.unlock',
+    setDailyLimit: 'cards.action.setDailyLimit',
+    unsetDailyLimit: 'cards.action.unsetDailyLimit',
+    limitPreset: 'cards.action.limitPreset',
+    setRecurringOnly: 'cards.action.setRecurringOnly',
+    unsetRecurringOnly: 'cards.action.unsetRecurringOnly',
   },
   feedback: {
     start: 'feedback.action.start',
