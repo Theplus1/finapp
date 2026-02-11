@@ -15,6 +15,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { CirclePlus, Trash } from "lucide-react";
 
 type Props = {
   virtualAccount: VirtualAccount | null;
@@ -23,15 +24,26 @@ type Props = {
   onSubmitSuccess: () => void;
 };
 
+const renderTelegramsIds = (virtualAccount: VirtualAccount) => {
+  let initTelegramsIds;
+  if (virtualAccount?.linkedTelegramIds?.length) {
+    initTelegramsIds = virtualAccount.linkedTelegramIds;
+  } else if (virtualAccount?.linkedTelegramId) {
+    initTelegramsIds = [virtualAccount.linkedTelegramId];
+  } else {
+    initTelegramsIds = [0];
+  }
+  return initTelegramsIds;
+};
+
 const FormLinkTelegram = ({
   virtualAccount,
   openDrawer,
   onCancel,
   onSubmitSuccess,
 }: Props) => {
-  const [telegramId, setTelegramId] = useState<number>(
-    virtualAccount?.linkedTelegramId ?? 0
-  );
+  const initTelegramsIds = renderTelegramsIds(virtualAccount!);
+  const [telegramIds, setTelegramIds] = useState<number[]>(initTelegramsIds);
   const [isLoading, setIsLoading] = useState(false);
 
   const { mutateAsync: linkTelegram } = useMutation({
@@ -39,7 +51,7 @@ const FormLinkTelegram = ({
       setIsLoading(true);
       api.virtualAccounts
         .linkTelegram(virtualAccount!._id, {
-          telegramId: telegramId!,
+          telegramIds: telegramIds,
         })
         .then(() => {
           onSubmitSuccess();
@@ -57,11 +69,11 @@ const FormLinkTelegram = ({
     if (!virtualAccount || !openDrawer) {
       return;
     }
-    setTelegramId(virtualAccount.linkedTelegramId ?? 0);
+    setTelegramIds(initTelegramsIds);
   }, [openDrawer, virtualAccount]);
 
   const onSubmit = () => {
-    if (!telegramId) {
+    if (!telegramIds) {
       toast.error("Telegram ID is required");
       return;
     }
@@ -69,37 +81,73 @@ const FormLinkTelegram = ({
   };
 
   const handleDrawerClose = () => {
-    setTelegramId(0);
+    setTelegramIds([0]);
     onCancel();
   };
 
   const disableSubmit =
-    isLoading || !telegramId || telegramId === virtualAccount?.linkedTelegramId;
+    isLoading ||
+    (telegramIds.length === virtualAccount?.linkedTelegramIds?.length &&
+      telegramIds.every((id) =>
+        virtualAccount?.linkedTelegramIds?.some(
+          (telegramId) => telegramId === id,
+        ),
+      ));
+
+  const handleAddTelegramId = () => {
+    setTelegramIds([...telegramIds, 0]);
+  };
+
+  const handleRemoveTelegramId = (index: number) => {
+    setTelegramIds(telegramIds.filter((_, i) => i !== index));
+  };
 
   return (
     <Drawer direction="right" open={openDrawer}>
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>
-            Link telegram to virtual account &quot;
+            Link telegrams to virtual account &quot;
             {virtualAccount?.name ?? EMPTY_LABEL}&quot;
           </DrawerTitle>
         </DrawerHeader>
         <div className="px-4 flex flex-col gap-2">
           <label className="block text-sm font-medium text-muted-foreground">
-            Telegram ID
+            Telegram IDs
           </label>
-          <Input
-            placeholder="Enter telegram id"
-            value={telegramId}
-            onChange={(e) => {
-              const value = e.target.value;
-              const numericValue = value.replace(/[^0-9]/g, "");
-              setTelegramId(numericValue ? Number(numericValue) : 0);
-            }}
-            onBlur={(e) => {
-              setTelegramId(Number(e.target.value) || 0);
-            }}
+          {telegramIds.map((id, index) => (
+            <div key={index} className="flex items-center gap-3">
+              <Input
+                placeholder="Enter telegram id"
+                value={id}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const numericValue = value.replace(/[^0-9]/g, "");
+                  setTelegramIds((prev) => {
+                    const newIds = [...prev];
+                    newIds[index] = Number(numericValue);
+                    return newIds;
+                  });
+                }}
+                onBlur={(e) => {
+                  setTelegramIds((prev) => {
+                    const newIds = [...prev];
+                    newIds[index] = Number(e.target.value) || 0;
+                    return newIds;
+                  });
+                }}
+              />
+              <Trash
+                size={22}
+                className="cursor-pointer"
+                onClick={() => handleRemoveTelegramId(index)}
+              />
+            </div>
+          ))}
+          <CirclePlus
+            size={22}
+            className="text-muted-foreground cursor-pointer mt-4"
+            onClick={handleAddTelegramId}
           />
         </div>
         <DrawerFooter className="px-4">
@@ -114,7 +162,7 @@ const FormLinkTelegram = ({
             <Button
               className={cn(
                 "cursor-pointer",
-                disableSubmit && "cursor-not-allowed opacity-50"
+                disableSubmit && "cursor-not-allowed opacity-50",
               )}
               onClick={!disableSubmit ? onSubmit : undefined}
             >

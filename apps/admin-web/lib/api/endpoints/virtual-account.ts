@@ -28,6 +28,7 @@ export interface VirtualAccount {
   linkedAt?: string;
   linkedBy?: string;
   linkedTelegramId?: number;
+  linkedTelegramIds?: number[];
   accountNumber: string;
   routingNumber: string;
 }
@@ -59,7 +60,7 @@ export const virtualAccountsApi = {
   },
   linkTelegram: async (
     virtualAccountId: string,
-    body: { telegramId: number }
+    body: { telegramIds: number[] }
   ): Promise<ApiResponse<VirtualAccount>> => {
     return await apiClient.post(
       `/virtual-account/${virtualAccountId}/link`,
