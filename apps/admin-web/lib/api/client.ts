@@ -171,7 +171,7 @@ class HttpClient {
   private async request<T>(
     method: HttpMethod,
     endpoint: string,
-    config?: RequestConfig
+    config?: RequestConfig,
   ): Promise<ApiResponse<T>> {
     const { params, headers, body, ...restConfig } = config || {};
 
@@ -185,8 +185,10 @@ class HttpClient {
         body: body ? JSON.stringify(body) : undefined,
         ...restConfig,
       });
-      if (response.status === 401) {
-        window.location.href = "/login";
+      const currentPath = window.location.pathname;
+      const pathLogin = "/login";
+      if (response.status === 401 && currentPath !== pathLogin) {
+        window.location.href = pathLogin;
       }
       const result: ApiResponse<T> = await this.handleResponse<T>(response);
       return result;
@@ -206,7 +208,7 @@ class HttpClient {
    */
   async get<T>(
     endpoint: string,
-    config?: RequestConfig
+    config?: RequestConfig,
   ): Promise<ApiResponse<T>> {
     return this.request<T>("GET", endpoint, config);
   }
@@ -217,7 +219,7 @@ class HttpClient {
   async post<T>(
     endpoint: string,
     data?: unknown,
-    config?: RequestConfig
+    config?: RequestConfig,
   ): Promise<ApiResponse<T>> {
     return this.request<T>("POST", endpoint, {
       ...config,
@@ -231,7 +233,7 @@ class HttpClient {
   async put<T>(
     endpoint: string,
     data?: unknown,
-    config?: RequestConfig
+    config?: RequestConfig,
   ): Promise<ApiResponse<T>> {
     return this.request<T>("PUT", endpoint, {
       ...config,
@@ -245,7 +247,7 @@ class HttpClient {
   async patch<T>(
     endpoint: string,
     data?: unknown,
-    config?: RequestConfig
+    config?: RequestConfig,
   ): Promise<ApiResponse<T>> {
     return this.request<T>("PATCH", endpoint, {
       ...config,
@@ -258,7 +260,7 @@ class HttpClient {
    */
   async delete<T>(
     endpoint: string,
-    config?: RequestConfig
+    config?: RequestConfig,
   ): Promise<ApiResponse<T>> {
     return this.request<T>("DELETE", endpoint, config);
   }

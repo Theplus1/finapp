@@ -188,12 +188,12 @@ export default function VirtualAccount() {
         if (telegrams.length > 0) {
           renderMenyIdTelegram = (
             <>
-              {telegrams.map((telegram) => (
+              {telegrams.map((telegram, index) => (
                 <p
-                  key={telegram}
+                  key={index}
                   className={cn(
                     "text-green-500 cursor-pointer block",
-                    telegram ? "" : "underline",
+                    typeof telegram === "number" ? "" : "underline",
                   )}
                   onClick={() => {
                     setVirtualAccountEdit(row.original);

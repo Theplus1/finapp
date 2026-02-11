@@ -6,7 +6,6 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { useEffect, useState } from "react";
@@ -15,7 +14,20 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
-import { CirclePlus, Trash } from "lucide-react";
+import { CirclePlus, Info, Trash } from "lucide-react";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Field } from "@/components/ui/field";
+
+const maxLengthIdTelegram = 15;
 
 type Props = {
   virtualAccount: VirtualAccount | null;
@@ -48,12 +60,21 @@ const FormLinkTelegram = ({
 
   const { mutateAsync: linkTelegram } = useMutation({
     mutationFn: async () => {
+      if (telegramIds.includes(0)) {
+        toast.error("Telegram ID cannot be 0");
+        return;
+      }
+      if (telegramIds.length !== new Set(telegramIds).size) {
+        toast.error("Telegram ID cannot be duplicated");
+        return;
+      }
       setIsLoading(true);
       api.virtualAccounts
         .linkTelegram(virtualAccount!._id, {
           telegramIds: telegramIds,
         })
         .then(() => {
+          toast.success("Telegram linked successfully");
           onSubmitSuccess();
         })
         .catch((error) => {
@@ -85,21 +106,21 @@ const FormLinkTelegram = ({
     onCancel();
   };
 
-  const disableSubmit =
-    isLoading ||
-    (telegramIds.length === virtualAccount?.linkedTelegramIds?.length &&
-      telegramIds.every((id) =>
-        virtualAccount?.linkedTelegramIds?.some(
-          (telegramId) => telegramId === id,
-        ),
-      ));
-
   const handleAddTelegramId = () => {
     setTelegramIds([...telegramIds, 0]);
   };
 
   const handleRemoveTelegramId = (index: number) => {
     setTelegramIds(telegramIds.filter((_, i) => i !== index));
+  };
+
+  const handleChangeTelegramId = (value: string, index: number) => {
+    const numericValue = value.replace(/[^0-9]/g, "");
+    setTelegramIds((prev) => {
+      const newIds = [...prev];
+      newIds[index] = Number(numericValue);
+      return newIds;
+    });
   };
 
   return (
@@ -115,35 +136,59 @@ const FormLinkTelegram = ({
           <label className="block text-sm font-medium text-muted-foreground">
             Telegram IDs
           </label>
-          {telegramIds.map((id, index) => (
-            <div key={index} className="flex items-center gap-3">
-              <Input
-                placeholder="Enter telegram id"
-                value={id}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const numericValue = value.replace(/[^0-9]/g, "");
-                  setTelegramIds((prev) => {
-                    const newIds = [...prev];
-                    newIds[index] = Number(numericValue);
-                    return newIds;
-                  });
-                }}
-                onBlur={(e) => {
-                  setTelegramIds((prev) => {
-                    const newIds = [...prev];
-                    newIds[index] = Number(e.target.value) || 0;
-                    return newIds;
-                  });
-                }}
-              />
-              <Trash
-                size={22}
-                className="cursor-pointer"
-                onClick={() => handleRemoveTelegramId(index)}
-              />
-            </div>
-          ))}
+          {telegramIds.map((id, index) => {
+            const progress = (id.toString().length / maxLengthIdTelegram) * 100;
+            const isZeroId = id === 0;
+            const isDuplicateId =
+              telegramIds.some(
+                (telegramId, idx) => telegramId === id && idx !== index,
+              );
+            return (
+              <div key={index} className="flex items-center gap-3">
+                <Field data-invalid={isZeroId || isDuplicateId}>
+                  <InputGroup className="pr-1">
+                    <InputGroupInput
+                      placeholder="Enter telegram id"
+                      value={id}
+                      maxLength={maxLengthIdTelegram}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        handleChangeTelegramId(value, index);
+                      }}
+                      onBlur={(e) => {
+                        setTelegramIds((prev) => {
+                          const newIds = [...prev];
+                          newIds[index] = Number(e.target.value) || 0;
+                          return newIds;
+                        });
+                      }}
+                    />
+                    <InputGroupAddon align={"inline-end"}>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info
+                            size={16}
+                            opacity={progress === 100 ? 1 : 0}
+                            style={{
+                              transition: "opacity 0.3s ease",
+                            }}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Reached maximum {maxLengthIdTelegram} characters
+                        </TooltipContent>
+                      </Tooltip>
+                    </InputGroupAddon>
+                  </InputGroup>
+                </Field>
+                <Trash
+                  size={22}
+                  className="cursor-pointer"
+                  onClick={() => handleRemoveTelegramId(index)}
+                />
+              </div>
+            );
+          })}
           <CirclePlus
             size={22}
             className="text-muted-foreground cursor-pointer mt-4"
@@ -162,9 +207,9 @@ const FormLinkTelegram = ({
             <Button
               className={cn(
                 "cursor-pointer",
-                disableSubmit && "cursor-not-allowed opacity-50",
+                isLoading && "cursor-not-allowed opacity-50",
               )}
-              onClick={!disableSubmit ? onSubmit : undefined}
+              onClick={!isLoading ? onSubmit : undefined}
             >
               {isLoading ? <Spinner /> : ""}
               Submit
