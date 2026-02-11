@@ -161,26 +161,41 @@ export class AccountsController {
     this.logger.log(
       `Linking virtual account ${id} to telegram ID ${dto.telegramId}`,
     );
-    
-    // Check if user already has a linked account
-    const existingUser = await this.usersService.findByTelegramId(dto.telegramId);
-    if (existingUser?.virtualAccountId) {
-      throw new Error(`Telegram ID ${dto.telegramId} already has a linked virtual account: ${existingUser.virtualAccountId}`);
+
+    if (dto.telegramId) {
+      // Check if user already has a linked account
+      const existingUser = await this.usersService.findByTelegramId(dto.telegramId);
+      if (existingUser?.virtualAccountId) {
+        throw new Error(`Telegram ID ${dto.telegramId} already has a linked virtual account: ${existingUser.virtualAccountId}`);
+      }
+      const virtualAccount = await this.accountsService.validateAccountExists(id);
+      
+      // Link account to user (single source of truth)
+      await this.usersService.unlinkAllAccount(virtualAccount.slashId);
+      await this.usersService.linkAccountNumber(dto.telegramId, virtualAccount.slashId);
+      
+      this.logger.log(`Successfully linked account ${id} to telegram ID ${dto.telegramId}`);
+      
+      return {
+        slashId: virtualAccount.slashId,
+        name: virtualAccount.name,
+        linkedTelegramId: dto.telegramId,
+        linkedAt: new Date(),
+      };
+    } else if (dto.telegramIds) {
+      const virtualAccount = await this.accountsService.validateAccountExists(id);
+      await this.usersService.linkAccountNumbers(dto.telegramIds, virtualAccount.slashId);
+      
+      this.logger.log(`Successfully linked account ${id} to telegram ID ${dto.telegramId}`);
+      return {
+        slashId: virtualAccount.slashId,
+        name: virtualAccount.name,
+        linkedTelegramIds: dto.telegramIds,
+        linkedAt: new Date(),
+      };
     }
-    const virtualAccount = await this.accountsService.validateAccountExists(id);
-    
-    // Link account to user (single source of truth)
-    await this.usersService.unlinkAllAccount(virtualAccount.slashId);
-    await this.usersService.linkAccountNumber(dto.telegramId, virtualAccount.slashId);
-    
-    this.logger.log(`Successfully linked account ${id} to telegram ID ${dto.telegramId}`);
-    
-    return {
-      slashId: virtualAccount.slashId,
-      name: virtualAccount.name,
-      linkedTelegramId: dto.telegramId,
-      linkedAt: new Date(),
-    };
+
+    throw new Error('Either telegramId or telegramIds must be provided');
   }
 
   @Delete(':id/link')

@@ -71,6 +71,22 @@ export class UsersService {
     return user;
   }
 
+  async linkAccountNumbers(
+    telegramIds: number[],
+    virtualAccountId: string,
+  ): Promise<UserDocument | null> {
+    const user = await this.userModel.findOneAndUpdate(
+      { virtualAccountId },
+      { telegramIds },
+      { upsert: true, new: true },
+    );
+
+    this.logger.log(
+      `Users ${telegramIds} linked to virtual account: ${virtualAccountId}`,
+    );
+    return user;
+  }
+
   async unlinkAccount(virtualAccountId: string): Promise<UserDocument | null> {
     const user = await this.userModel.findByIdAndUpdate(
       { virtualAccountId },
