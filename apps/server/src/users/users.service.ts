@@ -71,6 +71,25 @@ export class UsersService {
     return user;
   }
 
+  async linkAccountNumbers(
+    telegramIds: number[],
+    virtualAccountId: string,
+  ): Promise<UserDocument | null> {
+    const user = await this.userModel.findOneAndUpdate(
+      { virtualAccountId },
+      {
+        telegramId: null,
+        telegramIds,
+      },
+      { upsert: true, new: true },
+    );
+
+    this.logger.log(
+      `Users ${telegramIds} linked to virtual account: ${virtualAccountId}`,
+    );
+    return user;
+  }
+
   async unlinkAccount(virtualAccountId: string): Promise<UserDocument | null> {
     const user = await this.userModel.findByIdAndUpdate(
       { virtualAccountId },
@@ -259,6 +278,31 @@ export class UsersService {
   }
 
   /**
+   * Bulk add a notification destination (chỉ chatId) cho nhiều user.
+   */
+  async addNotificationDestinationBulk(
+    telegramIds: number[],
+    chatId: number,
+  ): Promise<boolean> {
+    if (!telegramIds?.length) return false;
+
+    const result = await this.userModel.updateMany(
+      { telegramId: { $in: telegramIds } },
+      {
+        $addToSet: {
+          notificationDestinations: { chatId },
+          notificationChatIds: chatId,
+        },
+      },
+    );
+
+    this.logger.log(
+      `Users ${telegramIds.join(',')} bulk added notification destination: ${chatId}`,
+    );
+    return result.acknowledged === true;
+  }
+
+  /**
    * Set warning thread id for a destination (topic cho balance/card alert).
    */
   async setWarningThreadId(
@@ -309,6 +353,31 @@ export class UsersService {
 
     this.logger.log(`User ${telegramId} removed notification destination: ${chatId}`);
     return user;
+  }
+
+  /**
+   * Bulk remove a notification destination cho nhiều user.
+   */
+  async removeNotificationDestinationBulk(
+    telegramIds: number[],
+    chatId: number,
+  ): Promise<boolean> {
+    if (!telegramIds?.length) return false;
+
+    const result = await this.userModel.updateMany(
+      { telegramId: { $in: telegramIds } },
+      {
+        $pull: {
+          notificationChatIds: chatId,
+          notificationDestinations: { chatId },
+        },
+      },
+    );
+
+    this.logger.log(
+      `Users ${telegramIds.join(',')} bulk removed notification destination: ${chatId}`,
+    );
+    return result.acknowledged === true;
   }
 
   /**

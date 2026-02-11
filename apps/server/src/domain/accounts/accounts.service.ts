@@ -210,6 +210,7 @@ export class AccountsService {
       const enriched: VirtualAccountDetail = {
         ...accountData,
         linkedTelegramId: user?.telegramId,
+        linkedTelegramIds: user?.telegramIds,
       };
 
       return enriched;

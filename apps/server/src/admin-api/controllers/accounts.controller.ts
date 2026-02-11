@@ -10,6 +10,7 @@ import {
   UseGuards,
   Logger,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -158,27 +159,47 @@ export class AccountsController {
     @Param('id') id: string,
     @Body() dto: LinkAccountDto,
   ): Promise<LinkAccountResponseDto> {
+    const telegramId = dto.telegramId;
+    const telegramIds = dto.telegramIds;
     this.logger.log(
-      `Linking virtual account ${id} to telegram ID ${dto.telegramId}`,
+      `Linking virtual account ${id} to ${telegramId != null ? `telegramId=${telegramId}` : `telegramIds=${telegramIds!.join(',')}`}`,
     );
-    
-    // Check if user already has a linked account
-    const existingUser = await this.usersService.findByTelegramId(dto.telegramId);
-    if (existingUser?.virtualAccountId) {
-      throw new Error(`Telegram ID ${dto.telegramId} already has a linked virtual account: ${existingUser.virtualAccountId}`);
-    }
+
     const virtualAccount = await this.accountsService.validateAccountExists(id);
-    
-    // Link account to user (single source of truth)
+
+    if (telegramId != null) {
+      // Check if user already has a linked account
+      const existingUser = await this.usersService.findByTelegramId(telegramId);
+      if (existingUser?.virtualAccountId) {
+        throw new BadRequestException(
+          `Telegram ID ${telegramId} already has a linked virtual account: ${existingUser.virtualAccountId}`,
+        );
+      }
+
+      // Link account to user (single source of truth)
+      await this.usersService.unlinkAllAccount(virtualAccount.slashId);
+      await this.usersService.linkAccountNumber(telegramId, virtualAccount.slashId);
+
+      this.logger.log(`Successfully linked account ${id} to telegram ID ${telegramId}`);
+
+      return {
+        slashId: virtualAccount.slashId,
+        name: virtualAccount.name,
+        linkedTelegramId: telegramId,
+        linkedAt: new Date(),
+      };
+    }
+
     await this.usersService.unlinkAllAccount(virtualAccount.slashId);
-    await this.usersService.linkAccountNumber(dto.telegramId, virtualAccount.slashId);
-    
-    this.logger.log(`Successfully linked account ${id} to telegram ID ${dto.telegramId}`);
-    
+    await this.usersService.linkAccountNumbers(telegramIds!, virtualAccount.slashId);
+
+    this.logger.log(
+      `Successfully linked account ${id} to telegram IDs ${telegramIds!.join(',')}`,
+    );
     return {
       slashId: virtualAccount.slashId,
       name: virtualAccount.name,
-      linkedTelegramId: dto.telegramId,
+      linkedTelegramIds: telegramIds!,
       linkedAt: new Date(),
     };
   }

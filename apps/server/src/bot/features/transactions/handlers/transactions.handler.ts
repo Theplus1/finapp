@@ -43,7 +43,18 @@ export class TransactionsHandler {
 
   async handleSubscribeTransactionsAction(ctx: BotContext) {
     await ctx.answerCbQuery('Subscribing...');
-    await this.usersService.addNotificationDestination(ctx.userData!.telegramId, ctx.chat?.id ?? ctx.from!.id);
+    const telegramIds = ctx.userData?.telegramIds;
+    const telegramId = ctx.userData?.telegramId;
+    const targetTelegramIds = (telegramIds?.length ? telegramIds : telegramId != null ? [telegramId] : null);
+    if (!targetTelegramIds) {
+      await ctx.reply('User not found');
+      return;
+    }
+    const destinationChatId = ctx.chat?.id ?? ctx.from!.id;
+    await this.usersService.addNotificationDestinationBulk(
+      targetTelegramIds,
+      destinationChatId,
+    );
     await ctx.editMessageText(Messages.subscribeTransactionsSuccess, {
       parse_mode: 'Markdown',
       ...Keyboards.backToTransaction(),
@@ -52,7 +63,18 @@ export class TransactionsHandler {
 
   async handleUnsubscribeTransactionsAction(ctx: BotContext) {
     await ctx.answerCbQuery('Unsubscribing...');
-    await this.usersService.removeNotificationDestination(ctx.userData!.telegramId, ctx.chat?.id ?? ctx.from!.id);
+    const telegramIds = ctx.userData?.telegramIds;
+    const telegramId = ctx.userData?.telegramId;
+    const targetTelegramIds = (telegramIds?.length ? telegramIds : telegramId != null ? [telegramId] : null);
+    if (!targetTelegramIds) {
+      await ctx.reply('User not found');
+      return;
+    }
+    const destinationChatId = ctx.chat?.id ?? ctx.from!.id;
+    await this.usersService.removeNotificationDestinationBulk(
+      targetTelegramIds,
+      destinationChatId,
+    );
     await ctx.editMessageText(Messages.unsubscribeTransactionsSuccess, {
       parse_mode: 'Markdown',
       ...Keyboards.backToTransaction(),
