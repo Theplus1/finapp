@@ -126,6 +126,32 @@ export class BotUpdate {
   }
 
   @ValidateUser({ answerCallback: true })
+  @Action(Actions.cards.setRecurringOnly)
+  async onCardSetRecurringOnlyAction(@Ctx() ctx: BotContext) {
+    ctx.session = {
+      step: SessionSteps.AWAITING_SET_RECURRING_ONLY_CARD_ID,
+      data: {},
+    };
+    await ctx.reply(Messages.cardModifierSetRecurringOnlyStart, {
+      parse_mode: 'Markdown',
+      reply_markup: { force_reply: true, selective: true },
+    });
+  }
+
+  @ValidateUser({ answerCallback: true })
+  @Action(Actions.cards.unsetRecurringOnly)
+  async onCardUnsetRecurringOnlyAction(@Ctx() ctx: BotContext) {
+    ctx.session = {
+      step: SessionSteps.AWAITING_UNSET_RECURRING_ONLY_CARD_ID,
+      data: {},
+    };
+    await ctx.reply(Messages.cardModifierUnsetRecurringOnlyStart, {
+      parse_mode: 'Markdown',
+      reply_markup: { force_reply: true, selective: true },
+    });
+  }
+
+  @ValidateUser({ answerCallback: true })
   @Action(actionWithPayloadRegex(Actions.cards.limitPreset, '(daily|weekly|monthly|yearly|collective)'))
   async onCardLimitPresetAction(@Ctx() ctx: BotContext) {
     const callbackData = (ctx.callbackQuery as { data?: string })?.data ?? '';
@@ -300,6 +326,12 @@ export class BotUpdate {
         break;
       case SessionSteps.AWAITING_UNSET_LIMIT_CARD_ID:
         await this.cardHandler.handleUnsetDailyLimitCardIdInput(ctx, text);
+        break;
+      case SessionSteps.AWAITING_SET_RECURRING_ONLY_CARD_ID:
+        await this.cardHandler.handleSetRecurringOnlyModifierCardIdInput(ctx, text);
+        break;
+      case SessionSteps.AWAITING_UNSET_RECURRING_ONLY_CARD_ID:
+        await this.cardHandler.handleUnsetRecurringOnlyModifierCardIdInput(ctx, text);
         break;
       case SessionSteps.AWAITING_TOPICALERT_REPLY:
         await this.notificationsHandler.handleTopicalertThreadIdInput(ctx, text);

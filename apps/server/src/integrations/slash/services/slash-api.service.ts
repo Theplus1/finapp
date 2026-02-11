@@ -33,6 +33,7 @@ import {
   UpdateCardGroupDto,
   ListCardGroupsQuery,
 } from '../dto/card-group.dto';
+import { CardModifierDto, CardModifiersResponseDto } from '../dto/card-modifier.dto';
 import { SlashApiResponse, PaginatedResponse, ListResponse } from '../interfaces/slash-response.interface';
 
 /**
@@ -347,6 +348,22 @@ export class SlashApiService {
     return this.request<any>({
       method: 'GET',
       url: `/card/${cardId}/utilization`,
+    });
+  }
+
+  async getCardModifiers(cardId: string): Promise<CardModifierDto[]> {
+    const response = await this.request<CardModifiersResponseDto>({
+      method: 'GET',
+      url: `/card/${cardId}/modifier`,
+    });
+    return response.modifiers;
+  }
+
+  async setCardModifier(cardId: string, modifier: CardModifierDto): Promise<void> {
+    await this.request<{ success: boolean }>({
+      method: 'PUT',
+      url: `/card/${cardId}/modifier`,
+      data: modifier,
     });
   }
 

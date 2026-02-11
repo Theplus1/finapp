@@ -113,6 +113,10 @@ export const Keyboards = {
         Markup.button.callback('Set Limit', Actions.cards.setDailyLimit),
         Markup.button.callback('Unset Limit', Actions.cards.unsetDailyLimit),
       ],
+      [
+        Markup.button.callback('Enable Recurring Only', Actions.cards.setRecurringOnly),
+        Markup.button.callback('Disable Recurring Only', Actions.cards.unsetRecurringOnly),
+      ],
       [Markup.button.callback('« Back to Menu', Actions.menu.main)],
     ]),
   cardsList: (cards: any[], currentCursor?: string, nextCursor?: string) => {

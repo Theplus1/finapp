@@ -166,6 +166,30 @@ export const Messages = {
     'ℹ️ *No Limit Found*\n\n' +
     `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
     'This card does not currently have a spending limit. Nothing to remove.',
+  cardModifierSetRecurringOnlyStart:
+    '💬 *Enable Recurring-Only Modifier*\n\n' +
+    'Please *REPLY* to this message with the card ID you want to enable *recurring-only payments* for.\n\n' +
+    '(Send /cancel to cancel)',
+  cardModifierUnsetRecurringOnlyStart:
+    '💬 *Disable Recurring-Only Modifier*\n\n' +
+    'Please *REPLY* to this message with the card ID you want to disable *recurring-only payments* for.\n\n' +
+    '(Send /cancel to cancel)',
+  cardModifierSetRecurringOnlySuccess: (cardName: string, last4: string) =>
+    '✅ *Recurring-Only Enabled*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'This card is now restricted to recurring payments only.',
+  cardModifierUnsetRecurringOnlySuccess: (cardName: string, last4: string) =>
+    '✅ *Recurring-Only Disabled*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'This card is no longer restricted to recurring payments only.',
+  cardModifierAlreadyEnabled: (cardName: string, last4: string) =>
+    'ℹ️ *Modifier Already Enabled*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'The recurring-only modifier is already enabled for this card.',
+  cardModifierAlreadyDisabled: (cardName: string, last4: string) =>
+    'ℹ️ *Modifier Already Disabled*\n\n' +
+    `Card: *${MarkdownUtil.escapse(cardName)}* (••••${last4})\n\n` +
+    'The recurring-only modifier is already disabled for this card.',
   // Transactions
   transactionsMenu: '📋 *Transactions Menu*\n\nChoose an option:',
   transactionNotificationMenu: (isSubscribed: boolean) =>
