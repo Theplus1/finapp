@@ -179,9 +179,7 @@ export class AccountsController {
       // Link account to user (single source of truth)
       await this.usersService.unlinkAllAccount(virtualAccount.slashId);
       await this.usersService.linkAccountNumber(telegramId, virtualAccount.slashId);
-
       this.logger.log(`Successfully linked account ${id} to telegram ID ${telegramId}`);
-
       return {
         slashId: virtualAccount.slashId,
         name: virtualAccount.name,
@@ -189,10 +187,7 @@ export class AccountsController {
         linkedAt: new Date(),
       };
     }
-
-    await this.usersService.unlinkAllAccount(virtualAccount.slashId);
     await this.usersService.linkAccountNumbers(telegramIds!, virtualAccount.slashId);
-
     this.logger.log(
       `Successfully linked account ${id} to telegram IDs ${telegramIds!.join(',')}`,
     );
