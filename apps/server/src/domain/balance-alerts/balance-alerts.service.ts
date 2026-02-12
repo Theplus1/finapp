@@ -129,18 +129,20 @@ export class BalanceAlertsService {
 
       const user = await this.usersService.findByVirtualAccountId(report.virtualAccountId);
 
-      if (!user || !user.telegramId) {
+      if (!user) {
         this.logger.log(
           `No user found for virtual account ${report.virtualAccountId} (${va.name}). Skipping alert.`,
         );
         return 'skipped';
       }
 
+      const userLabel = user.telegramId ?? user.telegramIds?.[0] ?? user.id;
+
       // Check if user has notification destinations
       const destinations = this.usersService.getDestinations(user);
       if (destinations.length === 0) {
         this.logger.log(
-          `User ${user.telegramId} has no notification destinations for VA ${report.virtualAccountId}. Skipping alert.`,
+          `User ${userLabel} has no notification destinations for VA ${report.virtualAccountId}. Skipping alert.`,
         );
         return 'skipped';
       }
@@ -179,7 +181,7 @@ export class BalanceAlertsService {
 
       if (successCount === 0 && failedCount > 0) {
         this.logger.error(
-          `Failed to send message for VA ${report.virtualAccountId} to user ${user.telegramId}: All ${failedCount} destinations failed`,
+          `Failed to send message for VA ${report.virtualAccountId} to user ${userLabel}: All ${failedCount} destinations failed`,
         );
         await this.notificationsService.createNotification({
           userId: user.id,
@@ -218,7 +220,7 @@ export class BalanceAlertsService {
         });
 
         this.logger.log(
-          `Balance alert sent to user ${user.telegramId} for VA ${report.virtualAccountId} (${va.name}) - Balance: ${balanceCents / 100} USD`,
+          `Balance alert sent to user ${userLabel} for VA ${report.virtualAccountId} (${va.name}) - Balance: ${balanceCents / 100} USD`,
         );
         return 'sent';
       } else {
