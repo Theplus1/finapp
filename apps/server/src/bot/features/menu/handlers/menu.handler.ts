@@ -69,7 +69,8 @@ export class MenuHandler {
       return;
     }
 
-    const userData = await this.usersService.findByTelegramId(user.id);
+    const chatId = ctx.chat?.id ?? user.id;
+    const userData = await this.usersService.findByTelegramIdOrIds(Math.abs(chatId));
     if (!userData) {
       await ctx.answerCbQuery('Please use /start first');
       await ctx.reply(Messages.mustStartBot);

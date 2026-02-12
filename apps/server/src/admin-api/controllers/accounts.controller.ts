@@ -169,7 +169,7 @@ export class AccountsController {
 
     if (telegramId != null) {
       // Check if user already has a linked account
-      const existingUser = await this.usersService.findByTelegramId(telegramId);
+      const existingUser = await this.usersService.findByTelegramIdOrIds(telegramId);
       if (existingUser?.virtualAccountId) {
         throw new BadRequestException(
           `Telegram ID ${telegramId} already has a linked virtual account: ${existingUser.virtualAccountId}`,

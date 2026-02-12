@@ -50,7 +50,8 @@ export class UserValidationGuard implements CanActivate {
     }
 
     // Find user by telegram ID
-    const user = await this.usersService.findByTelegramId(telegramUser.id);
+    const chatId = ctx.chat?.id ?? telegramUser.id;
+    const user = await this.usersService.findByTelegramIdOrIds(Math.abs(chatId));
     
     if (!user) {
       if (options.answerCallback && ctx.callbackQuery) {
