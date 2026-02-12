@@ -353,6 +353,9 @@ export class SlashSyncService {
       result.totalCreated += accountResult.totalCreated;
       result.totalUpdated += accountResult.totalUpdated;
       result.totalFailed += accountResult.totalFailed;
+
+      // Add delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 10000));
     }
 
     return result;

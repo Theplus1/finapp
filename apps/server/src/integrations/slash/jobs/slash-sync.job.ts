@@ -25,7 +25,7 @@ export class SlashSyncJob {
   /**
    * Sync cards daily at midnight
    */
-  @Cron(CronExpression.EVERY_30_SECONDS)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async syncCards() {
     if (!this.enableScheduledSync) {
       return;
