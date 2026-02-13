@@ -22,7 +22,7 @@ export class User {
   @Prop()
   telegramId?: number;
 
-  @Prop({ type: [Number], default: [] })
+  @Prop({ index: true, type: [Number], default: [] })
   telegramIds?: number[];
 
   @Prop()
