@@ -1,6 +1,8 @@
 import { Controller, Post, Get, Query, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { SlashSyncService } from '../services/slash-sync.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * Slash Sync Controller
@@ -11,7 +13,11 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 export class SlashSyncController {
   private readonly logger = new Logger(SlashSyncController.name);
 
-  constructor(private readonly slashSyncService: SlashSyncService) {}
+  constructor(
+    private readonly slashSyncService: SlashSyncService,
+    private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('cards')
   @HttpCode(HttpStatus.ACCEPTED)
@@ -105,5 +111,38 @@ export class SlashSyncController {
   @ApiResponse({ status: 200, description: 'Sync statistics' })
   async getSyncStats(@Query('entityType') entityType?: string) {
     return this.slashSyncService.getSyncStats(entityType);
+  }
+
+  @Get('jobs/status')
+  @ApiOperation({ summary: 'Get cron job status' })
+  @ApiResponse({ status: 200, description: 'Cron job status' })
+  async getJobsStatus() {
+    const jobs = this.schedulerRegistry.getCronJobs();
+    const enableScheduledSync = this.configService.get<boolean>('slash.enableScheduledSync', true);
+    
+    const jobStatus: Array<{ name: string; nextRun?: string; lastRun?: string; error?: string }> = [];
+    jobs.forEach((job, name) => {
+      try {
+        jobStatus.push({
+          name,
+          nextRun: job.nextDate()?.toString() || 'N/A',
+          lastRun: job.lastDate()?.toString() || 'N/A',
+        });
+      } catch (error) {
+        jobStatus.push({
+          name,
+          error: 'Unable to get job details',
+        });
+      }
+    });
+
+    return {
+      enableScheduledSync,
+      totalJobs: jobs.size,
+      jobs: jobStatus,
+      message: jobs.size === 0 
+        ? '⚠️ No cron jobs registered. Check ScheduleModule and job providers.' 
+        : `✅ ${jobs.size} cron job(s) registered`,
+    };
   }
 }
