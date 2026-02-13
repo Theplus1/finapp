@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SlashSyncService } from '../services/slash-sync.service';
 import { ConfigService } from '@nestjs/config';
+import { Lock } from '../decorators/lock.decorator';
 
 /**
  * Slash Sync Job
@@ -23,58 +24,73 @@ export class SlashSyncJob {
   }
 
   /**
-   * Sync cards daily at midnight
+   * Sync cards every 5 minutes
    */
+  @Lock('syncCards')
   @Cron(CronExpression.EVERY_5_MINUTES)
   async syncCards() {
     if (!this.enableScheduledSync) {
       return;
     }
 
+    const startTime = Date.now();
     this.logger.log('Starting scheduled card sync...');
     try {
       await this.slashSyncService.syncAllCards();
-      this.logger.log('Scheduled card sync completed successfully');
+      const duration = Date.now() - startTime;
+      this.logger.log(`Scheduled card sync completed successfully in ${duration}ms`);
     } catch (error) {
-      this.logger.error('Scheduled card sync failed:', error);
+      const duration = Date.now() - startTime;
+      this.logger.error(`Scheduled card sync failed after ${duration}ms:`, error);
     }
   }
 
   /**
    * Sync recent transactions every 10 seconds
    */
+  @Lock('syncRecentTransactions')
   @Cron(CronExpression.EVERY_10_SECONDS)
   async syncRecentTransactions() {
     if (!this.enableScheduledSync) {
       return;
     }
 
+    const startTime = Date.now();
     this.logger.log('Starting scheduled recent transaction sync...');
     try {
       // Sync transactions from last 30 seconds (runs every 10s for 3x overlap)
       await this.slashSyncService.syncRecentTransactionsBySeconds(30);
-      this.logger.log('Scheduled recent transaction sync completed successfully');
+      const duration = Date.now() - startTime;
+      this.logger.log(`Scheduled recent transaction sync completed successfully in ${duration}ms`);
     } catch (error) {
-      this.logger.error('Scheduled recent transaction sync failed:', error);
+      const duration = Date.now() - startTime;
+      this.logger.error(`Scheduled recent transaction sync failed after ${duration}ms:`, error);
     }
   }
 
   /**
-   * Sync recent transactions every day
+   * Sync recent transactions every day at midnight
+   * Reduced to 2 hours since we already sync every 10 seconds
+   * This is a safety net for any missed transactions
    */
+  @Lock('syncRecentTransactionsDaily')
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async syncRecentTransactionsDaily() {
     if (!this.enableScheduledSync) {
       return;
     }
 
-    this.logger.log('Starting scheduled recent transaction sync...');
+    const startTime = Date.now();
+    this.logger.log('Starting scheduled daily transaction sync...');
     try {
-      // Sync transactions from last 24 hours
-      await this.slashSyncService.syncRecentTransactions(24);
-      this.logger.log('Scheduled recent transaction sync completed successfully');
+      // Only sync last 2 hours as safety net (we already sync every 10s)
+      // This reduces API calls from ~50-100 to ~5-10
+      await this.slashSyncService.syncRecentTransactions(2);
+      const duration = Date.now() - startTime;
+      this.logger.log(`Scheduled daily transaction sync completed successfully in ${duration}ms`);
     } catch (error) {
-      this.logger.error('Scheduled recent transaction sync failed:', error);
+      const duration = Date.now() - startTime;
+      this.logger.error(`Scheduled daily transaction sync failed after ${duration}ms:`, error);
     }
   }
 
@@ -101,20 +117,24 @@ export class SlashSyncJob {
   // }
 
   /**
-   * Sync virtual accounts daily at midnight
+   * Sync virtual accounts every 5 minutes
    */
+  @Lock('syncVirtualAccounts')
   @Cron(CronExpression.EVERY_5_MINUTES)
   async syncVirtualAccounts() {
     if (!this.enableScheduledSync) {
       return;
     }
 
+    const startTime = Date.now();
     this.logger.log('Starting scheduled virtual account sync...');
     try {
       await this.slashSyncService.syncAllVirtualAccounts();
-      this.logger.log('Scheduled virtual account sync completed successfully');
+      const duration = Date.now() - startTime;
+      this.logger.log(`Scheduled virtual account sync completed successfully in ${duration}ms`);
     } catch (error) {
-      this.logger.error('Scheduled virtual account sync failed:', error);
+      const duration = Date.now() - startTime;
+      this.logger.error(`Scheduled virtual account sync failed after ${duration}ms:`, error);
     }
   }
 }

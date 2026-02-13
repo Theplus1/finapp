@@ -134,7 +134,10 @@ export class SlashApiService {
     }
   }
 
-  private async request<T>(config: AxiosRequestConfig): Promise<T> {
+  private async request<T>(config: AxiosRequestConfig, retryCount = 0): Promise<T> {
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+
     try {
       const response = await this.axiosInstance.request<{ data?: T } & Record<string, unknown>>(config);
       const body = response.data;
@@ -143,6 +146,25 @@ export class SlashApiService {
       }
       return (body ?? response.data) as T;
     } catch (error) {
+      const axiosError = error as AxiosError;
+      const status = axiosError.response?.status;
+
+      // Retry on rate limit (429) or server errors (5xx)
+      const shouldRetry = (status === 429 || (status && status >= 500)) && retryCount < maxRetries;
+
+      if (shouldRetry) {
+        const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
+        const jitter = Math.random() * 1000; // Add jitter to prevent thundering herd
+        const totalDelay = delay + jitter;
+
+        this.logger.warn(
+          `Request failed with status ${status}. Retrying in ${Math.round(totalDelay)}ms (attempt ${retryCount + 1}/${maxRetries})...`,
+        );
+
+        await new Promise(resolve => setTimeout(resolve, totalDelay));
+        return this.request<T>(config, retryCount + 1);
+      }
+
       throw error;
     }
   }
