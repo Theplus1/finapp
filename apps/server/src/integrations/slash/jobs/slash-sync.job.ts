@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SlashSyncService } from '../services/slash-sync.service';
 import { ConfigService } from '@nestjs/config';
-import { Lock } from '../decorators/lock.decorator';
 
 /**
  * Slash Sync Job
@@ -21,12 +20,12 @@ export class SlashSyncJob {
       'slash.enableScheduledSync',
       true,
     );
+    this.logger.log(`SlashSyncJob initialized. Scheduled sync enabled: ${this.enableScheduledSync}`);
   }
 
   /**
    * Sync cards every 5 minutes
    */
-  @Lock('syncCards')
   @Cron(CronExpression.EVERY_5_MINUTES)
   async syncCards() {
     if (!this.enableScheduledSync) {
@@ -48,7 +47,6 @@ export class SlashSyncJob {
   /**
    * Sync recent transactions every 10 seconds
    */
-  @Lock('syncRecentTransactions')
   @Cron(CronExpression.EVERY_10_SECONDS)
   async syncRecentTransactions() {
     if (!this.enableScheduledSync) {
@@ -73,7 +71,6 @@ export class SlashSyncJob {
    * Reduced to 2 hours since we already sync every 10 seconds
    * This is a safety net for any missed transactions
    */
-  @Lock('syncRecentTransactionsDaily')
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async syncRecentTransactionsDaily() {
     if (!this.enableScheduledSync) {
@@ -119,7 +116,6 @@ export class SlashSyncJob {
   /**
    * Sync virtual accounts every 5 minutes
    */
-  @Lock('syncVirtualAccounts')
   @Cron(CronExpression.EVERY_5_MINUTES)
   async syncVirtualAccounts() {
     if (!this.enableScheduledSync) {
