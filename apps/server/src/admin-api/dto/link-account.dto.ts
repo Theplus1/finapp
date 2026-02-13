@@ -1,13 +1,26 @@
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsNumber, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LinkAccountDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Telegram ID of the user to link',
-    example: 123456789 
+    example: 123456789,
   })
+  @Type(() => Number)
   @IsNumber()
-  telegramId: number;
+  @IsOptional()
+  telegramId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Telegram IDs of the users to link',
+    example: [123456789, 987654321],
+  })
+  @IsArray()
+  @Type(() => Number)
+  @IsNumber({}, { each: true })
+  @IsOptional()
+  telegramIds?: number[];
 }
 
 export class LinkAccountResponseDto {
@@ -17,8 +30,13 @@ export class LinkAccountResponseDto {
   @ApiProperty({ description: 'Account name' })
   name: string;
 
-  @ApiProperty({ description: 'Linked Telegram ID' })
-  linkedTelegramId: number;
+  // single telegram id
+  @ApiPropertyOptional({ description: 'Linked Telegram ID' })
+  linkedTelegramId?: number;
+
+  // multiple telegram ids
+  @ApiPropertyOptional({ description: 'Linked Telegram IDs' })
+  linkedTelegramIds?: number[];
 
   @ApiProperty({ description: 'Linked User ID', required: false })
   linkedUserId?: string;

@@ -86,7 +86,7 @@ export default function VirtualAccount() {
               page: pagination.page,
               pageSize: pagination.pageSize,
             },
-            row.index
+            row.index,
           )
         );
       },
@@ -183,24 +183,67 @@ export default function VirtualAccount() {
       ),
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
         const telegram = row.original.linkedTelegramId;
+        const telegrams = row.original.linkedTelegramIds ?? [];
+        let renderMenyIdTelegram, renderIdTelegram, renderSetIds;
+        if (telegrams.length > 0) {
+          renderMenyIdTelegram = (
+            <>
+              {telegrams.map((telegram, index) => (
+                <p
+                  key={index}
+                  className={cn(
+                    "text-green-500 cursor-pointer block",
+                    typeof telegram === "number" ? "" : "underline",
+                  )}
+                  onClick={() => {
+                    setVirtualAccountEdit(row.original);
+                    setOpenDrawer(true);
+                  }}
+                >
+                  {telegram}
+                </p>
+              ))}
+            </>
+          );
+        } else if (!!telegram) {
+          renderIdTelegram = (
+            <p
+              key={telegram}
+              className={cn(
+                "text-green-500 cursor-pointer block",
+                telegram ? "" : "underline",
+              )}
+              onClick={() => {
+                setVirtualAccountEdit(row.original);
+                setOpenDrawer(true);
+              }}
+            >
+              {telegram}
+            </p>
+          );
+        } else {
+          renderSetIds = (
+            <p
+              className="text-green-500 cursor-pointer block underline"
+              onClick={() => {
+                setVirtualAccountEdit(row.original);
+                setOpenDrawer(true);
+              }}
+            >
+              Set IDs
+            </p>
+          );
+        }
+
         return isLoading ? (
           <Skeleton />
         ) : (
           <>
             <div className="flex items-center gap-2 hover-container">
-              <span className="font-medium">Telegram:</span>{" "}
-              <span
-                className={cn(
-                  "text-green-500 cursor-pointer",
-                  telegram ? "" : "underline"
-                )}
-                onClick={() => {
-                  setVirtualAccountEdit(row.original);
-                  setOpenDrawer(true);
-                }}
-              >
-                {telegram ? telegram : "Set ID"}
-              </span>
+              <span className="font-medium">Telegrams:</span>{" "}
+              <div>
+                {renderMenyIdTelegram || renderIdTelegram || renderSetIds}
+              </div>
             </div>
           </>
         );

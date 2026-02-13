@@ -48,9 +48,10 @@ export class TransactionNotificationsService {
     this.logger.log(`Processing notification for transaction: ${transaction.slashId}`);
 
     const user = await this.usersService.findByVirtualAccountId(transaction.virtualAccountId || '');
-    if (!user || !user.telegramId) {
+    const hasTelegram = user?.telegramId != null || (user?.telegramIds?.length ?? 0) > 0;
+    if (!user || !hasTelegram) {
       this.logger.warn(
-        `User not found for virtual account ID: ${transaction.virtualAccountId}`,
+        `User not found or no telegram/chats for virtual account ID: ${transaction.virtualAccountId}`,
       );
       return;
     }
@@ -66,7 +67,7 @@ export class TransactionNotificationsService {
       return;
     }
 
-    const destinations = user.notificationChatIds;
+    const destinations = user.notificationChatIds ?? [];
     if (destinations.length === 0) {
       this.logger.debug(`No notification destinations configured for user: ${user.id}`);
       return;

@@ -106,17 +106,19 @@ export class CardSpendingAlertsService {
       }
 
       const user = await this.usersService.findByVirtualAccountId(report.virtualAccountId);
-      if (!user || !user.telegramId) {
+      if (!user) {
         this.logger.log(
-          `User not found or no telegram ID for VA ${report.virtualAccountId}. Skipping.`,
+          `User not found for VA ${report.virtualAccountId}. Skipping.`,
         );
         return 'skipped';
       }
 
+      const userLabel = user.telegramId ?? user.telegramIds?.[0] ?? user.id;
+
       const destinations = this.usersService.getDestinations(user);
       if (destinations.length === 0) {
         this.logger.log(
-          `User ${user.telegramId} has no notification destinations for VA ${report.virtualAccountId}. Skipping alert.`,
+          `User ${userLabel} has no notification destinations for VA ${report.virtualAccountId}. Skipping alert.`,
         );
         return 'skipped';
       }
@@ -186,7 +188,7 @@ export class CardSpendingAlertsService {
 
       if (successCount === 0 && failedCount > 0) {
         this.logger.error(
-          `Failed to send message for VA ${report.virtualAccountId} to user ${user.telegramId}: All ${failedCount} destinations failed`,
+          `Failed to send message for VA ${report.virtualAccountId} to user ${userLabel}: All ${failedCount} destinations failed`,
         );
         await this.notificationsService.createNotification({
           userId: user.id,
@@ -227,7 +229,7 @@ export class CardSpendingAlertsService {
         });
 
         this.logger.log(
-          `Card spending alert sent to user ${user.telegramId} for VA ${report.virtualAccountId} (${va.name}) on ${today} - ${highSpendingCards.length} card(s) with spending > ${this.thresholdAmount}`,
+          `Card spending alert sent to user ${userLabel} for VA ${report.virtualAccountId} (${va.name}) on ${today} - ${highSpendingCards.length} card(s) with spending > ${this.thresholdAmount}`,
         );
         return 'sent';
       }

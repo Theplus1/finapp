@@ -31,20 +31,31 @@ export class UsersService {
     return this.userModel.findOne({ telegramId });
   }
 
+  /**
+   * Find user by group chat ID (or legacy telegramId).
+   * telegramIds are group chat IDs (ctx.chat.id), not personal account IDs.
+   */
+  async findByTelegramIdOrIds(telegramId: number): Promise<UserDocument | null> {
+    return this.userModel.findOne({
+      $or: [{ telegramId }, { telegramIds: telegramId }],
+    });
+  }
+
   async updateSubscription(
     telegramId: number,
     chatId: string,
   ): Promise<UserDocument | null> {
-    const user = await this.userModel.findOneAndUpdate(
-      { telegramId },
-      { notificationChatIds: { $addToSet: chatId } },
+    const user = await this.findByTelegramIdOrIds(telegramId);
+    if (!user) return null;
+    const updated = await this.userModel.findByIdAndUpdate(
+      user._id,
+      { notificationChatIds: { $addToSet: Number(chatId) } },
       { new: true },
     );
-
     this.logger.log(
-      `User ${telegramId} subscription updated to: ${chatId}`,
+      `User (chat ${telegramId}) subscription updated to: ${chatId}`,
     );
-    return user;
+    return updated;
   }
 
   async getSubscribedUsers(): Promise<UserDocument[]> {
@@ -71,14 +82,33 @@ export class UsersService {
     return user;
   }
 
+  async linkAccountNumbers(
+    telegramIds: number[],
+    virtualAccountId: string,
+  ): Promise<UserDocument | null> {
+    const user = await this.userModel.findOneAndUpdate(
+      { virtualAccountId },
+      {
+        telegramId: null,
+        telegramIds,
+      },
+      { upsert: true, new: true },
+    );
+
+    this.logger.log(
+      `Users ${telegramIds} linked to virtual account: ${virtualAccountId}`,
+    );
+    return user;
+  }
+
   async unlinkAccount(virtualAccountId: string): Promise<UserDocument | null> {
-    const user = await this.userModel.findByIdAndUpdate(
+    const user = await this.userModel.findOneAndUpdate(
       { virtualAccountId },
       { $unset: { virtualAccountId: '' } },
       { new: true },
     );
 
-    this.logger.log(`User ${user?.telegramId} unlinked from virtual account`);
+    this.logger.log(`User unlinked from virtual account ${virtualAccountId}`);
     return user;
   }
 
@@ -103,7 +133,7 @@ export class UsersService {
   }
 
   async hasLinkedAccount(telegramId: number): Promise<boolean> {
-    const user = await this.findByTelegramId(telegramId);
+    const user = await this.findByTelegramIdOrIds(telegramId);
     return !!user?.virtualAccountId;
   }
 
@@ -113,7 +143,7 @@ export class UsersService {
    * Check if user has approved access
    */
   async hasApprovedAccess(telegramId: number): Promise<boolean> {
-    const user = await this.findByTelegramId(telegramId);
+    const user = await this.findByTelegramIdOrIds(telegramId);
     return user?.accessStatus === AccessStatus.APPROVED;
   }
 
@@ -121,17 +151,18 @@ export class UsersService {
    * Request access for a user (automatically set on registration)
    */
   async requestAccess(telegramId: number): Promise<UserDocument | null> {
-    const user = await this.userModel.findOneAndUpdate(
-      { telegramId },
-      { 
+    const user = await this.findByTelegramIdOrIds(telegramId);
+    if (!user) return null;
+    const updated = await this.userModel.findByIdAndUpdate(
+      user._id,
+      {
         accessStatus: AccessStatus.PENDING,
         accessRequestedAt: new Date(),
       },
       { new: true },
     );
-
-    this.logger.log(`User ${telegramId} requested access`);
-    return user;
+    this.logger.log(`User (chat ${telegramId}) requested access`);
+    return updated;
   }
 
   /**
@@ -141,9 +172,11 @@ export class UsersService {
     telegramId: number,
     approvedBy: number,
   ): Promise<UserDocument | null> {
-    const user = await this.userModel.findOneAndUpdate(
-      { telegramId },
-      { 
+    const user = await this.findByTelegramIdOrIds(telegramId);
+    if (!user) return null;
+    const updated = await this.userModel.findByIdAndUpdate(
+      user._id,
+      {
         accessStatus: AccessStatus.APPROVED,
         accessApprovedAt: new Date(),
         accessApprovedBy: approvedBy,
@@ -151,9 +184,8 @@ export class UsersService {
       },
       { new: true },
     );
-
-    this.logger.log(`User ${telegramId} access approved by ${approvedBy}`);
-    return user;
+    this.logger.log(`User (chat ${telegramId}) access approved by ${approvedBy}`);
+    return updated;
   }
 
   /**
@@ -164,18 +196,19 @@ export class UsersService {
     reason: string,
     deniedBy: number,
   ): Promise<UserDocument | null> {
-    const user = await this.userModel.findOneAndUpdate(
-      { telegramId },
-      { 
+    const user = await this.findByTelegramIdOrIds(telegramId);
+    if (!user) return null;
+    const updated = await this.userModel.findByIdAndUpdate(
+      user._id,
+      {
         accessStatus: AccessStatus.DENIED,
         accessDeniedReason: reason,
         accessApprovedBy: deniedBy,
       },
       { new: true },
     );
-
-    this.logger.log(`User ${telegramId} access denied by ${deniedBy}: ${reason}`);
-    return user;
+    this.logger.log(`User (chat ${telegramId}) access denied by ${deniedBy}: ${reason}`);
+    return updated;
   }
 
   /**
@@ -186,18 +219,19 @@ export class UsersService {
     reason: string,
     revokedBy: number,
   ): Promise<UserDocument | null> {
-    const user = await this.userModel.findOneAndUpdate(
-      { telegramId },
-      { 
+    const user = await this.findByTelegramIdOrIds(telegramId);
+    if (!user) return null;
+    const updated = await this.userModel.findByIdAndUpdate(
+      user._id,
+      {
         accessStatus: AccessStatus.REVOKED,
         accessDeniedReason: reason,
         accessApprovedBy: revokedBy,
       },
       { new: true },
     );
-
-    this.logger.log(`User ${telegramId} access revoked by ${revokedBy}: ${reason}`);
-    return user;
+    this.logger.log(`User (chat ${telegramId}) access revoked by ${revokedBy}: ${reason}`);
+    return updated;
   }
 
   /**
@@ -236,17 +270,17 @@ export class UsersService {
     telegramId: number,
     chatId: number,
   ): Promise<UserDocument | null> {
-    const user = await this.findByTelegramId(telegramId);
+    const user = await this.findByTelegramIdOrIds(telegramId);
     if (!user) return null;
 
     const dests = user.notificationDestinations || [];
     if (dests.some((d) => d.chatId === chatId)) {
-      this.logger.log(`User ${telegramId} already has destination ${chatId}`);
+      this.logger.log(`User (chat ${telegramId}) already has destination ${chatId}`);
       return user;
     }
 
-    const updated = await this.userModel.findOneAndUpdate(
-      { telegramId },
+    const updated = await this.userModel.findByIdAndUpdate(
+      user._id,
       {
         $push: { notificationDestinations: { chatId } },
         $addToSet: { notificationChatIds: chatId },
@@ -254,8 +288,38 @@ export class UsersService {
       { new: true },
     );
 
-    this.logger.log(`User ${telegramId} added notification destination: ${chatId}`);
+    this.logger.log(`User (chat ${telegramId}) added notification destination: ${chatId}`);
     return updated;
+  }
+
+  /**
+   * Bulk add a notification destination (chỉ chatId) cho nhiều user.
+   */
+  async addNotificationDestinationBulk(
+    telegramIds: number[],
+    chatId: number,
+  ): Promise<boolean> {
+    if (!telegramIds?.length) return false;
+
+    const result = await this.userModel.updateMany(
+      {
+        $or: [
+          { telegramId: { $in: telegramIds } },
+          { telegramIds: { $in: telegramIds } },
+        ],
+      },
+      {
+        $addToSet: {
+          notificationDestinations: { chatId },
+          notificationChatIds: chatId,
+        },
+      },
+    );
+
+    this.logger.log(
+      `Users (chats ${telegramIds.join(',')}) bulk added notification destination: ${chatId}`,
+    );
+    return result.acknowledged === true;
   }
 
   /**
@@ -266,30 +330,26 @@ export class UsersService {
     chatId: number,
     threadId: number,
   ): Promise<UserDocument | null> {
-    const user = await this.findByTelegramId(telegramId);
+    const user = await this.findByTelegramIdOrIds(telegramId);
     if (!user) return null;
 
     const dests = user.notificationDestinations || [];
     const hasChat = dests.some((d) => d.chatId === chatId);
     if (!hasChat) {
-      await this.userModel.findOneAndUpdate(
-        { telegramId },
-        {
-          $push: { notificationDestinations: { chatId, warningThreadId: threadId } },
-          $addToSet: { notificationChatIds: chatId },
-        },
-        { new: true },
-      );
+      await this.userModel.findByIdAndUpdate(user._id, {
+        $push: { notificationDestinations: { chatId, warningThreadId: threadId } },
+        $addToSet: { notificationChatIds: chatId },
+      });
     } else {
       await this.userModel.findOneAndUpdate(
-        { telegramId, 'notificationDestinations.chatId': chatId },
+        { _id: user._id, 'notificationDestinations.chatId': chatId },
         { $set: { 'notificationDestinations.$.warningThreadId': threadId } },
         { new: true },
       );
     }
 
-    this.logger.log(`User ${telegramId} set warning thread ${threadId} for chat ${chatId}`);
-    return this.findByTelegramId(telegramId);
+    this.logger.log(`User (chat ${telegramId}) set warning thread ${threadId} for chat ${chatId}`);
+    return this.findByTelegramIdOrIds(telegramId);
   }
 
   /**
@@ -299,23 +359,56 @@ export class UsersService {
     telegramId: number,
     chatId: number,
   ): Promise<UserDocument | null> {
-    const user = await this.userModel.findOneAndUpdate(
-      { telegramId },
+    const user = await this.findByTelegramIdOrIds(telegramId);
+    if (!user) return null;
+
+    const updated = await this.userModel.findByIdAndUpdate(
+      user._id,
       {
         $pull: { notificationChatIds: chatId, notificationDestinations: { chatId } },
       },
       { new: true },
     );
 
-    this.logger.log(`User ${telegramId} removed notification destination: ${chatId}`);
-    return user;
+    this.logger.log(`User (chat ${telegramId}) removed notification destination: ${chatId}`);
+    return updated;
+  }
+
+  /**
+   * Bulk remove a notification destination cho nhiều user.
+   */
+  async removeNotificationDestinationBulk(
+    telegramIds: number[],
+    chatId: number,
+  ): Promise<boolean> {
+    if (!telegramIds?.length) return false;
+
+    const result = await this.userModel.updateMany(
+      {
+        $or: [
+          { telegramId: { $in: telegramIds } },
+          { telegramIds: { $in: telegramIds } },
+        ],
+      },
+      {
+        $pull: {
+          notificationChatIds: chatId,
+          notificationDestinations: { chatId },
+        },
+      },
+    );
+
+    this.logger.log(
+      `Users (chats ${telegramIds.join(',')}) bulk removed notification destination: ${chatId}`,
+    );
+    return result.acknowledged === true;
   }
 
   /**
    * Get all notification destinations for a user (groups/channels only) - legacy, prefer getDestinations(user).
    */
   async getNotificationDestinations(telegramId: number): Promise<number[]> {
-    const user = await this.findByTelegramId(telegramId);
+    const user = await this.findByTelegramIdOrIds(telegramId);
     if (!user) return [];
     const dests = this.getDestinations(user);
     return dests.map((d) => d.chatId);

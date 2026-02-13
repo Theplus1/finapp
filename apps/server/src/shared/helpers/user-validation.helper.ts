@@ -28,7 +28,8 @@ export class UserValidationHelper {
     const telegramUser = ctx.from;
     if (!telegramUser) return null;
 
-    const userData = await usersService.findByTelegramId(telegramUser.id);
+    const chatId = ctx.chat?.id ?? telegramUser.id;
+    const userData = await usersService.findByTelegramIdOrIds(Math.abs(chatId));
     if (!userData) {
       if (answerCallback && ctx.callbackQuery) {
         await ctx.answerCbQuery('Please use /start first');
