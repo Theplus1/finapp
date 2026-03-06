@@ -2,12 +2,28 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { AdminUsersService } from '../../domain/admin-users/admin-users.service';
+import type { AdminUserRole } from '../../database/schemas/admin-user.schema';
+import type { StringValue } from 'ms';
 
 export interface AdminLoginResponse {
   accessToken: string;
   tokenType: 'Bearer';
   expiresIn: number;
   username: string;
+  role: AdminUserRole;
+  type: 'admin' | 'customer';
+  virtualAccountId?: string;
+  bossId?: string;
+}
+
+export interface AuthenticatedUser {
+  id: string;
+  username: string;
+  role: AdminUserRole;
+  email?: string;
+  createdAt?: Date;
+  virtualAccountId?: string;
+  bossId?: string;
 }
 
 /**
@@ -18,7 +34,7 @@ export interface AdminLoginResponse {
 export class AdminAuthService implements OnModuleInit {
   private readonly logger = new Logger(AdminAuthService.name);
   private readonly jwtSecret: string;
-  private readonly jwtExpiresIn: string;
+  private readonly jwtExpiresIn: StringValue;
 
   constructor(
     private readonly configService: ConfigService,
@@ -26,7 +42,7 @@ export class AdminAuthService implements OnModuleInit {
     private readonly adminUsersService: AdminUsersService,
   ) {
     this.jwtSecret = this.configService.get<string>('JWT_SECRET', 'default-secret');
-    this.jwtExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '24h');
+    this.jwtExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '24h') as StringValue;
   }
 
   /**
@@ -55,7 +71,10 @@ export class AdminAuthService implements OnModuleInit {
   /**
    * Validate user credentials (used by Passport LocalStrategy)
    */
-  async validateUser(username: string, password: string): Promise<any> {
+  async validateUser(
+    username: string,
+    password: string,
+  ): Promise<AuthenticatedUser | null> {
     // Use domain service to validate credentials
     const adminUser = await this.adminUsersService.validateCredentials(username, password);
     
@@ -70,24 +89,32 @@ export class AdminAuthService implements OnModuleInit {
       role: adminUser.role,
       email: adminUser.email,
       createdAt: adminUser.createdAt,
+      virtualAccountId: adminUser.virtualAccountId,
+      bossId: adminUser.bossId,
     };
   }
 
   /**
    * Generate JWT token for authenticated user
    */
-  async login(user: any): Promise<AdminLoginResponse> {
+  async login(user: AuthenticatedUser): Promise<AdminLoginResponse> {
+    const role = user.role;
+    const type: 'admin' | 'customer' =
+      role === 'admin' || role === 'super-admin' ? 'admin' : 'customer';
+
     // Generate JWT token
     const payload = {
       sub: user.id,
       username: user.username,
-      role: user.role,
-      type: 'admin',
+      role,
+      type,
+      virtualAccountId: user.virtualAccountId,
+      bossId: user.bossId,
     };
 
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: this.jwtSecret,
-      expiresIn: this.jwtExpiresIn as any,
+      expiresIn: this.jwtExpiresIn,
     });
 
     this.logger.log(`Admin logged in successfully: ${user.username}`);
@@ -97,6 +124,10 @@ export class AdminAuthService implements OnModuleInit {
       tokenType: 'Bearer',
       expiresIn: this.parseExpiresIn(this.jwtExpiresIn),
       username: user.username,
+      role,
+      type,
+      virtualAccountId: user.virtualAccountId,
+      bossId: user.bossId,
     };
   }
 
@@ -106,10 +137,11 @@ export class AdminAuthService implements OnModuleInit {
   async createAdmin(
     username: string, 
     password: string, 
-    role: 'super-admin' | 'admin' = 'admin',
+    role: AdminUserRole = 'admin',
     email?: string,
+    meta?: { virtualAccountId?: string; bossId?: string },
   ) {
-    return this.adminUsersService.createUser(username, password, role, email);
+    return this.adminUsersService.createUser(username, password, role, email, meta);
   }
 
   /**

@@ -1,5 +1,6 @@
 import { IsString, IsNotEmpty, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { ADMIN_USER_ROLES } from '../../database/schemas/admin-user.schema';
 
 export class AdminLoginDto {
   @ApiProperty({ description: 'Admin username', example: 'admin' })
@@ -26,6 +27,18 @@ export class AdminLoginResponseDto {
 
   @ApiProperty({ description: 'Admin username' })
   username: string;
+
+  @ApiProperty({ description: 'User role', enum: ADMIN_USER_ROLES })
+  role: string;
+
+  @ApiProperty({ description: 'Token audience type', enum: ['admin', 'customer'] })
+  type: 'admin' | 'customer';
+
+  @ApiProperty({ description: 'Slash virtual account id (for boss/employee)', required: false })
+  virtualAccountId?: string;
+
+  @ApiProperty({ description: 'Boss id (for employee accounts)', required: false })
+  bossId?: string;
 }
 
 export class AdminProfileDto {
@@ -35,8 +48,14 @@ export class AdminProfileDto {
   @ApiProperty({ description: 'Admin username' })
   username: string;
 
-  @ApiProperty({ description: 'Admin role', enum: ['super-admin', 'admin'] })
+  @ApiProperty({ description: 'User role', enum: ADMIN_USER_ROLES })
   role: string;
+
+  @ApiProperty({ description: 'Slash virtual account id (for boss/employee)', required: false })
+  virtualAccountId?: string;
+
+  @ApiProperty({ description: 'Boss id (for employee accounts)', required: false })
+  bossId?: string;
 
   @ApiProperty({ description: 'Account creation date' })
   createdAt: Date;

@@ -23,6 +23,8 @@ import {
 import { VirtualAccountQueryDto } from '../dto/virtual-account-query.dto';
 import { UpdateVirtualAccountDto } from '../../integrations/slash/dto/account.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { Roles } from '../decorators/roles.decorator';
+import { RolesGuard } from '../guards/roles.guard';
 import {
   LinkAccountDto,
   LinkAccountResponseDto,
@@ -35,7 +37,8 @@ import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants
 @ApiTags('Admin API - Virtual Accounts')
 @ApiBearerAuth()
 @Controller('admin-api/virtual-accounts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin', 'super-admin')
 export class AccountsController {
   private readonly logger = new Logger(AccountsController.name);
 

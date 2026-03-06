@@ -1,5 +1,6 @@
 import { IsString, IsNotEmpty, MinLength, IsEnum, IsEmail, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ADMIN_USER_ROLES, type AdminUserRole } from '../../database/schemas/admin-user.schema';
 
 export class CreateAdminDto {
   @ApiProperty({ description: 'Admin username', example: 'john.doe' })
@@ -16,18 +17,28 @@ export class CreateAdminDto {
 
   @ApiProperty({ 
     description: 'Admin role', 
-    enum: ['admin', 'super-admin'],
+    enum: ADMIN_USER_ROLES,
     example: 'admin',
     default: 'admin'
   })
-  @IsEnum(['admin', 'super-admin'])
+  @IsEnum(ADMIN_USER_ROLES)
   @IsOptional()
-  role?: 'admin' | 'super-admin';
+  role?: AdminUserRole;
 
   @ApiPropertyOptional({ description: 'Admin email', example: 'john@example.com' })
   @IsEmail()
   @IsOptional()
   email?: string;
+
+  @ApiPropertyOptional({ description: 'Slash virtual account id (for boss/employee)', example: 'subaccount_...' })
+  @IsString()
+  @IsOptional()
+  virtualAccountId?: string;
+
+  @ApiPropertyOptional({ description: 'Boss id (for employee accounts)', example: '...' })
+  @IsString()
+  @IsOptional()
+  bossId?: string;
 }
 
 export class AdminUserResponseDto {
@@ -37,7 +48,7 @@ export class AdminUserResponseDto {
   @ApiProperty({ description: 'Username' })
   username: string;
 
-  @ApiProperty({ description: 'Role', enum: ['admin', 'super-admin'] })
+  @ApiProperty({ description: 'Role', enum: ADMIN_USER_ROLES })
   role: string;
 
   @ApiProperty({ description: 'Email', required: false })
@@ -48,6 +59,12 @@ export class AdminUserResponseDto {
 
   @ApiProperty({ description: 'Last login time', required: false })
   lastLoginAt?: Date;
+
+  @ApiProperty({ description: 'Slash virtual account id (for boss/employee)', required: false })
+  virtualAccountId?: string;
+
+  @ApiProperty({ description: 'Boss id (for employee accounts)', required: false })
+  bossId?: string;
 
   @ApiProperty({ description: 'Created at' })
   createdAt: Date;

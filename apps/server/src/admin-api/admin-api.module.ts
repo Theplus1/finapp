@@ -29,6 +29,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
 import { DailySummaryController } from './controllers/daily-summary.controller';
 import { DailyPaymentSummariesModule } from 'src/domain/daily-payment-summaries/daily-payment-summaries.module';
 
@@ -72,6 +73,7 @@ import { DailyPaymentSummariesModule } from 'src/domain/daily-payment-summaries/
     LocalAuthGuard,
     JwtAuthGuard,
     SuperAdminAuthGuard,
+    RolesGuard,
     // Services
     AdminAuthService,
   ],
