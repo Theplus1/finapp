@@ -7,7 +7,6 @@ import {
 } from "@repo/ui/components/drawer";
 import { Button } from "@repo/ui/components/button";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
-import { EMPTY_LABEL } from "@/app/utils/constants";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -32,8 +31,8 @@ const maxLengthIdTelegram = 15;
 type Props = {
   virtualAccount: VirtualAccount | null;
   openDrawer: boolean;
-  onCancel: () => void;
-  onSubmitSuccess: () => void;
+  onCancelSetTelegram: () => void;
+  onSubmitTelegramSuccess: () => void;
 };
 
 const renderTelegramsIds = (virtualAccount: VirtualAccount) => {
@@ -51,8 +50,8 @@ const renderTelegramsIds = (virtualAccount: VirtualAccount) => {
 const FormLinkTelegram = ({
   virtualAccount,
   openDrawer,
-  onCancel,
-  onSubmitSuccess,
+  onCancelSetTelegram,
+  onSubmitTelegramSuccess,
 }: Props) => {
   const initTelegramsIds = renderTelegramsIds(virtualAccount!);
   const [telegramIds, setTelegramIds] = useState<number[]>(initTelegramsIds);
@@ -75,7 +74,7 @@ const FormLinkTelegram = ({
         })
         .then(() => {
           toast.success("Telegram linked successfully");
-          onSubmitSuccess();
+          onSubmitTelegramSuccess();
         })
         .catch((error) => {
           toast.error(error.message);
@@ -103,7 +102,7 @@ const FormLinkTelegram = ({
 
   const handleDrawerClose = () => {
     setTelegramIds([0]);
-    onCancel();
+    onCancelSetTelegram();
   };
 
   const handleAddTelegramId = () => {
@@ -124,100 +123,91 @@ const FormLinkTelegram = ({
   };
 
   return (
-    <Drawer direction="right" open={openDrawer}>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>
-            Link telegrams to virtual account &quot;
-            {virtualAccount?.name ?? EMPTY_LABEL}&quot;
-          </DrawerTitle>
-        </DrawerHeader>
-        <div className="px-4 flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Telegram IDs
-          </label>
-          {telegramIds.map((id, index) => {
-            const progress = (id.toString().length / maxLengthIdTelegram) * 100;
-            const isZeroId = id === 0;
-            const isDuplicateId =
-              telegramIds.some(
-                (telegramId, idx) => telegramId === id && idx !== index,
-              );
-            return (
-              <div key={index} className="flex items-center gap-3">
-                <Field data-invalid={isZeroId || isDuplicateId}>
-                  <InputGroup className="pr-1">
-                    <InputGroupInput
-                      placeholder="Enter telegram id"
-                      value={id}
-                      maxLength={maxLengthIdTelegram}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        handleChangeTelegramId(value, index);
-                      }}
-                      onBlur={(e) => {
-                        setTelegramIds((prev) => {
-                          const newIds = [...prev];
-                          newIds[index] = Number(e.target.value) || 0;
-                          return newIds;
-                        });
-                      }}
-                    />
-                    <InputGroupAddon className="justify-end">
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info
-                            size={16}
-                            opacity={progress === 100 ? 1 : 0}
-                            style={{
-                              transition: "opacity 0.3s ease",
-                            }}
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          Reached maximum {maxLengthIdTelegram} characters
-                        </TooltipContent>
-                      </Tooltip>
-                    </InputGroupAddon>
-                  </InputGroup>
-                </Field>
-                <Trash
-                  size={22}
-                  className="cursor-pointer"
-                  onClick={() => handleRemoveTelegramId(index)}
-                />
-              </div>
-            );
-          })}
-          <CirclePlus
-            size={22}
-            className="text-muted-foreground cursor-pointer mt-4"
-            onClick={handleAddTelegramId}
-          />
+    <>
+      <div className="px-4 flex flex-col gap-2">
+        <label className="block text-sm font-medium text-muted-foreground">
+          Telegram IDs
+        </label>
+        {telegramIds.map((id, index) => {
+          const progress = (id.toString().length / maxLengthIdTelegram) * 100;
+          const isZeroId = id === 0;
+          const isDuplicateId = telegramIds.some(
+            (telegramId, idx) => telegramId === id && idx !== index,
+          );
+          return (
+            <div key={index} className="flex items-center gap-3">
+              <Field data-invalid={isZeroId || isDuplicateId}>
+                <InputGroup className="pr-1">
+                  <InputGroupInput
+                    placeholder="Enter telegram id"
+                    value={id}
+                    maxLength={maxLengthIdTelegram}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      handleChangeTelegramId(value, index);
+                    }}
+                    onBlur={(e) => {
+                      setTelegramIds((prev) => {
+                        const newIds = [...prev];
+                        newIds[index] = Number(e.target.value) || 0;
+                        return newIds;
+                      });
+                    }}
+                  />
+                  <InputGroupAddon align={"inline-end"}>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info
+                          size={16}
+                          opacity={progress === 100 ? 1 : 0}
+                          style={{
+                            transition: "opacity 0.3s ease",
+                          }}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Reached maximum {maxLengthIdTelegram} characters
+                      </TooltipContent>
+                    </Tooltip>
+                  </InputGroupAddon>
+                </InputGroup>
+              </Field>
+              <Trash
+                size={22}
+                className="cursor-pointer"
+                onClick={() => handleRemoveTelegramId(index)}
+              />
+            </div>
+          );
+        })}
+        <CirclePlus
+          size={22}
+          className="text-muted-foreground cursor-pointer mt-4"
+          onClick={handleAddTelegramId}
+        />
+      </div>
+      <DrawerFooter className="px-4">
+        <div className="flex justify-end gap-3">
+          <Button
+            variant="outline"
+            onClick={handleDrawerClose}
+            className="cursor-pointer"
+          >
+            Cancel
+          </Button>
+          <Button
+            className={cn(
+              "cursor-pointer",
+              isLoading && "cursor-not-allowed opacity-50",
+            )}
+            onClick={!isLoading ? onSubmit : undefined}
+          >
+            {isLoading ? <Spinner /> : ""}
+            Submit
+          </Button>
         </div>
-        <DrawerFooter className="px-4">
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={handleDrawerClose}
-              className="cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              className={cn(
-                "cursor-pointer",
-                isLoading && "cursor-not-allowed opacity-50",
-              )}
-              onClick={!isLoading ? onSubmit : undefined}
-            >
-              {isLoading ? <Spinner /> : ""}
-              Submit
-            </Button>
-          </div>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+      </DrawerFooter>
+    </>
   );
 };
 

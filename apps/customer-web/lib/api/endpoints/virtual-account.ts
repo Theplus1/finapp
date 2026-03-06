@@ -31,8 +31,6 @@ export interface VirtualAccount {
   linkedTelegramIds?: number[];
   accountNumber: string;
   routingNumber: string;
-  bossEmail?: string;
-  bossUsername?: string;
 }
 
 type Params = {
@@ -51,31 +49,22 @@ export interface VirtualAccountsDetailResponse {
 
 export const virtualAccountsApi = {
   getVirtualAccounts: async (
-    params?: Params,
+    params?: Params
   ): Promise<ApiResponse<VirtualAccount[]>> => {
     return apiClient.get("/virtual-account", { params });
   },
   getVirtualAccountById: async (
-    id: string,
+    id: string
   ): Promise<ApiResponse<VirtualAccount>> => {
     return await apiClient.get(`/virtual-account/${id}`);
   },
   linkTelegram: async (
     virtualAccountId: string,
-    body: { telegramIds: number[] },
+    body: { telegramIds: number[] }
   ): Promise<ApiResponse<VirtualAccount>> => {
     return await apiClient.post(
       `/virtual-account/${virtualAccountId}/link`,
-      body,
-    );
-  },
-  setAccount: async (
-    virtualAccountId: string,
-    body: { username: string; email: string; password: string },
-  ): Promise<ApiResponse<VirtualAccount>> => {
-    return await apiClient.post(
-      `/virtual-account/${virtualAccountId}/set-account`,
-      body,
+      body
     );
   },
 };

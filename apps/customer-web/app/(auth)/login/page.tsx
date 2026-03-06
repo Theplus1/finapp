@@ -14,11 +14,11 @@ export default function Page() {
       console.log("Login failed:", error);
     },
     onSuccess: (response: ApiResponse<AuthResponse>) => {
-      const isAdmin = response.data.type === "admin";
-      if(!isAdmin) {
+      const isCustomer = response.data.type === "customer";
+      if (!isCustomer) {
         throw new Error("You don't have permission to access this page");
       }
-      
+
       localStorage.setItem("auth_token", response.data.accessToken);
       localStorage.setItem("username", response.data.username);
       router.push("/dashboard");

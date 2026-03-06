@@ -19,7 +19,7 @@ export interface RegisterData {
 export interface AuthResponse {
   accessToken: string;
   username: string;
-  type: 'admin' | 'customer';
+  type: "customer" | "admin";
 }
 
 export interface User {

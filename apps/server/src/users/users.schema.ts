@@ -25,9 +25,6 @@ export class User {
   @Prop({ index: true, type: [Number], default: [] })
   telegramIds?: number[];
 
-  @Prop({ type: [Number], default: [] })
-  telegramIds?: number[];
-
   @Prop()
   username?: string;
 
