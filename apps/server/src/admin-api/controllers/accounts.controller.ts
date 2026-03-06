@@ -33,6 +33,10 @@ import { AccountsService } from '../../domain/accounts/accounts.service';
 import { SlashApiService } from '../../integrations/slash/services/slash-api.service';
 import { UsersService } from '../../users/users.service';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
+import { AdminAuthService } from '../services/admin-auth.service';
+import { AdminUsersService } from '../../domain/admin-users/admin-users.service';
+import { SetBossAccountDto } from '../dto/set-boss-account.dto';
+import { AdminUserResponseDto } from '../dto/create-admin.dto';
 
 @ApiTags('Admin API - Virtual Accounts')
 @ApiBearerAuth()
@@ -46,6 +50,8 @@ export class AccountsController {
     private readonly accountsService: AccountsService,
     private readonly slashApiService: SlashApiService,
     private readonly usersService: UsersService,
+    private readonly adminAuthService: AdminAuthService,
+    private readonly adminUsersService: AdminUsersService,
   ) {}
 
   @Get()
@@ -226,5 +232,64 @@ export class AccountsController {
     this.logger.log(`Successfully unlinked account ${id} from virtual account ID ${virtualAccount.slashId}`);
     
     return true;
+  }
+
+  @Post(':id/set-account')
+  @ApiOperation({
+    summary: 'Create boss account for virtual account',
+    description: 'Admin creates a boss user (customer owner) for a given virtual account',
+  })
+  @ApiParam({ name: 'id', description: 'Virtual Account Slash ID' })
+  @ApiBody({ type: SetBossAccountDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Boss account created and linked to virtual account successfully',
+    type: AdminUserResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - boss already exists for this virtual account or username taken',
+  })
+  async setBossAccount(
+    @Param('id') slashId: string,
+    @Body() dto: SetBossAccountDto,
+    @Request() req: { user?: { username?: string } },
+  ): Promise<AdminUserResponseDto> {
+    this.logger.log(
+      `Set boss account for virtual account ${slashId} by ${req.user?.username ?? 'unknown'}`,
+    );
+
+    // Here we treat :id as Slash virtual account id
+    const virtualAccount = await this.accountsService.findBySlashId(slashId);
+
+    const existingBoss = await this.adminUsersService.findBossByVirtualAccountId(
+      virtualAccount.slashId,
+    );
+    if (existingBoss) {
+      throw new BadRequestException(
+        `Virtual account ${virtualAccount.slashId} already has a boss user: ${existingBoss.username}`,
+      );
+    }
+
+    const bossUser = await this.adminAuthService.createAdmin(
+      dto.username,
+      dto.password,
+      'boss',
+      dto.email,
+      { virtualAccountId: virtualAccount.slashId },
+    );
+
+    return {
+      id: (bossUser._id as any).toString(),
+      username: bossUser.username,
+      role: bossUser.role,
+      email: bossUser.email,
+      isActive: bossUser.isActive,
+      lastLoginAt: bossUser.lastLoginAt,
+      virtualAccountId: bossUser.virtualAccountId,
+      bossId: bossUser.bossId,
+      createdAt: bossUser.createdAt,
+      updatedAt: bossUser.updatedAt,
+    };
   }
 }
