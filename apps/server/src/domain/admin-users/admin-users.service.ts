@@ -94,6 +94,26 @@ export class AdminUsersService {
   }
 
   /**
+   * Find active boss by virtual account id
+   */
+  async findBossByVirtualAccountId(virtualAccountId: string): Promise<AdminUserDocument | null> {
+    return this.adminUserRepository.findOne({
+      role: 'boss',
+      virtualAccountId,
+      isActive: true,
+    });
+  }
+
+  /**
+   * Find all active bosses by virtual account ids
+   */
+  async findBossesByVirtualAccountIds(
+    virtualAccountIds: string[],
+  ): Promise<AdminUserDocument[]> {
+    return this.adminUserRepository.findBossesByVirtualAccountIds(virtualAccountIds);
+  }
+
+  /**
    * Update admin user password
    */
   async updatePassword(username: string, newPassword: string): Promise<void> {

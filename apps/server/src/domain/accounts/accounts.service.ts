@@ -4,10 +4,11 @@ import { VirtualAccountDocument } from '../../database/schemas/virtual-account.s
 import { PaginationOptions, RepositoryQuery } from '../../common/types/repository-query.types';
 import { SortOrder } from '../../common/constants/pagination.constants';
 import { UsersService } from '../../users/users.service';
-import { 
-  VirtualAccountDetail, 
-  AccountStats, 
-  AccountFilters 
+import { AdminUsersService } from '../admin-users/admin-users.service';
+import {
+  VirtualAccountDetail,
+  AccountStats,
+  AccountFilters,
 } from './types/account.types';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class AccountsService {
   constructor(
     private readonly virtualAccountRepository: VirtualAccountRepository,
     private readonly usersService: UsersService,
+    private readonly adminUsersService: AdminUsersService,
   ) {}
 
   /**
@@ -56,7 +58,7 @@ export class AccountsService {
       this.virtualAccountRepository.count(mongoFilter),
     ]);
 
-    // Enrich accounts with linked user data
+    // Enrich accounts with linked user & boss data
     const enrichedAccounts = await this.enrichAccounts(accounts);
 
     return [enrichedAccounts, total];
@@ -186,31 +188,46 @@ export class AccountsService {
       return [];
     }
 
-    // Extract unique account IDs
-    const accountIds = [...new Set(accounts.map(a => a.slashId).filter(Boolean))];
+    // Extract unique Slash IDs
+    const slashIds = [...new Set(accounts.map((a) => a.slashId).filter(Boolean))];
 
-    // Batch fetch users who have these accounts linked
-    const users = accountIds.length > 0
-      ? await this.usersService.findByAccountNumbers(accountIds)
-      : [];
+    const [users, bosses] = await Promise.all([
+      slashIds.length > 0
+        ? this.usersService.findByAccountNumbers(slashIds)
+        : Promise.resolve([]),
+      slashIds.length > 0
+        ? this.adminUsersService.findBossesByVirtualAccountIds(slashIds)
+        : Promise.resolve([]),
+    ]);
 
-    // Build lookup map for O(1) access
-    const userMap = new Map();
-    users.forEach(user => {
+    const userMap = new Map<string, any>();
+    users.forEach((user) => {
       if (user.virtualAccountId) {
         userMap.set(user.virtualAccountId, user);
       }
     });
 
-    // Enrich each account with user data
-    return accounts.map(account => {
+    const bossMap = new Map<string, { username: string; email?: string }>();
+    bosses.forEach((boss) => {
+      if (boss.virtualAccountId) {
+        bossMap.set(boss.virtualAccountId, {
+          username: boss.username,
+          email: boss.email,
+        });
+      }
+    });
+
+    return accounts.map((account) => {
       const accountData = account.toObject();
       const user = userMap.get(account.slashId);
+      const boss = bossMap.get(account.slashId);
 
       const enriched: VirtualAccountDetail = {
         ...accountData,
         linkedTelegramId: user?.telegramId,
         linkedTelegramIds: user?.telegramIds,
+        bossUsername: boss?.username,
+        bossEmail: boss?.email,
       };
 
       return enriched;

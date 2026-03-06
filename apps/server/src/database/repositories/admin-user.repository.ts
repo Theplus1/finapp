@@ -74,6 +74,13 @@ export class AdminUserRepository {
   }
 
   /**
+   * Generic findOne helper
+   */
+  async findOne(filter: Partial<AdminUser>): Promise<AdminUserDocument | null> {
+    return this.adminUserModel.findOne(filter).exec();
+  }
+
+  /**
    * List all admin users (without password hashes)
    */
   async findAll(): Promise<AdminUserDocument[]> {
@@ -102,6 +109,22 @@ export class AdminUserRepository {
   async count(): Promise<number> {
     return this.adminUserModel
       .countDocuments({ isActive: true })
+      .exec();
+  }
+
+  /**
+   * Find all active bosses by virtual account ids
+   */
+  async findBossesByVirtualAccountIds(
+    virtualAccountIds: string[],
+  ): Promise<AdminUserDocument[]> {
+    if (virtualAccountIds.length === 0) return [];
+    return this.adminUserModel
+      .find({
+        role: 'boss',
+        isActive: true,
+        virtualAccountId: { $in: virtualAccountIds },
+      })
       .exec();
   }
 }
