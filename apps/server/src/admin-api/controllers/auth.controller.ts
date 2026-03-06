@@ -27,6 +27,7 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { SuperAdminAuthGuard } from '../guards/super-admin-auth.guard';
 import { AdminLoginDto, AdminLoginResponseDto, AdminProfileDto } from '../dto/admin-auth.dto';
 import { CreateAdminDto, AdminUserResponseDto, UpdatePasswordDto } from '../dto/create-admin.dto';
+import type { AuthenticatedUser } from '../services/admin-auth.service';
 
 @ApiTags('Admin API - Authentication')
 @Controller('admin-api/auth')
@@ -49,7 +50,9 @@ export class AuthController {
     type: AdminLoginResponseDto 
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Request() req: any): Promise<AdminLoginResponseDto> {
+  async login(
+    @Request() req: { user: AuthenticatedUser },
+  ): Promise<AdminLoginResponseDto> {
     this.logger.log(`Login successful for user: ${req.user.username}`);
     return this.adminAuthService.login(req.user);
   }
@@ -67,9 +70,15 @@ export class AuthController {
     type: AdminProfileDto 
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@Request() req: any): Promise<AdminProfileDto> {
-    const admin = req.user;
-    const adminUser = await this.adminAuthService.getAdminUser(admin.username);
+  async getProfile(
+    @Request() req: { user?: { username?: string } },
+  ): Promise<AdminProfileDto> {
+    const username = req.user?.username;
+    if (!username) {
+      throw new Error('Unauthorized: missing username');
+    }
+
+    const adminUser = await this.adminAuthService.getAdminUser(username);
     
     if (!adminUser) {
       throw new Error('Admin user not found');
@@ -79,6 +88,8 @@ export class AuthController {
       id: (adminUser._id as any).toString(),
       username: adminUser.username,
       role: adminUser.role,
+      virtualAccountId: adminUser.virtualAccountId,
+      bossId: adminUser.bossId,
       createdAt: adminUser.createdAt,
     };
   }
@@ -99,7 +110,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Bad request - user already exists' })
   @ApiResponse({ status: 401, description: 'Unauthorized - invalid token' })
   async createAdmin(
-    @Request() req: any,
+    @Request() req: { user?: unknown },
     @Body() createAdminDto: CreateAdminDto,
   ): Promise<AdminUserResponseDto> {
     this.logger.log(`Super-admin creating new admin: ${createAdminDto.username}`);
@@ -109,6 +120,7 @@ export class AuthController {
       createAdminDto.password,
       createAdminDto.role || 'admin',
       createAdminDto.email,
+      { virtualAccountId: createAdminDto.virtualAccountId, bossId: createAdminDto.bossId },
     );
 
     return {
@@ -118,6 +130,8 @@ export class AuthController {
       email: user.email,
       isActive: user.isActive,
       lastLoginAt: user.lastLoginAt,
+      virtualAccountId: user.virtualAccountId,
+      bossId: user.bossId,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

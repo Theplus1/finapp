@@ -6,12 +6,15 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { Roles } from '../decorators/roles.decorator';
+import { RolesGuard } from '../guards/roles.guard';
 import { UsersService } from 'src/users/users.service';
 
 @ApiTags('Admin API - Users')
 @ApiBearerAuth()
 @Controller('admin-api/users')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin', 'super-admin')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
 

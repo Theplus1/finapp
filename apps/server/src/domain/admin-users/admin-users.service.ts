@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AdminUserRepository } from '../../database/repositories/admin-user.repository';
-import { AdminUserDocument } from '../../database/schemas/admin-user.schema';
+import { AdminUserDocument, AdminUserRole } from '../../database/schemas/admin-user.schema';
 
 /**
  * Admin Users Domain Service
@@ -26,6 +26,11 @@ export class AdminUsersService {
       return null;
     }
 
+    if (!adminUser.isActive) {
+      this.logger.warn(`Login attempt for inactive user: ${username}`);
+      return null;
+    }
+
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, adminUser.passwordHash);
     if (!isPasswordValid) {
@@ -45,8 +50,9 @@ export class AdminUsersService {
   async createUser(
     username: string, 
     password: string, 
-    role: 'super-admin' | 'admin' = 'admin',
+    role: AdminUserRole = 'admin',
     email?: string,
+    meta?: { virtualAccountId?: string; bossId?: string },
   ): Promise<AdminUserDocument> {
     // Check if user already exists
     const exists = await this.adminUserRepository.exists(username);
@@ -63,6 +69,8 @@ export class AdminUsersService {
       passwordHash,
       role,
       email,
+      virtualAccountId: meta?.virtualAccountId,
+      bossId: meta?.bossId,
       isActive: true,
     });
 

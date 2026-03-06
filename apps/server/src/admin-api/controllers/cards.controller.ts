@@ -17,13 +17,16 @@ import {
 } from '@nestjs/swagger';
 import { CardQueryDto } from '../dto/card-query.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { Roles } from '../decorators/roles.decorator';
+import { RolesGuard } from '../guards/roles.guard';
 import { CardsService } from '../../domain/cards/cards.service';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 
 @ApiTags('Admin API - Cards')
 @ApiBearerAuth()
 @Controller('admin-api/cards')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin', 'super-admin')
 export class CardsController {
   private readonly logger = new Logger(CardsController.name);
 
