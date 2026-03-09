@@ -77,6 +77,6 @@ import { DailyPaymentSummariesModule } from 'src/domain/daily-payment-summaries/
     // Services
     AdminAuthService,
   ],
-  exports: [AdminAuthService],
+  exports: [AdminAuthService, JwtAuthGuard, RolesGuard],
 })
 export class AdminApiModule {}

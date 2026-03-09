@@ -17,6 +17,7 @@ import { GoogleSheetsModule } from './integrations/google-sheets/google-sheets.m
 const rateLimit = require('telegraf-ratelimit');
 import { Agent as HttpsAgent } from 'https';
 import { AdminApiModule } from './admin-api/admin-api.module';
+import { CustomerApiModule } from './customer-api/customer-api.module';
 import { DatabaseModule } from './database/database.module';
 import { CardsModule } from './domain/cards/cards.module';
 import { TransactionsModule } from './domain/transactions/transactions.module';
@@ -153,6 +154,7 @@ import { CardSpendingAlertsModule } from './domain/card-spending-alerts/card-spe
     UsersModule,
     BotModule,  // Telegram bot
     AdminApiModule,  // Admin dashboard API
+    CustomerApiModule,  // Customer-facing API (Boss, NV)
   ],
   controllers: [AppController],
   providers: [AppService],

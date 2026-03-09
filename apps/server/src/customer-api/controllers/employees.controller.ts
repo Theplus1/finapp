@@ -1,0 +1,162 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+  Logger,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../admin-api/guards/jwt-auth.guard';
+import { Roles } from '../../admin-api/decorators/roles.decorator';
+import { RolesGuard } from '../../admin-api/guards/roles.guard';
+import { AdminUsersService } from '../../domain/admin-users/admin-users.service';
+import {
+  CreateEmployeeDto,
+  UpdateEmployeeDto,
+  EmployeeResponseDto,
+} from '../dto/employee.dto';
+import type { AdminUserDocument } from '../../database/schemas/admin-user.schema';
+
+interface RequestUser {
+  userId: string;
+  username: string;
+  role: string;
+  bossId?: string;
+  virtualAccountId?: string;
+}
+
+function toEmployeeResponse(doc: AdminUserDocument): EmployeeResponseDto {
+  return {
+    id: (doc._id as unknown as { toString(): string }).toString(),
+    username: doc.username,
+    role: doc.role,
+    email: doc.email,
+    isActive: doc.isActive,
+    lastLoginAt: doc.lastLoginAt,
+    bossId: doc.bossId,
+    virtualAccountId: doc.virtualAccountId,
+    createdAt: doc.createdAt as Date,
+    updatedAt: doc.updatedAt as Date,
+  };
+}
+
+@ApiTags('Customer API - Employees')
+@ApiBearerAuth()
+@Controller('customer-api/employees')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('boss')
+export class EmployeesController {
+  private readonly logger = new Logger(EmployeesController.name);
+
+  constructor(private readonly adminUsersService: AdminUsersService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'List employees of the current boss' })
+  @ApiResponse({
+    status: 200,
+    description: 'Employees retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Boss only' })
+  async list(@Request() req: { user?: RequestUser }): Promise<{
+    data: EmployeeResponseDto[];
+  }> {
+    const bossId = req.user?.userId;
+    if (!bossId) {
+      throw new Error('User context missing');
+    }
+    const employees = await this.adminUsersService.findEmployeesByBossId(bossId);
+    return {
+      data: employees.map((e) => toEmployeeResponse(e as AdminUserDocument)),
+    };
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new employee (ads or accountant)' })
+  @ApiBody({ type: CreateEmployeeDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Employee created successfully',
+    type: EmployeeResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - username taken or invalid role' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Boss only' })
+  async create(
+    @Body() dto: CreateEmployeeDto,
+    @Request() req: { user?: RequestUser },
+  ): Promise<EmployeeResponseDto> {
+    const bossId = req.user?.userId;
+    if (!bossId) {
+      throw new Error('User context missing');
+    }
+    this.logger.log(`Boss ${req.user?.username} creating employee ${dto.username}`);
+    const employee = await this.adminUsersService.createEmployee(
+      bossId,
+      dto.username,
+      dto.password,
+      dto.role,
+      dto.email,
+    );
+    return toEmployeeResponse(employee as AdminUserDocument);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update employee (password, email)' })
+  @ApiParam({ name: 'id', description: 'Employee user ID' })
+  @ApiBody({ type: UpdateEmployeeDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Employee updated successfully',
+    type: EmployeeResponseDto,
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden - not your employee' })
+  @ApiResponse({ status: 404, description: 'Employee not found' })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateEmployeeDto,
+    @Request() req: { user?: RequestUser },
+  ): Promise<EmployeeResponseDto> {
+    const bossId = req.user?.userId;
+    if (!bossId) {
+      throw new Error('User context missing');
+    }
+    this.logger.log(`Boss ${req.user?.username} updating employee ${id}`);
+    const updated = await this.adminUsersService.updateEmployee(id, bossId, {
+      password: dto.password,
+      email: dto.email,
+    });
+    return toEmployeeResponse(updated as AdminUserDocument);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete (deactivate) employee' })
+  @ApiParam({ name: 'id', description: 'Employee user ID' })
+  @ApiResponse({ status: 200, description: 'Employee deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - not your employee' })
+  @ApiResponse({ status: 404, description: 'Employee not found' })
+  async delete(
+    @Param('id') id: string,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{ success: true }> {
+    const bossId = req.user?.userId;
+    if (!bossId) {
+      throw new Error('User context missing');
+    }
+    this.logger.log(`Boss ${req.user?.username} deleting employee ${id}`);
+    await this.adminUsersService.deleteEmployee(id, bossId);
+    return { success: true };
+  }
+}
