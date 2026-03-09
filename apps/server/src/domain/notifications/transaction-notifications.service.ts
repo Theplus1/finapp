@@ -47,6 +47,13 @@ export class TransactionNotificationsService {
   private async notifyUserAboutTransaction(transaction: any): Promise<void> {
     this.logger.log(`Processing notification for transaction: ${transaction.slashId}`);
 
+    if (transaction.amountCents !== -100) {
+      this.logger.debug(
+        `Skip sending notification for non-Facebook verify transaction: ${transaction.slashId} (amountCents=${transaction.amountCents})`,
+      );
+      return;
+    }
+
     const user = await this.usersService.findByVirtualAccountId(transaction.virtualAccountId || '');
     const hasTelegram = user?.telegramId != null || (user?.telegramIds?.length ?? 0) > 0;
     if (!user || !hasTelegram) {
