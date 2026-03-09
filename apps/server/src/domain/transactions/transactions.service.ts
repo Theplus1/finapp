@@ -147,6 +147,21 @@ export class TransactionsService {
   }
 
   /**
+   * Find one transaction by Slash ID and virtual account ID, returns enriched or null
+   */
+  async findBySlashIdAndVirtualAccountId(
+    slashId: string,
+    virtualAccountId: string,
+  ): Promise<TransactionWithRelations | null> {
+    const transaction = await this.transactionRepository.findBySlashId(slashId);
+    if (!transaction || transaction.virtualAccountId !== virtualAccountId) {
+      return null;
+    }
+    const [enriched] = await this.enrichTransactions([transaction]);
+    return enriched ?? null;
+  }
+
+  /**
    * Enrich transactions with card and virtual account data
    * Uses batch queries to avoid N+1 problem
    */
