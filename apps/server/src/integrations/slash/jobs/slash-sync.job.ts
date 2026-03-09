@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 export class SlashSyncJob {
   private readonly logger = new Logger(SlashSyncJob.name);
   private readonly enableScheduledSync: boolean;
+  private isSyncingTransactions = false;
 
   constructor(
     private readonly slashSyncService: SlashSyncService,
@@ -53,6 +54,12 @@ export class SlashSyncJob {
       return;
     }
 
+    if (this.isSyncingTransactions) {
+      this.logger.debug('Skipping transaction sync — previous run still in progress');
+      return;
+    }
+
+    this.isSyncingTransactions = true;
     const startTime = Date.now();
     this.logger.log('Starting scheduled recent transaction sync...');
     try {
@@ -63,6 +70,8 @@ export class SlashSyncJob {
     } catch (error) {
       const duration = Date.now() - startTime;
       this.logger.error(`Scheduled recent transaction sync failed after ${duration}ms:`, error);
+    } finally {
+      this.isSyncingTransactions = false;
     }
   }
 
