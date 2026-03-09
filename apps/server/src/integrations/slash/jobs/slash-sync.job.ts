@@ -48,7 +48,7 @@ export class SlashSyncJob {
   /**
    * Sync recent transactions every 10 seconds
    */
-  @Cron(CronExpression.EVERY_30_SECONDS)
+  @Cron(CronExpression.EVERY_10_SECONDS)
   async syncRecentTransactions() {
     if (!this.enableScheduledSync) {
       return;
@@ -64,7 +64,7 @@ export class SlashSyncJob {
     this.logger.log('Starting scheduled recent transaction sync...');
     try {
       // Sync transactions from last 30 seconds (runs every 10s for 3x overlap)
-      await this.slashSyncService.syncRecentTransactionsBySeconds(60);
+      await this.slashSyncService.syncRecentTransactionsBySeconds(30);
       const duration = Date.now() - startTime;
       this.logger.log(`Scheduled recent transaction sync completed successfully in ${duration}ms`);
     } catch (error) {
