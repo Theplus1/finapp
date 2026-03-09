@@ -4,17 +4,30 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from "@repo/ui/components/drawer";
+import { Button } from "@repo/ui/components/button";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@repo/ui/components/spinner";
 import { cn } from "@/lib/utils";
+import { CirclePlus, Info, Trash } from "lucide-react";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@repo/ui/components/input-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@repo/ui/components/tooltip";
+import { Field } from "@repo/ui/components/field";
+
+const maxLengthIdTelegram = 15;
 
 type Props = {
   virtualAccount: VirtualAccount | null;
@@ -23,25 +36,45 @@ type Props = {
   onSubmitSuccess: () => void;
 };
 
+const renderTelegramsIds = (virtualAccount: VirtualAccount) => {
+  let initTelegramsIds;
+  if (virtualAccount?.linkedTelegramIds?.length) {
+    initTelegramsIds = virtualAccount.linkedTelegramIds;
+  } else if (virtualAccount?.linkedTelegramId) {
+    initTelegramsIds = [virtualAccount.linkedTelegramId];
+  } else {
+    initTelegramsIds = [0];
+  }
+  return initTelegramsIds;
+};
+
 const FormLinkTelegram = ({
   virtualAccount,
   openDrawer,
   onCancel,
   onSubmitSuccess,
 }: Props) => {
-  const [telegramId, setTelegramId] = useState<number>(
-    virtualAccount?.linkedTelegramId ?? 0
-  );
+  const initTelegramsIds = renderTelegramsIds(virtualAccount!);
+  const [telegramIds, setTelegramIds] = useState<number[]>(initTelegramsIds);
   const [isLoading, setIsLoading] = useState(false);
 
   const { mutateAsync: linkTelegram } = useMutation({
     mutationFn: async () => {
+      if (telegramIds.includes(0)) {
+        toast.error("Telegram ID cannot be 0");
+        return;
+      }
+      if (telegramIds.length !== new Set(telegramIds).size) {
+        toast.error("Telegram ID cannot be duplicated");
+        return;
+      }
       setIsLoading(true);
       api.virtualAccounts
         .linkTelegram(virtualAccount!._id, {
-          telegramId: telegramId!,
+          telegramIds: telegramIds,
         })
         .then(() => {
+          toast.success("Telegram linked successfully");
           onSubmitSuccess();
         })
         .catch((error) => {
@@ -57,11 +90,11 @@ const FormLinkTelegram = ({
     if (!virtualAccount || !openDrawer) {
       return;
     }
-    setTelegramId(virtualAccount.linkedTelegramId ?? 0);
+    setTelegramIds(initTelegramsIds);
   }, [openDrawer, virtualAccount]);
 
   const onSubmit = () => {
-    if (!telegramId) {
+    if (!telegramIds) {
       toast.error("Telegram ID is required");
       return;
     }
@@ -69,37 +102,97 @@ const FormLinkTelegram = ({
   };
 
   const handleDrawerClose = () => {
-    setTelegramId(0);
+    setTelegramIds([0]);
     onCancel();
   };
 
-  const disableSubmit =
-    isLoading || !telegramId || telegramId === virtualAccount?.linkedTelegramId;
+  const handleAddTelegramId = () => {
+    setTelegramIds([...telegramIds, 0]);
+  };
+
+  const handleRemoveTelegramId = (index: number) => {
+    setTelegramIds(telegramIds.filter((_, i) => i !== index));
+  };
+
+  const handleChangeTelegramId = (value: string, index: number) => {
+    const numericValue = value.replace(/[^0-9]/g, "");
+    setTelegramIds((prev) => {
+      const newIds = [...prev];
+      newIds[index] = Number(numericValue);
+      return newIds;
+    });
+  };
 
   return (
     <Drawer direction="right" open={openDrawer}>
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>
-            Link telegram to virtual account &quot;
+            Link telegrams to virtual account &quot;
             {virtualAccount?.name ?? EMPTY_LABEL}&quot;
           </DrawerTitle>
         </DrawerHeader>
         <div className="px-4 flex flex-col gap-2">
           <label className="block text-sm font-medium text-muted-foreground">
-            Telegram ID
+            Telegram IDs
           </label>
-          <Input
-            placeholder="Enter telegram id"
-            value={telegramId}
-            onChange={(e) => {
-              const value = e.target.value;
-              const numericValue = value.replace(/[^0-9]/g, "");
-              setTelegramId(numericValue ? Number(numericValue) : 0);
-            }}
-            onBlur={(e) => {
-              setTelegramId(Number(e.target.value) || 0);
-            }}
+          {telegramIds.map((id, index) => {
+            const progress = (id.toString().length / maxLengthIdTelegram) * 100;
+            const isZeroId = id === 0;
+            const isDuplicateId =
+              telegramIds.some(
+                (telegramId, idx) => telegramId === id && idx !== index,
+              );
+            return (
+              <div key={index} className="flex items-center gap-3">
+                <Field data-invalid={isZeroId || isDuplicateId}>
+                  <InputGroup className="pr-1">
+                    <InputGroupInput
+                      placeholder="Enter telegram id"
+                      value={id}
+                      maxLength={maxLengthIdTelegram}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        handleChangeTelegramId(value, index);
+                      }}
+                      onBlur={(e) => {
+                        setTelegramIds((prev) => {
+                          const newIds = [...prev];
+                          newIds[index] = Number(e.target.value) || 0;
+                          return newIds;
+                        });
+                      }}
+                    />
+                    <InputGroupAddon className="justify-end">
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info
+                            size={16}
+                            opacity={progress === 100 ? 1 : 0}
+                            style={{
+                              transition: "opacity 0.3s ease",
+                            }}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Reached maximum {maxLengthIdTelegram} characters
+                        </TooltipContent>
+                      </Tooltip>
+                    </InputGroupAddon>
+                  </InputGroup>
+                </Field>
+                <Trash
+                  size={22}
+                  className="cursor-pointer"
+                  onClick={() => handleRemoveTelegramId(index)}
+                />
+              </div>
+            );
+          })}
+          <CirclePlus
+            size={22}
+            className="text-muted-foreground cursor-pointer mt-4"
+            onClick={handleAddTelegramId}
           />
         </div>
         <DrawerFooter className="px-4">
@@ -114,9 +207,9 @@ const FormLinkTelegram = ({
             <Button
               className={cn(
                 "cursor-pointer",
-                disableSubmit && "cursor-not-allowed opacity-50"
+                isLoading && "cursor-not-allowed opacity-50",
               )}
-              onClick={!disableSubmit ? onSubmit : undefined}
+              onClick={!isLoading ? onSubmit : undefined}
             >
               {isLoading ? <Spinner /> : ""}
               Submit

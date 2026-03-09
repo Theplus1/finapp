@@ -30,6 +30,7 @@ import {
   DateRangeFilter,
 } from '../interfaces/sync.interface';
 import { DailyPaymentSummariesService } from '../../../domain/daily-payment-summaries/daily-payment-summaries.service';
+import { delay } from '../../../common/utils/async.util';
 
 /**
  * Slash Sync Service
@@ -179,6 +180,11 @@ export class SlashSyncService {
       }
 
       cursor = response.metadata?.nextCursor;
+      
+      // Add delay between pagination requests
+      if (cursor) {
+        await delay(2000); // 2s delay between pages
+      }
     } while (cursor);
 
     return result;
@@ -262,8 +268,8 @@ export class SlashSyncService {
       if (itemResult.updated) result.totalUpdated++;
       if (itemResult.failed) result.totalFailed++;
 
-      // Add a small delay to avoid rate limiting
-      await this.delay(100);
+      // Small delay between card detail requests
+      await delay(1000);
     }
 
     return result;
@@ -297,12 +303,6 @@ export class SlashSyncService {
     }
   }
 
-  /**
-   * Utility method to add delay between API calls
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
 
   /**
    * Full sync of all transactions
@@ -353,6 +353,9 @@ export class SlashSyncService {
       result.totalCreated += accountResult.totalCreated;
       result.totalUpdated += accountResult.totalUpdated;
       result.totalFailed += accountResult.totalFailed;
+
+      // Add delay between accounts to prevent overwhelming rate limiter
+      await delay(15000);
     }
 
     return result;
@@ -394,6 +397,11 @@ export class SlashSyncService {
         }
 
         cursor = response.metadata?.nextCursor;
+        
+        // Add delay between pagination requests for additional rate limit protection
+        if (cursor) {
+          await delay(10000); // 10s delay between pages
+        }
       } catch (error) {
         this.logger.error(`Error fetching transactions for account ${virtualAccountId}:`, error);
         cursor = undefined; // Stop pagination on error
@@ -539,6 +547,11 @@ export class SlashSyncService {
       }
 
       cursor = response.metadata?.nextCursor;
+      
+      // Add delay between pagination requests
+      if (cursor) {
+        await delay(2000); // 2s delay between pages
+      }
     } while (cursor);
 
     return result;
@@ -624,6 +637,11 @@ export class SlashSyncService {
       }
 
       cursor = response.metadata?.nextCursor;
+      
+      // Add delay between pagination requests
+      if (cursor) {
+        await delay(2000); // 2s delay between pages
+      }
     } while (cursor);
 
     return result;

@@ -19,8 +19,11 @@ export enum AccessStatus {
 
 @Schema({ timestamps: true })
 export class User {
-  @Prop({ required: true, unique: true })
-  telegramId: number;
+  @Prop()
+  telegramId?: number;
+
+  @Prop({ index: true, type: [Number], default: [] })
+  telegramIds?: number[];
 
   @Prop({ type: [Number], default: [] })
   telegramIds?: number[];
@@ -87,3 +90,11 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+UserSchema.index(
+  { telegramId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { telegramId: { $exists: true, $ne: null } },
+  },
+);

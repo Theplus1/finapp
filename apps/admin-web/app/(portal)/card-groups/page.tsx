@@ -9,10 +9,10 @@ import { Section, SectionContent } from "@/components/layouts/section";
 import { PageLayout } from "@/components/layouts/page-layout";
 import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { CardGroup } from "@/lib/api/endpoints/card-group";
-import { DataTable } from "@/components/ui/data-table";
+import { DataTable } from "@repo/ui/components/data-table";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ClientPagination } from "@/components/ui/client-pagination";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { ClientPagination } from "@repo/ui/components/client-pagination";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};

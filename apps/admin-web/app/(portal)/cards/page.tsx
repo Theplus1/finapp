@@ -5,17 +5,17 @@ import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatUtcMMDDYYYY, renderNoTable } from "@/app/utils/func";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { Section, SectionContent } from "@/components/layouts/section";
 import { PageLayout } from "@/components/layouts/page-layout";
 import type { Card } from "@/lib/api/endpoints/card";
-import { DataTable } from "@/components/ui/data-table";
+import { DataTable } from "@repo/ui/components/data-table";
 import FilterCard from "./components/filter";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { EMPTY_LABEL } from "@/app/utils/constants";
-import { ClientPagination } from "@/components/ui/client-pagination";
-import CardNameCol from "@/components/ui/card-name-col";
+import { ClientPagination } from "@repo/ui/components/client-pagination";
+import CardNameCol from "@repo/ui/components/card-name-col";
 
 const initFilter = {
   cardGroupId: "",

@@ -327,7 +327,7 @@ export const Messages = {
   pendingUserInfo: (user: UserDocument) =>
     `👤 *New Access Request*\n\n` +
     `*User Information:*\n` +
-    `• Telegram ID: \`${user.telegramId}\`\n` +
+    `• Telegram ID: \`${user.telegramId ?? user.telegramIds?.join(',') ?? 'N/A'}\`\n` +
     `• Username: ${user.username ? `@${user.username}` : 'N/A'}\n` +
     `• Name: ${user.firstName || ''} ${user.lastName || ''}\n` +
     `• Virtual Account: ${user.virtualAccountId || 'Not linked'}\n` +
@@ -336,16 +336,16 @@ export const Messages = {
 
   userAccessApproved: (user: UserDocument) =>
     `✅ *Access Approved*\n\n` +
-    `User @${user.username || user.telegramId} has been granted access.`,
+    `User @${user.username || user.telegramId || user.telegramIds?.join(',')} has been granted access.`,
 
   userAccessDenied: (user: UserDocument, reason: string) =>
     `🚫 *Access Denied*\n\n` +
-    `User @${user.username || user.telegramId} access has been denied.\n` +
+    `User @${user.username || user.telegramId || user.telegramIds?.join(',')} access has been denied.\n` +
     `Reason: ${reason}`,
 
   userAccessRevoked: (user: UserDocument, reason: string) =>
     `🚫 *Access Revoked*\n\n` +
-    `User @${user.username || user.telegramId} access has been revoked.\n` +
+    `User @${user.username || user.telegramId || user.telegramIds?.join(',')} access has been revoked.\n` +
     `Reason: ${reason}`,
 
   newAccessRequest: (

@@ -51,7 +51,7 @@ export class UserValidationInterceptor implements NestInterceptor {
     }
 
     // Find user by telegram ID
-    const user = await this.usersService.findByTelegramId(Math.abs(chatGroup.id));
+    const user = await this.usersService.findByTelegramIdOrIds(Math.abs(chatGroup.id));
     
     if (!user || !user.virtualAccountId) {
       if (options.answerCallback && ctx.callbackQuery) {

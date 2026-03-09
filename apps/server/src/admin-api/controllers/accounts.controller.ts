@@ -10,6 +10,7 @@ import {
   UseGuards,
   Logger,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -158,8 +159,10 @@ export class AccountsController {
     @Param('id') id: string,
     @Body() dto: LinkAccountDto,
   ): Promise<LinkAccountResponseDto> {
+    const telegramId = dto.telegramId;
+    const telegramIds = dto.telegramIds;
     this.logger.log(
-      `Linking virtual account ${id} to telegram ID ${dto.telegramId}`,
+      `Linking virtual account ${id} to ${telegramId != null ? `telegramId=${telegramId}` : `telegramIds=${telegramIds!.join(',')}`}`,
     );
 
     if (dto.telegramId) {

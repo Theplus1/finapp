@@ -16,17 +16,17 @@ import { SectionContent } from "@/components/layouts/section";
 import { Section } from "@/components/layouts/section";
 import type { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { DataTable } from "@/components/ui/data-table";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { DataTable } from "@repo/ui/components/data-table";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { CopyIcon } from "@/components/ui/copy-button";
-import { ClientPagination } from "@/components/ui/client-pagination";
+} from "@repo/ui/components/tooltip";
+import { CopyIcon } from "@repo/ui/components/copy-button";
+import { ClientPagination } from "@repo/ui/components/client-pagination";
 import FormLinkTelegram from "./(components)/form-link-telegram";
 import { cn } from "@/lib/utils";
 
@@ -86,7 +86,7 @@ export default function VirtualAccount() {
               page: pagination.page,
               pageSize: pagination.pageSize,
             },
-            row.index
+            row.index,
           )
         );
       },
@@ -183,24 +183,67 @@ export default function VirtualAccount() {
       ),
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
         const telegram = row.original.linkedTelegramId;
+        const telegrams = row.original.linkedTelegramIds ?? [];
+        let renderMenyIdTelegram, renderIdTelegram, renderSetIds;
+        if (telegrams.length > 0) {
+          renderMenyIdTelegram = (
+            <>
+              {telegrams.map((telegram, index) => (
+                <p
+                  key={index}
+                  className={cn(
+                    "text-green-500 cursor-pointer block",
+                    typeof telegram === "number" ? "" : "underline",
+                  )}
+                  onClick={() => {
+                    setVirtualAccountEdit(row.original);
+                    setOpenDrawer(true);
+                  }}
+                >
+                  {telegram}
+                </p>
+              ))}
+            </>
+          );
+        } else if (!!telegram) {
+          renderIdTelegram = (
+            <p
+              key={telegram}
+              className={cn(
+                "text-green-500 cursor-pointer block",
+                telegram ? "" : "underline",
+              )}
+              onClick={() => {
+                setVirtualAccountEdit(row.original);
+                setOpenDrawer(true);
+              }}
+            >
+              {telegram}
+            </p>
+          );
+        } else {
+          renderSetIds = (
+            <p
+              className="text-green-500 cursor-pointer block underline"
+              onClick={() => {
+                setVirtualAccountEdit(row.original);
+                setOpenDrawer(true);
+              }}
+            >
+              Set IDs
+            </p>
+          );
+        }
+
         return isLoading ? (
           <Skeleton />
         ) : (
           <>
             <div className="flex items-center gap-2 hover-container">
-              <span className="font-medium">Telegram:</span>{" "}
-              <span
-                className={cn(
-                  "text-green-500 cursor-pointer",
-                  telegram ? "" : "underline"
-                )}
-                onClick={() => {
-                  setVirtualAccountEdit(row.original);
-                  setOpenDrawer(true);
-                }}
-              >
-                {telegram ? telegram : "Set ID"}
-              </span>
+              <span className="font-medium">Telegrams:</span>{" "}
+              <div>
+                {renderMenyIdTelegram || renderIdTelegram || renderSetIds}
+              </div>
             </div>
           </>
         );

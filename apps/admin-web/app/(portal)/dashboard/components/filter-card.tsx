@@ -6,14 +6,14 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@repo/ui/components/select";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@repo/ui/components/spinner";
 import { Card } from "@/lib/api/endpoints/card";
-import { Input } from "@/components/ui/input";
+import { Input } from "@repo/ui/components/input";
 import { useMemo, useState } from "react";
-import { Label } from "@/components/ui/label";
+import { Label } from "@repo/ui/components/label";
 
 type Props = {
   onCardChange: (cardId: string) => void;

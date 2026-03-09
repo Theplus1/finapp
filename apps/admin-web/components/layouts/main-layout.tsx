@@ -8,15 +8,15 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
+} from "@repo/ui/components/breadcrumb";
+import { Separator } from "@repo/ui/components/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar";
+} from "@repo/ui/components/sidebar";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
-import { Toaster } from "../ui/sonner";
+import { Toaster } from "@repo/ui/components/sonner";
 
 interface MainLayoutProps {
   children: React.ReactNode;

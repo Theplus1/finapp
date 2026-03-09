@@ -6,11 +6,11 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@repo/ui/components/select";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Spinner } from "@/components/ui/spinner";
-import { Label } from "@/components/ui/label";
+import { Spinner } from "@repo/ui/components/spinner";
+import { Label } from "@repo/ui/components/label";
 import { useState } from "react";
 
 type Props = {

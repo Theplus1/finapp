@@ -50,7 +50,7 @@ export class NotificationsHandler {
       return;
     }
 
-    const user = await this.usersService.findByTelegramId(Math.abs(chatId));
+    const user = await this.usersService.findByTelegramIdOrIds(Math.abs(chatId));
     if (!user) {
       await ctx.reply(Messages.connectUserNotFound());
       return;
@@ -93,7 +93,7 @@ export class NotificationsHandler {
     }
 
     const groupUserId = Math.abs(chatId);
-    const user = await this.usersService.findByTelegramId(groupUserId);
+    const user = await this.usersService.findByTelegramIdOrIds(groupUserId);
     if (!user) {
       await ctx.reply(Messages.connectUserNotFound());
       return;
@@ -194,7 +194,7 @@ export class NotificationsHandler {
 
     try {
       const groupUserId = isGroup ? Math.abs(chatId!) : userId;
-      const user = await this.usersService.findByTelegramId(groupUserId);
+      const user = await this.usersService.findByTelegramIdOrIds(groupUserId);
       if (!user) {
         await ctx.reply(Messages.userNotFound);
         return;
@@ -271,7 +271,7 @@ export class NotificationsHandler {
         return;
       }
       const groupUserId = Math.abs(chatId);
-      const user = await this.usersService.findByTelegramId(groupUserId);
+      const user = await this.usersService.findByTelegramIdOrIds(groupUserId);
       if (!user) {
         await ctx.reply(Messages.connectUserNotFound());
         ctx.session = undefined;

@@ -17,14 +17,14 @@ import {
   SectionHeader,
   SectionTitle,
 } from "@/components/layouts/section";
-import { DataTable } from "@/components/ui/data-table";
+import { DataTable } from "@repo/ui/components/data-table";
 import { Transaction } from "@/lib/api/endpoints/transaction";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import FilterTransaction from "./components/filter";
 import { EMPTY_LABEL } from "@/app/utils/constants";
-import { ClientPagination } from "@/components/ui/client-pagination";
-import CardNameCol from "@/components/ui/card-name-col";
+import { ClientPagination } from "@repo/ui/components/client-pagination";
+import CardNameCol from "@repo/ui/components/card-name-col";
 import { cn } from "@/lib/utils";
 const initFilter = {
   cardId: "",

@@ -11,7 +11,7 @@ import {
   // SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar";
+} from "@repo/ui/components/sidebar";
 import { navMain as navMainConfig } from "@/config/navigation";
 
 // This is sample data - replace with actual user data from auth
