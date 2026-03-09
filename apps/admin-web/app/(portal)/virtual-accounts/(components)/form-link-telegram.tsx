@@ -4,28 +4,28 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
+} from "@repo/ui/components/drawer";
+import { Button } from "@repo/ui/components/button";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@repo/ui/components/spinner";
 import { cn } from "@/lib/utils";
 import { CirclePlus, Info, Trash } from "lucide-react";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
-} from "@/components/ui/input-group";
+} from "@repo/ui/components/input-group";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Field } from "@/components/ui/field";
+} from "@repo/ui/components/tooltip";
+import { Field } from "@repo/ui/components/field";
 
 const maxLengthIdTelegram = 15;
 
@@ -163,7 +163,7 @@ const FormLinkTelegram = ({
                         });
                       }}
                     />
-                    <InputGroupAddon align={"inline-end"}>
+                    <InputGroupAddon className="justify-end">
                       <Tooltip>
                         <TooltipTrigger>
                           <Info

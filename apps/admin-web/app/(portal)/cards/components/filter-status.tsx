@@ -1,4 +1,4 @@
-import { Label } from "@/components/ui/label";
+import { Label } from "@repo/ui/components/label";
 import {
   Select,
   SelectContent,
@@ -7,7 +7,7 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@repo/ui/components/select";
 import { useState } from "react";
 
 type Props = {

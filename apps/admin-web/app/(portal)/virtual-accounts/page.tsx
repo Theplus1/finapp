@@ -16,17 +16,17 @@ import { SectionContent } from "@/components/layouts/section";
 import { Section } from "@/components/layouts/section";
 import type { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { DataTable } from "@/components/ui/data-table";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { DataTable } from "@repo/ui/components/data-table";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { CopyIcon } from "@/components/ui/copy-button";
-import { ClientPagination } from "@/components/ui/client-pagination";
+} from "@repo/ui/components/tooltip";
+import { CopyIcon } from "@repo/ui/components/copy-button";
+import { ClientPagination } from "@repo/ui/components/client-pagination";
 import FormLinkTelegram from "./(components)/form-link-telegram";
 import { cn } from "@/lib/utils";
 

@@ -1,5 +1,5 @@
 "use client";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DatePicker } from "@repo/ui/components/date-picker";
 
 type Props = {
   onDateFromChange: (date: string | undefined) => void;

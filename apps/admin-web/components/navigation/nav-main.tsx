@@ -2,15 +2,15 @@
 
 import { type LucideIcon } from "lucide-react";
 
-import { CollapsibleTrigger } from "@/components/ui/collapsible";
+import { CollapsibleTrigger } from "@repo/ui/components/collapsible";
 import {
   SidebarGroup,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar";
+} from "@repo/ui/components/sidebar";
 import Link from "next/link";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 
 export function NavMain({
   items,

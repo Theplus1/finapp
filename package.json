@@ -32,5 +32,9 @@
     "@opentelemetry/core": "^2.2.0",
     "@opentelemetry/sdk-trace-base": "^2.2.0",
     "next": "^15.5.7"
+  },
+  "overrides": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0"
   }
 }
