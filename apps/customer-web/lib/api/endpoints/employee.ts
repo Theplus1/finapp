@@ -2,13 +2,14 @@
  * Users API endpoints
  */
 
+import { RoleUserEnum } from "@/config/navigation";
 import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
 
 export interface Employee {
   id: string;
   username: string;
-  role: "ads" | "accountant";
+  role: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT;
   email: string;
   isActive: boolean;
   bossId: string;
@@ -21,7 +22,7 @@ export interface CreateEmployeeData {
   username: string;
   email: string;
   password: string;
-  role: "ads" | "accountant";
+  role: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT;
 }
 
 export interface UpdateUserData {

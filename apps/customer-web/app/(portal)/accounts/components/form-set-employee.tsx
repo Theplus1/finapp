@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import { RoleUserEnum } from "@/config/navigation";
 
 type Props = {
   openDrawer: boolean;
@@ -30,7 +31,9 @@ const FormSetEmployee = ({
   onSubmitEmployeeSuccess,
 }: Props) => {
   const [username, setUsername] = useState<string>("");
-  const [role, setRole] = useState<"ads" | "accountant">("ads");
+  const [role, setRole] = useState<RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT>(
+    RoleUserEnum.ADS,
+  );
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
@@ -109,7 +112,7 @@ const FormSetEmployee = ({
           </label>
           <Select
             onValueChange={(value) => {
-              setRole(value as "ads" | "accountant");
+              setRole(value as RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT);
             }}
             value={role}
           >

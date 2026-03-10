@@ -27,7 +27,7 @@ const ActionsTable = ({ onClickAction, virtualAccount }: Props) => {
           }
         >
           <Settings data-icon="inline-start" />
-          Set account
+          Connect boss account
         </Button>
         <Button
           variant={"outline"}

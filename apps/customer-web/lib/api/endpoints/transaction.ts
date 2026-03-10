@@ -52,4 +52,9 @@ export const transactionsApi = {
   ): Promise<ApiResponse<Transaction[]>> => {
     return apiClient.get("/transaction", { params });
   },
+  getFacebookVerifyConfirmCode: async (
+    id: string
+  ): Promise<ApiResponse<{ confirmCode: string }>> => {
+    return apiClient.post(`/transaction/${id}/get-confirm-code`);
+  },
 };

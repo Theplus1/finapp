@@ -1,10 +1,4 @@
-import {
-  Drawer,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@repo/ui/components/drawer";
+import { DrawerFooter } from "@repo/ui/components/drawer";
 import { Button } from "@repo/ui/components/button";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 import { useEffect, useState } from "react";

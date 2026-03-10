@@ -11,12 +11,7 @@ import {
 } from "@/app/utils/func";
 import { PageLayout } from "@/components/layouts/page-layout";
 import { PageHeader, PageTitle } from "@/components/layouts/page-header";
-import {
-  Section,
-  SectionContent,
-  SectionHeader,
-  SectionTitle,
-} from "@/components/layouts/section";
+import { Section, SectionContent } from "@/components/layouts/section";
 import { DataTable } from "@repo/ui/components/data-table";
 import { Transaction } from "@/lib/api/endpoints/transaction";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
@@ -26,9 +21,11 @@ import { EMPTY_LABEL } from "@/app/utils/constants";
 import { ClientPagination } from "@repo/ui/components/client-pagination";
 import CardNameCol from "@repo/ui/components/card-name-col";
 import { cn } from "@/lib/utils";
+import { Employee } from "@/lib/api/endpoints/employee";
+import { RoleUserEnum } from "@/config/navigation";
+import GetConfirmCode from "./components/get-confirm-code";
 const initFilter = {
   cardId: "",
-  virtualAccountId: "",
   startDate: "",
   endDate: "",
 };
@@ -36,8 +33,26 @@ const initFilter = {
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as Transaction[];
+
+const initEmployee: Employee = {
+  id: "",
+  username: "",
+  role: RoleUserEnum.ADS,
+  email: "",
+  isActive: false,
+  bossId: "",
+  virtualAccountId: "",
+  createdAt: "",
+  updatedAt: "",
+};
+
 export default function Dashboard() {
   const { setBreadcrumbs } = useBreadcrumbs();
+
+  const [transGettedCode, setTransGettedCode] = useState<
+    Record<string, string>
+  >({});
+  const [user, setUser] = useState<Employee>(initEmployee);
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
@@ -48,6 +63,13 @@ export default function Dashboard() {
   useEffect(() => {
     setBreadcrumbs([{ label: "Dashboard", href: "/dashboard" }]);
   }, [setBreadcrumbs]);
+
+  useEffect(() => {
+    const userLocalStorage = localStorage.getItem("user");
+    if (userLocalStorage) {
+      setUser(JSON.parse(userLocalStorage));
+    }
+  }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ["transactions", pagination.page, currentFilter],
@@ -89,24 +111,18 @@ export default function Dashboard() {
         },
       },
       {
+        header: "Transaction ID",
+        cell: ({ row }: CellContext<Transaction, number>) => {
+          return isLoading ? <Skeleton /> : row.original.slashId;
+        },
+      },
+      {
         header: "Card",
         cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? (
             <Skeleton />
           ) : row.original.card?.name ? (
             <CardNameCol card={row.original.card} />
-          ) : (
-            EMPTY_LABEL
-          );
-        },
-      },
-      {
-        header: "Virtual account",
-        cell: ({ row }: CellContext<Transaction, string>) => {
-          return isLoading ? (
-            <Skeleton />
-          ) : row.original.virtualAccount?.name ? (
-            row.original.virtualAccount?.name
           ) : (
             EMPTY_LABEL
           );
@@ -149,8 +165,22 @@ export default function Dashboard() {
         cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? (
             <Skeleton />
-          ) : (
+          ) : [RoleUserEnum.BOSS, RoleUserEnum.ACCOUNTANT].includes(
+              user.role,
+            ) || transGettedCode[row.original.slashId] ? (
             (row.original.merchantData?.description ?? EMPTY_LABEL)
+          ) : (
+            <GetConfirmCode
+              tranId={row.original.slashId}
+              onGetCodeSuccess={(confirmCode) => {
+                setTransGettedCode((prev) => {
+                  return {
+                    ...prev,
+                    [row.original.slashId]: confirmCode,
+                  };
+                });
+              }}
+            />
           );
         },
       },
@@ -175,7 +205,7 @@ export default function Dashboard() {
         },
       },
     ],
-    [isLoading, pagination],
+    [isLoading, pagination, transGettedCode],
   ) as ColumnDef<Transaction>[];
 
   const handleChangeFilter = (field: string, value: string | undefined) => {
@@ -192,13 +222,10 @@ export default function Dashboard() {
   return (
     <PageLayout>
       <PageHeader>
-        <PageTitle>Dashboard</PageTitle>
+        <PageTitle>Transactions</PageTitle>
       </PageHeader>
 
       <Section>
-        <SectionHeader>
-          <SectionTitle>Transactions</SectionTitle>
-        </SectionHeader>
         <SectionContent>
           <FilterTransaction
             onCardChange={(cardId) => handleChangeFilter("cardId", cardId)}

@@ -33,9 +33,7 @@ export type {
 // Consolidated API object
 import { authApi } from "./endpoints/auth";
 import { usersApi } from "./endpoints/users";
-import { virtualAccountsApi } from "./endpoints/virtual-account";
 import { cardsApi } from "./endpoints/card";
-import { cardGroupsApi } from "./endpoints/card-group";
 import { transactionsApi } from "./endpoints/transaction";
 import { paymentApi } from "./endpoints/payment";
 import { employeeApi } from "./endpoints/employee";
@@ -44,9 +42,7 @@ export const api = {
   auth: authApi,
   users: usersApi,
   employees: employeeApi,
-  virtualAccounts: virtualAccountsApi,
   cards: cardsApi,
-  cardGroups: cardGroupsApi,
   transactions: transactionsApi,
   payment: paymentApi,
 };

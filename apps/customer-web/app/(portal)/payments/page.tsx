@@ -14,6 +14,7 @@ import FilterCard from "./components/filter";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Payment, PaymentRow } from "@/lib/api/endpoints/payment";
 import { EMPTY_LABEL } from "@/app/utils/constants";
+// import Statistic from "./components/statistic";
 
 const initFilter = {
   month: "2026-02",
@@ -200,6 +201,7 @@ export default function Cards() {
           <FilterCard
             onMonthChange={(month) => handleChangeFilter("month", month)}
           />
+          {/* <Statistic /> */}
           <DataTable
             columns={columns}
             data={dataPaymentGrouped as Payment[]}

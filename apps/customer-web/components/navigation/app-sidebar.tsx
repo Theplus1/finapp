@@ -25,12 +25,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
 
   // Dynamically set isActive based on current pathname
-  const navMainItems = navMainConfig.map((section) => ({
-    ...section,
-    isActive:
-      section.items?.some((item) => pathname.startsWith(item.url)) ||
-      pathname.startsWith(section.url),
-  }));
+  const navMainItems = React.useMemo(() => {
+    if (typeof localStorage === "undefined" || !localStorage) return [];
+    const { role } = JSON.parse(localStorage.getItem("user") ?? "{}");
+    return navMainConfig
+      .map((section) => ({
+        ...section,
+        isActive:
+          section.items?.some((item) => pathname.startsWith(item.url)) ||
+          pathname.startsWith(section.url),
+      }))
+      .filter((item) => item.roleAccept?.includes(role));
+  }, [pathname, typeof localStorage]);
 
   return (
     <Sidebar collapsible="icon" {...props}>

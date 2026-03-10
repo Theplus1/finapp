@@ -2,6 +2,7 @@
  * Authentication API endpoints
  */
 
+import { RoleUserEnum } from "@/config/navigation";
 import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
 
@@ -27,6 +28,8 @@ export interface User {
   name: string;
   email: string;
   createdAt: string;
+  role: RoleUserEnum;
+  username: string;
 }
 
 export const authApi = {

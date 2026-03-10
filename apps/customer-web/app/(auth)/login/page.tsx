@@ -18,9 +18,10 @@ export default function Page() {
       if (!isCustomer) {
         throw new Error("You don't have permission to access this page");
       }
+      const { accessToken, ...rest } = response.data;
 
-      localStorage.setItem("auth_token", response.data.accessToken);
-      localStorage.setItem("username", response.data.username);
+      localStorage.setItem("auth_token", accessToken);
+      localStorage.setItem("user", JSON.stringify(rest));
       router.push("/dashboard");
     },
   });

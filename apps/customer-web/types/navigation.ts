@@ -1,3 +1,4 @@
+import { RoleUserEnum } from '@/config/navigation'
 import { LucideIcon } from 'lucide-react'
 
 export interface NavItem {
@@ -15,6 +16,7 @@ export interface NavSection {
   title: string
   url: string
   icon: LucideIcon
+  roleAccept?: RoleUserEnum[]
   isActive?: boolean
   items?: {
     title: string

@@ -167,9 +167,6 @@ export default function Cards() {
       <Section>
         <SectionContent>
           <FilterCard
-            onGroupChange={(groupId) =>
-              handleChangeFilter("cardGroupId", groupId)
-            }
             onStatusChange={(status) => handleChangeFilter("status", status)}
           />
           <DataTable

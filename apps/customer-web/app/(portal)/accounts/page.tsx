@@ -33,6 +33,7 @@ import {
   PopoverTrigger,
 } from "@repo/ui/components/popover";
 import ActionsTable from "./components/actions-table";
+import { upperCaseFirstCharacter } from "@repo/ui/lib/func";
 
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
@@ -120,7 +121,11 @@ export default function Accounts() {
     {
       header: "Role",
       cell: ({ row }: CellContext<Employee, string>) => {
-        return isLoading ? <Skeleton /> : <span>{row.original.role}</span>;
+        return isLoading ? (
+          <Skeleton />
+        ) : (
+          <span>{upperCaseFirstCharacter(row.original.role)}</span>
+        );
       },
     },
     {

@@ -16,24 +16,40 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import CardNameCol from "@repo/ui/components/card-name-col";
 import { ClientPagination } from "@repo/ui/components/client-pagination";
 import { DataTable } from "@repo/ui/components/data-table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@repo/ui/components/popover";
+import ActionsTable, { DrawerCardType } from "./components/actions-table";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@repo/ui/components/drawer";
+import FormActionCard from "./components/form-action-card";
 
 const initFilter = {
-  cardGroupId: "",
-  virtualAccountId: "",
   status: "",
 };
 
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as Card[];
+
 export default function Cards() {
   const { setBreadcrumbs } = useBreadcrumbs();
+  const [cardEdit, setCardEdit] = useState<Card | null>(null);
+  const [openDrawer, setOpenDrawer] = useState(false);
+  const [drawerType, setDrawerType] = useState<DrawerCardType>("lock");
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
     total: 0,
   });
   const [currentFilter, setCurrentFilter] = useState(initFilter);
+  const [countGetList, setCountGetList] = useState(0);
 
   useEffect(() => {
     setBreadcrumbs([
@@ -43,7 +59,7 @@ export default function Cards() {
   }, [setBreadcrumbs]);
 
   const { data: cardInfors, isLoading } = useQuery({
-    queryKey: ["cards", pagination.page, currentFilter],
+    queryKey: ["cards", pagination.page, currentFilter, countGetList],
     queryFn: async () => {
       const res = await api.cards.getCards({
         ...currentFilter,
@@ -62,17 +78,16 @@ export default function Cards() {
 
   const dataCard: Card[] = useMemo(() => cardInfors?.data ?? [], [cardInfors]);
 
-  const dataCardGrouped = useMemo(() => {
-    if (isLoading) return maskDataTable;
-    return dataCard.map((card) => {
-      const virtualAccountName = card.virtualAccount?.name ?? EMPTY_LABEL;
-      return {
-        ...card,
-        groupName: EMPTY_LABEL,
-        virtualAccountName,
-      };
-    });
-  }, [dataCard, isLoading]);
+  const dataCardGrouped = useMemo(
+    () => (isLoading ? maskDataTable : dataCard),
+    [dataCard, isLoading],
+  );
+
+  const handleActionVirtualAccount = (type: DrawerCardType, card: Card) => {
+    setCardEdit(card);
+    setOpenDrawer(true);
+    setDrawerType(type);
+  };
 
   const columns = [
     {
@@ -95,24 +110,6 @@ export default function Cards() {
       header: "Card Name",
       cell: ({ row }: CellContext<Card, string>) => {
         return isLoading ? <Skeleton /> : <CardNameCol card={row.original} />;
-      },
-    },
-    {
-      header: "Group",
-      cell: ({ row }: CellContext<Card & { groupName: string }, string>) => {
-        return isLoading || false ? (
-          <Skeleton />
-        ) : (
-          (row.original.cardGroup?.name ?? EMPTY_LABEL)
-        );
-      },
-    },
-    {
-      header: "Virtual accounts",
-      cell: ({
-        row,
-      }: CellContext<Card & { virtualAccountName: string }, string>) => {
-        return isLoading ? <Skeleton /> : row.original.virtualAccountName;
       },
     },
     {
@@ -145,6 +142,27 @@ export default function Cards() {
         );
       },
     },
+    {
+      id: "actions",
+      header: <p className="text-center">Actions</p>,
+      cell: ({ row }: CellContext<Card, string>) => {
+        return (
+          <div className="flex justify-center">
+            <Popover>
+              <PopoverTrigger className="cursor-pointer">...</PopoverTrigger>
+              <PopoverContent>
+                <ActionsTable
+                  card={row.original}
+                  onClickAction={(type) =>
+                    handleActionVirtualAccount(type, row.original)
+                  }
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        );
+      },
+    },
   ] as ColumnDef<Card>[];
 
   const handleChangeFilter = (field: string, value: string) => {
@@ -157,6 +175,62 @@ export default function Cards() {
       [field]: value,
     }));
   };
+  const renderTitleDrawer = (typeDrawer: DrawerCardType) => {
+    switch (typeDrawer) {
+      case "lock":
+        return (
+          <>
+            Lock card &quot;
+            {cardEdit?.name ?? EMPTY_LABEL}&quot; ?
+          </>
+        );
+      case "unlock":
+        return (
+          <>
+            Unlock card &quot;
+            {cardEdit?.name ?? EMPTY_LABEL}&quot; ?
+          </>
+        );
+      case "set-pre-recharge":
+        return (
+          <>
+            Set pre-recharge for card &quot;
+            {cardEdit?.name ?? EMPTY_LABEL}&quot; ?
+          </>
+        );
+      case "set-spending-limit":
+        return (
+          <>
+            Set spending limit for card &quot;
+            {cardEdit?.name ?? EMPTY_LABEL}&quot; ?
+          </>
+        );
+      case "unset-pre-recharge":
+        return (
+          <>
+            Unset pre-recharge for card &quot;
+            {cardEdit?.name ?? EMPTY_LABEL}&quot; ?
+          </>
+        );
+      case "unset-spending-limit":
+        return (
+          <>
+            Unset spending limit for card &quot;
+            {cardEdit?.name ?? EMPTY_LABEL}&quot; ?
+          </>
+        );
+      default:
+        return "";
+    }
+  };
+  const handleCancelDrawer = () => {
+    setOpenDrawer(false);
+  };
+
+  const handleSuccessDrawer = () => {
+    setOpenDrawer(false);
+    setCountGetList((prev) => prev + 1);
+  };
 
   return (
     <PageLayout>
@@ -167,9 +241,6 @@ export default function Cards() {
       <Section>
         <SectionContent>
           <FilterCard
-            onGroupChange={(groupId) =>
-              handleChangeFilter("cardGroupId", groupId)
-            }
             onStatusChange={(status) => handleChangeFilter("status", status)}
           />
           <DataTable
@@ -183,6 +254,22 @@ export default function Cards() {
             pageSize={pagination.pageSize}
             onChange={(page) => setPagination((prev) => ({ ...prev, page }))}
           />
+          <Drawer direction="right" open={openDrawer}>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>
+                  {renderTitleDrawer(drawerType || "lock-card")}
+                </DrawerTitle>
+              </DrawerHeader>
+              <FormActionCard
+                card={cardEdit}
+                openDrawer={openDrawer}
+                onCancelDrawer={handleCancelDrawer}
+                onSubmitCardSuccess={handleSuccessDrawer}
+                drawerType={drawerType}
+              />
+            </DrawerContent>
+          </Drawer>
         </SectionContent>
       </Section>
     </PageLayout>

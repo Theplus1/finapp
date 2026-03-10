@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { ChevronsUpDown, LogOut } from "lucide-react";
+import { upperCaseFirstCharacter } from "@repo/ui/lib/func";
 
 import {
   DropdownMenu,
@@ -17,19 +18,32 @@ import {
 } from "@repo/ui/components/sidebar";
 import { AudioWaveform } from "lucide-react";
 import { EMPTY_LABEL } from "@/app/utils/constants";
+import { User } from "@/lib/api/endpoints/auth";
+import { RoleUserEnum } from "@/config/navigation";
+
+const initUser: User = {
+  role: RoleUserEnum.BOSS,
+  username: "",
+  id: "",
+  name: "",
+  email: "",
+  createdAt: "",
+};
 
 export function SidebarAction() {
   const { isMobile } = useSidebar();
-  const [username, setUsername] = React.useState("");
+  const [user, setUser] = React.useState<User>(initUser);
 
   React.useEffect(() => {
-    const username = localStorage.getItem("username") || "";
-    setUsername(username);
+    const user = JSON.parse(
+      localStorage.getItem("user") || `${JSON.stringify(initUser)}`,
+    );
+    setUser(user);
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("auth_token");
-    localStorage.removeItem("username");
+    localStorage.removeItem("user");
     window.location.href = "/login";
   };
 
@@ -46,8 +60,12 @@ export function SidebarAction() {
                 <AudioWaveform className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{username || EMPTY_LABEL}</span>
-                <span className="truncate text-xs">{"Customer"}</span>
+                <span className="truncate font-medium">
+                  {user.username || EMPTY_LABEL}
+                </span>
+                <span className="truncate text-xs">
+                  {upperCaseFirstCharacter(user.role) || EMPTY_LABEL}
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>
