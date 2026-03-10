@@ -1,6 +1,5 @@
 # Documentation
 
-
 ## Files
 
 - [QUICK_START.md](./docs/QUICK_START.md) - Setup and run locally
