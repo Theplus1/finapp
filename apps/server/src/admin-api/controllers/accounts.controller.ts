@@ -37,6 +37,9 @@ import { AdminAuthService } from '../services/admin-auth.service';
 import { AdminUsersService } from '../../domain/admin-users/admin-users.service';
 import { SetBossAccountDto } from '../dto/set-boss-account.dto';
 import { AdminUserResponseDto } from '../dto/create-admin.dto';
+import { DailyPaymentSummariesService } from '../../domain/daily-payment-summaries/daily-payment-summaries.service';
+import { UpsertDepositDto } from '../dto/upsert-deposit.dto';
+import { startOfDay } from 'date-fns';
 
 @ApiTags('Admin API - Virtual Accounts')
 @ApiBearerAuth()
@@ -52,6 +55,7 @@ export class AccountsController {
     private readonly usersService: UsersService,
     private readonly adminAuthService: AdminAuthService,
     private readonly adminUsersService: AdminUsersService,
+    private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
   ) {}
 
   @Get()
@@ -291,5 +295,46 @@ export class AccountsController {
       createdAt: bossUser.createdAt,
       updatedAt: bossUser.updatedAt,
     };
+  }
+
+  @Post(':id/deposits')
+  @ApiOperation({
+    summary: 'Upsert daily deposit for virtual account',
+    description:
+      'Admin sets the total deposit (in cents) for a given virtual account and date',
+  })
+  @ApiParam({ name: 'id', description: 'Virtual Account Slash ID' })
+  @ApiBody({ type: UpsertDepositDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Deposit updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - invalid date or amount',
+  })
+  async upsertDeposit(
+    @Param('id') slashId: string,
+    @Body() dto: UpsertDepositDto,
+  ): Promise<{ success: true }> {
+    this.logger.log(
+      `Upsert deposit for virtual account ${slashId} on ${dto.date}`,
+    );
+
+    const virtualAccount = await this.accountsService.findBySlashId(slashId);
+
+    const date = startOfDay(new Date(dto.date));
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException('Invalid date');
+    }
+
+    await this.dailyPaymentSummariesService.upsertDepositForDate(
+      virtualAccount.slashId,
+      date,
+      dto.depositCents,
+      virtualAccount.currency,
+    );
+
+    return { success: true };
   }
 }

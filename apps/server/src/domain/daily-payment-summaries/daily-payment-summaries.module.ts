@@ -1,8 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DailyPaymentSummariesService } from './daily-payment-summaries.service';
-import { DailyPaymentSummary, DailyPaymentSummarySchema } from 'src/database/schemas/daily-payment-summary.schema';
+import {
+  DailyPaymentSummary,
+  DailyPaymentSummarySchema,
+} from 'src/database/schemas/daily-payment-summary.schema';
 import { TransactionsModule } from '../transactions/transactions.module';
+import { DailyPaymentSummariesJob } from './daily-payment-summaries.job';
+import { AccountsModule } from '../accounts/accounts.module';
 
 @Module({
   imports: [
@@ -10,8 +15,9 @@ import { TransactionsModule } from '../transactions/transactions.module';
       { name: DailyPaymentSummary.name, schema: DailyPaymentSummarySchema },
     ]),
     TransactionsModule,
+    AccountsModule,
   ],
-  providers: [DailyPaymentSummariesService],
+  providers: [DailyPaymentSummariesService, DailyPaymentSummariesJob],
   exports: [DailyPaymentSummariesService],
 })
 export class DailyPaymentSummariesModule {}

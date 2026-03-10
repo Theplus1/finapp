@@ -9,6 +9,8 @@ import { EmployeesController } from './controllers/employees.controller';
 import { CustomerCardsController } from './controllers/cards.controller';
 import { CustomerTransactionsController } from './controllers/transactions.controller';
 import { CustomerAuthController } from './controllers/auth.controller';
+import { DailyPaymentSummariesModule } from '../domain/daily-payment-summaries/daily-payment-summaries.module';
+import { CustomerPaymentsController } from './controllers/payments.controller';
 
 @Module({
   imports: [
@@ -18,12 +20,14 @@ import { CustomerAuthController } from './controllers/auth.controller';
     TransactionsModule,
     SlashIntegrationModule,
     DatabaseModule,
+    DailyPaymentSummariesModule,
   ],
   controllers: [
     CustomerAuthController,
     EmployeesController,
     CustomerCardsController,
     CustomerTransactionsController,
+    CustomerPaymentsController,
   ],
 })
 export class CustomerApiModule {}
