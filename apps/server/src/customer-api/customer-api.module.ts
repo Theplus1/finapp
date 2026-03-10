@@ -8,6 +8,7 @@ import { DatabaseModule } from '../database/database.module';
 import { EmployeesController } from './controllers/employees.controller';
 import { CustomerCardsController } from './controllers/cards.controller';
 import { CustomerTransactionsController } from './controllers/transactions.controller';
+import { CustomerAuthController } from './controllers/auth.controller';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CustomerTransactionsController } from './controllers/transactions.contr
     DatabaseModule,
   ],
   controllers: [
+    CustomerAuthController,
     EmployeesController,
     CustomerCardsController,
     CustomerTransactionsController,
