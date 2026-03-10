@@ -74,19 +74,23 @@ export class CustomerTransactionsController {
     pagination: { page: number; limit: number; total: number };
   }> {
     const virtualAccountId = this.getVirtualAccountId(req);
-    this.logger.log(`Listing transactions for VA ${virtualAccountId}`);
+    const role = req.user?.role;
+    this.logger.log(`Listing transactions for VA ${virtualAccountId}, role=${role}`);
+
+    const filters = {
+      virtualAccountId,
+      cardId: query.cardId,
+      status: query.status,
+      detailedStatus: query.detailedStatus,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+      ...(role === 'ads' ? { amountCents: FACEBOOK_VERIFY_AMOUNT_CENTS } : {}),
+    };
 
     const [data, total] = await this.transactionsService.findAllWithFiltersAndPagination(
-      {
-        virtualAccountId,
-        cardId: query.cardId,
-        status: query.status,
-        detailedStatus: query.detailedStatus,
-        startDate: query.startDate,
-        endDate: query.endDate,
-        sortBy: query.sortBy,
-        sortOrder: query.sortOrder,
-      },
+      filters,
       {
         page: query.page ?? PAGINATION_DEFAULTS.PAGE,
         limit: query.limit ?? PAGINATION_DEFAULTS.LIMIT,
@@ -171,10 +175,13 @@ export class CustomerTransactionsController {
       transactionSlashId,
     );
 
+    const confirmCodeValue: string | null =
+      transactionDto.merchantData?.description ?? null;
+
     if (existing) {
       return {
         transactionId: transactionSlashId,
-        confirmCode: null,
+        confirmCode: confirmCodeValue,
         revealedByYou: existing.revealedByUserId === userId,
         revealInfo: {
           revealedBy: existing.revealedByUsername,
@@ -188,14 +195,12 @@ export class CustomerTransactionsController {
       revealedByUserId: userId,
       revealedByUsername: username,
     });
-    const confirmCode: string | null =
-      transactionDto.merchantData?.description ?? null;
     this.logger.log(
       `Confirm code revealed for transaction ${transactionSlashId} by ${username}`,
     );
     return {
       transactionId: transactionSlashId,
-      confirmCode,
+      confirmCode: confirmCodeValue,
       revealedByYou: true,
     };
   }
