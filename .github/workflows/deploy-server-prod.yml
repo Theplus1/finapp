@@ -1,4 +1,4 @@
-name: Deploy Server to VPS (Docker)
+name: Deploy Server to VPS (Docker) - Prod
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     paths:
       - 'apps/server/**'
       - 'packages/**'
-      - '.github/workflows/deploy-server-docker.yml'
+      - '.github/workflows/deploy-server-prod.yml'
   workflow_dispatch: # Allow manual trigger
 
 jobs:

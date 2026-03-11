@@ -1,4 +1,4 @@
-name: Deploy Admin Web to VPS
+name: Deploy Admin Web to VPS - Prod
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     paths:
       - 'apps/admin-web/**'
       - 'packages/**'
-      - '.github/workflows/deploy-admin-web.yml'
+      - '.github/workflows/deploy-admin-web-prod.yml'
   workflow_dispatch: # Allow manual trigger
 
 jobs:

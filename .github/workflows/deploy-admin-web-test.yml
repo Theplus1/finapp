@@ -1,0 +1,79 @@
+name: Deploy Admin Web to VPS - Test
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'apps/admin-web/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-admin-web-test.yml'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  deploy-admin-web:
+    name: Deploy Admin Web Application
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .env file for admin-web
+        run: |
+          cat > apps/admin-web/.env.production << EOF
+          API_URL=${{ vars.SERVER_BASE_URL }}
+          EOF
+
+      - name: Build admin-web
+        run: npm run build:admin
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync admin-web files to VPS
+        run: |
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude 'src' \
+            --exclude 'coverage' \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            apps/admin-web/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.ADMIN_APP_DIR }}/
+
+      - name: Deploy admin-web to VPS
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          ADMIN_APP_DIR: ${{ vars.ADMIN_APP_DIR }}
+          ADMIN_PORT: ${{ vars.ADMIN_PORT }}
+        run: |
+          ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
+            set -e
+            cd ${{ vars.ADMIN_APP_DIR }}
+            
+            echo "📦 Installing dependencies..."
+            npm install --omit=dev --legacy-peer-deps
+            
+            echo "🔄 Restarting admin-web..."
+            pm2 restart admin-web || pm2 start npm --name admin-web -- start -- -p ${{ vars.ADMIN_PORT }}
+            pm2 save
+            
+            echo "✅ Deployment complete"
+          ENDSSH

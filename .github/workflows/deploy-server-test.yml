@@ -1,0 +1,125 @@
+name: Deploy Server to VPS (Docker) - Test
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'apps/server/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-server-test.yml'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  build-and-deploy:
+    name: Build Docker Image and Deploy
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/theplus1/finapp-server
+          tags: |
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/server/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to VPS
+        env:
+          IMAGE_NAME: ghcr.io/theplus1/finapp-server:latest
+        run: |
+          ssh ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} << ENDSSH
+            set -e
+            cd ${{ vars.SERVER_APP_DIR }}
+
+            # Ensure directories exist for volume mounts (Docker will create them as root otherwise)
+            mkdir -p public/exports
+
+            # Log in to GitHub Container Registry
+            echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Pull the latest image
+            docker pull ${IMAGE_NAME}
+
+            # Stop and remove old container if exists
+            docker stop finapp-server || true
+            docker rm finapp-server || true
+
+            # Run new container with environment variables
+            docker run -d \
+              --name finapp-server \
+              --restart unless-stopped \
+              --network host \
+              --dns 8.8.8.8 \
+              --dns 1.1.1.1 \
+              -v ${{ vars.SERVER_APP_DIR }}/public/exports:/app/public/exports \
+              -e "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" \
+              -e "MODE=${{ vars.MODE }}" \
+              -e "WEBHOOK_URL=${{ vars.WEBHOOK_URL }}" \
+              -e "PORT=${{ vars.PORT }}" \
+              -e "MONGO_URI=${{ secrets.MONGO_URI }}" \
+              -e "NOTIFICATION_CRON=${{ vars.NOTIFICATION_CRON }}" \
+              -e "SLASH_API_KEY=${{ secrets.SLASH_API_KEY }}" \
+              -e "SLASH_BASE_URL=${{ vars.SLASH_BASE_URL }}" \
+              -e "SLASH_TIMEOUT=${{ vars.SLASH_TIMEOUT }}" \
+              -e "SLASH_WEBHOOK_SECRET=${{ secrets.SLASH_WEBHOOK_SECRET }}" \
+              -e "SUPER_ADMIN_TOKEN=${{ secrets.SUPER_ADMIN_TOKEN }}" \
+              -e "REDIS_HOST=${{ vars.REDIS_HOST }}" \
+              -e "REDIS_PORT=${{ vars.REDIS_PORT }}" \
+              -e "EXPORT_SECRET=${{ secrets.EXPORT_SECRET }}" \
+              -e "RESOURCE_BASE_URL=${{ vars.RESOURCE_BASE_URL }}" \
+              -e "GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC=true" \
+              -e "GOOGLE_SERVICE_ACCOUNT_KEY=${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" \
+              -e "OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318" \
+              -e "BALANCE_ALERT_CRON=${{ vars.BALANCE_ALERT_CRON }}" \
+              -e "CARD_SPENDING_ALERT_CRON=${{ vars.CARD_SPENDING_ALERT_CRON }}" \
+              -e "GOOGLE_SHEETS_SYNC_CRON=${{ vars.GOOGLE_SHEETS_SYNC_CRON }}" \
+              -e "GOOGLE_SHEETS_CHUNK_SIZE=${{ vars.GOOGLE_SHEETS_CHUNK_SIZE }}" \
+              -e "SLASH_ENABLE_SCHEDULED_SYNC=${{ vars.SLASH_ENABLE_SCHEDULED_SYNC }}" \
+              -e "NODE_ENV=production" \
+              ${IMAGE_NAME}
+
+            # Clean up old images (keep last 3)
+            docker images ghcr.io/theplus1/finapp-server --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | \
+              tail -n +4 | tail -n +4 | awk '{print $1}' | \
+              xargs -r docker rmi
+
+            echo "✅ Deployment complete"
+            docker ps --filter "name=finapp-server"
+          ENDSSH
