@@ -11,6 +11,7 @@ import { CustomerTransactionsController } from './controllers/transactions.contr
 import { CustomerAuthController } from './controllers/auth.controller';
 import { DailyPaymentSummariesModule } from '../domain/daily-payment-summaries/daily-payment-summaries.module';
 import { CustomerPaymentsController } from './controllers/payments.controller';
+import { CustomerCardSpendController } from './controllers/card-spend.controller';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { CustomerPaymentsController } from './controllers/payments.controller';
     CustomerCardsController,
     CustomerTransactionsController,
     CustomerPaymentsController,
+    CustomerCardSpendController,
   ],
 })
 export class CustomerApiModule {}
