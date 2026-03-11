@@ -6,12 +6,7 @@ import {
   User,
 } from "lucide-react";
 import { NavSection } from "@/types";
-
-export enum RoleUserEnum {
-  BOSS = "boss",
-  ADS = "ads",
-  ACCOUNTANT = "accountant",
-}
+import { RoleUserEnum } from "@/lib/api/endpoints/users";
 
 export const navMain: NavSection[] = [
   {

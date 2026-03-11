@@ -19,7 +19,7 @@ import {
 import { AudioWaveform } from "lucide-react";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { User } from "@/lib/api/endpoints/auth";
-import { RoleUserEnum } from "@/config/navigation";
+import { RoleUserEnum } from "@/lib/api/endpoints/users";
 
 const initUser: User = {
   role: RoleUserEnum.BOSS,

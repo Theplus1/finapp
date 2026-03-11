@@ -1,6 +1,13 @@
 import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
 
+export enum DrawerTypeVirtualAccountEnum {
+  LINK_TELEGRAM = "link-telegram",
+  SET_ACCOUNT = "set-account",
+  RECHARGE = "recharge",
+  RECHARGE_HISTORY = "recharge-history",
+}
+
 export interface VirtualAccount {
   _id: string;
   slashId: string;

@@ -15,7 +15,6 @@ type Props = {
 };
 
 const FilterMonthYear = ({ onMonthYearChange }: Props) => {
-  // render months from 2025-01 to current month
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
   const [value, setValue] = useState<string | undefined>(

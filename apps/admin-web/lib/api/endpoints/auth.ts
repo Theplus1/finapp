@@ -4,6 +4,7 @@
 
 import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
+import { TypeUserEnum } from "./users";
 
 export interface LoginCredentials {
   email: string;
@@ -19,7 +20,7 @@ export interface RegisterData {
 export interface AuthResponse {
   accessToken: string;
   username: string;
-  type: 'admin' | 'customer';
+  type: TypeUserEnum;
 }
 
 export interface User {

@@ -1,15 +1,15 @@
-import FilterStatus from "./filter-status";
+import FilterMonthYear from "./filter-month";
 
 interface Props {
-  onStatusChange: (status: string) => void;
+  onFilterChange: (month: string) => void;
 }
 
-const FilterCard = ({ onStatusChange }: Props) => {
+const FilterTime = ({ onFilterChange }: Props) => {
   return (
     <div className="pb-4 flex gap-4">
-      <FilterStatus onStatusChange={onStatusChange} />
+      <FilterMonthYear onMonthYearChange={onFilterChange} />
     </div>
   );
 };
 
-export default FilterCard;
+export default FilterTime;

@@ -1,13 +1,16 @@
 import { DrawerFooter } from "@repo/ui/components/drawer";
 import { Button } from "@repo/ui/components/button";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Spinner } from "@repo/ui/components/spinner";
 import { cn } from "@/lib/utils";
-import { Card, LimitPreset } from "@/lib/api/endpoints/card";
-import { DrawerCardType } from "./actions-table";
+import {
+  Card,
+  DrawerCardTypeEnum,
+  LimitPreset,
+} from "@/lib/api/endpoints/card";
 import {
   Select,
   SelectContent,
@@ -18,11 +21,11 @@ import {
 import { Input } from "@repo/ui/components/input";
 
 type Props = {
-  card: Card | null;
+  card: Card;
   openDrawer: boolean;
   onCancelDrawer: () => void;
   onSubmitCardSuccess: () => void;
-  drawerType: DrawerCardType;
+  drawerType: DrawerCardTypeEnum;
 };
 
 const FormActionCard = ({
@@ -42,10 +45,11 @@ const FormActionCard = ({
     mutationFn: async () => {
       setIsLoading(true);
       api.cards
-        .lockCard(card!.slashId)
+        .lockCard(card.slashId)
         .then(() => {
           toast.success("Card locked successfully");
           onSubmitCardSuccess();
+          onCancelDrawer();
         })
         .catch((error) => {
           toast.error(error.message);
@@ -60,10 +64,11 @@ const FormActionCard = ({
     mutationFn: async () => {
       setIsLoading(true);
       api.cards
-        .unlockCard(card!.slashId)
+        .unlockCard(card.slashId)
         .then(() => {
           toast.success("Card unlocked successfully");
           onSubmitCardSuccess();
+          onCancelDrawer();
         })
         .catch((error) => {
           toast.error(error.message);
@@ -78,10 +83,11 @@ const FormActionCard = ({
     mutationFn: async () => {
       setIsLoading(true);
       api.cards
-        .setRecurringOnly(card!.slashId)
+        .setRecurringOnly(card.slashId)
         .then(() => {
           toast.success("Card pre-recharge set successfully");
           onSubmitCardSuccess();
+          onCancelDrawer();
         })
         .catch((error) => {
           toast.error(error.message);
@@ -96,10 +102,11 @@ const FormActionCard = ({
     mutationFn: async () => {
       setIsLoading(true);
       api.cards
-        .unsetRecurringOnly(card!.slashId)
+        .unsetRecurringOnly(card.slashId)
         .then(() => {
           toast.success("Card recurring only unset successfully");
           onSubmitCardSuccess();
+          onCancelDrawer();
         })
         .catch((error) => {
           toast.error(error.message);
@@ -114,10 +121,11 @@ const FormActionCard = ({
     mutationFn: async () => {
       setIsLoading(true);
       api.cards
-        .setLimit(card!.slashId, presetLimit, amountLimit)
+        .setLimit(card.slashId, presetLimit, amountLimit)
         .then(() => {
           toast.success("Card spending limit set successfully");
           onSubmitCardSuccess();
+          onCancelDrawer();
         })
         .catch((error) => {
           toast.error(error.message);
@@ -132,10 +140,11 @@ const FormActionCard = ({
     mutationFn: async () => {
       setIsLoading(true);
       api.cards
-        .unsetLimit(card!.slashId)
+        .unsetLimit(card.slashId)
         .then(() => {
           toast.success("Card spending limit unset successfully");
           onSubmitCardSuccess();
+          onCancelDrawer();
         })
         .catch((error) => {
           toast.error(error.message);
@@ -145,16 +154,6 @@ const FormActionCard = ({
         });
     },
   });
-
-  useEffect(() => {
-    if (!card || !openDrawer) {
-      return;
-    }
-  }, [openDrawer, card]);
-
-  const handleDrawerClose = () => {
-    onCancelDrawer();
-  };
 
   return (
     <>
@@ -198,7 +197,7 @@ const FormActionCard = ({
         <div className="flex justify-end gap-3">
           <Button
             variant="outline"
-            onClick={handleDrawerClose}
+            onClick={onCancelDrawer}
             className="cursor-pointer"
           >
             Cancel
@@ -211,20 +210,27 @@ const FormActionCard = ({
             onClick={
               !isLoading
                 ? () => {
-                    if (drawerType === "lock") {
+                    if (drawerType === DrawerCardTypeEnum.LOCK) {
                       lockCard();
-                    } else if (drawerType === "unlock") {
+                    } else if (drawerType === DrawerCardTypeEnum.UNLOCK) {
                       unlockCard();
-                    } else if (drawerType === "set-pre-recharge") {
+                    } else if (
+                      drawerType === DrawerCardTypeEnum.SET_PRE_RECHARGE
+                    ) {
                       setPreRecharge();
-                    } else if (drawerType === "unset-pre-recharge") {
+                    } else if (
+                      drawerType === DrawerCardTypeEnum.UNSET_PRE_RECHARGE
+                    ) {
                       unsetPreRecharge();
-                    } else if (drawerType === "set-spending-limit") {
+                    } else if (
+                      drawerType === DrawerCardTypeEnum.SET_SPENDING_LIMIT
+                    ) {
                       setSpendingLimit();
-                    } else if (drawerType === "unset-spending-limit") {
+                    } else if (
+                      drawerType === DrawerCardTypeEnum.UNSET_SPENDING_LIMIT
+                    ) {
                       unsetSpendingLimit();
                     }
-                    handleDrawerClose();
                   }
                 : undefined
             }

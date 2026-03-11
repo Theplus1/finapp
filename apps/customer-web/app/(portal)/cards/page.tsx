@@ -8,7 +8,7 @@ import { formatUtcMMDDYYYY, renderNoTable } from "@/app/utils/func";
 import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { Section, SectionContent } from "@/components/layouts/section";
 import { PageLayout } from "@/components/layouts/page-layout";
-import type { Card } from "@/lib/api/endpoints/card";
+import { Card, CardStatus, DrawerCardTypeEnum } from "@/lib/api/endpoints/card";
 import FilterCard from "./components/filter";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { EMPTY_LABEL } from "@/app/utils/constants";
@@ -21,7 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@repo/ui/components/popover";
-import ActionsTable, { DrawerCardType } from "./components/actions-table";
+import ActionsTable from "./components/actions-table";
 import {
   Drawer,
   DrawerContent,
@@ -38,11 +38,42 @@ const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as Card[];
 
+const initCard: Card = {
+  _id: "",
+  slashId: "",
+  __v: 0,
+  accountId: "",
+  cardGroupId: "",
+  cardGroup: {
+    slashId: "",
+    name: "",
+  },
+  createdAt: "",
+  expiryMonth: "",
+  expiryYear: "",
+  isDeleted: false,
+  isPhysical: false,
+  isSingleUse: false,
+  last4: "",
+  lastSyncedAt: "",
+  name: "",
+  status: CardStatus.ACTIVE,
+  syncSource: "",
+  updatedAt: "",
+  virtualAccountId: "",
+  virtualAccount: {
+    slashId: "",
+    name: "",
+  },
+};
+
 export default function Cards() {
   const { setBreadcrumbs } = useBreadcrumbs();
-  const [cardEdit, setCardEdit] = useState<Card | null>(null);
+  const [cardEdit, setCardEdit] = useState<Card>(initCard);
   const [openDrawer, setOpenDrawer] = useState(false);
-  const [drawerType, setDrawerType] = useState<DrawerCardType>("lock");
+  const [drawerType, setDrawerType] = useState<DrawerCardTypeEnum>(
+    DrawerCardTypeEnum.LOCK,
+  );
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
@@ -83,7 +114,7 @@ export default function Cards() {
     [dataCard, isLoading],
   );
 
-  const handleActionVirtualAccount = (type: DrawerCardType, card: Card) => {
+  const handleActionVirtualAccount = (type: DrawerCardTypeEnum, card: Card) => {
     setCardEdit(card);
     setOpenDrawer(true);
     setDrawerType(type);
@@ -175,44 +206,44 @@ export default function Cards() {
       [field]: value,
     }));
   };
-  const renderTitleDrawer = (typeDrawer: DrawerCardType) => {
+  const renderTitleDrawer = (typeDrawer: DrawerCardTypeEnum) => {
     switch (typeDrawer) {
-      case "lock":
+      case DrawerCardTypeEnum.LOCK:
         return (
           <>
             Lock card &quot;
             {cardEdit?.name ?? EMPTY_LABEL}&quot; ?
           </>
         );
-      case "unlock":
+      case DrawerCardTypeEnum.UNLOCK:
         return (
           <>
             Unlock card &quot;
             {cardEdit?.name ?? EMPTY_LABEL}&quot; ?
           </>
         );
-      case "set-pre-recharge":
+      case DrawerCardTypeEnum.SET_PRE_RECHARGE:
         return (
           <>
             Set pre-recharge for card &quot;
             {cardEdit?.name ?? EMPTY_LABEL}&quot; ?
           </>
         );
-      case "set-spending-limit":
+      case DrawerCardTypeEnum.SET_SPENDING_LIMIT:
         return (
           <>
             Set spending limit for card &quot;
             {cardEdit?.name ?? EMPTY_LABEL}&quot; ?
           </>
         );
-      case "unset-pre-recharge":
+      case DrawerCardTypeEnum.UNSET_PRE_RECHARGE:
         return (
           <>
             Unset pre-recharge for card &quot;
             {cardEdit?.name ?? EMPTY_LABEL}&quot; ?
           </>
         );
-      case "unset-spending-limit":
+      case DrawerCardTypeEnum.UNSET_SPENDING_LIMIT:
         return (
           <>
             Unset spending limit for card &quot;

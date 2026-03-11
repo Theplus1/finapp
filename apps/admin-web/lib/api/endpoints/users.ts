@@ -5,6 +5,17 @@
 import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
 
+export enum TypeUserEnum {
+  CUSTOMER = "customer",
+  ADMIN = "admin",
+}
+
+export enum RoleUserEnum {
+  ADMIN = "admin",
+  BOSS = "boss",
+  ADS = "ads",
+  ACCOUNTANT = "accountant",
+}
 export interface User {
   accessStatus: string;
   _id: string;
@@ -17,6 +28,7 @@ export interface User {
   updatedAt: string;
   __v: number;
   virtualAccountId: string;
+  role: RoleUserEnum;
 }
 
 export interface UpdateUserData {
@@ -61,7 +73,7 @@ export const usersApi = {
    */
   updateUser: async (
     id: string,
-    data: BodyInit
+    data: BodyInit,
   ): Promise<ApiResponse<User>> => {
     return apiClient.put<User>(`/users/${id}`, data);
   },

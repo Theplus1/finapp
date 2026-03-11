@@ -2,9 +2,9 @@
  * Authentication API endpoints
  */
 
-import { RoleUserEnum } from "@/config/navigation";
 import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
+import { RoleUserEnum } from "./users";
 
 export interface LoginCredentials {
   email: string;
@@ -17,10 +17,15 @@ export interface RegisterData {
   password: string;
 }
 
+export enum TypeUserEnum {
+  CUSTOMER = "customer",
+  ADMIN = "admin",
+}
+
 export interface AuthResponse {
   accessToken: string;
   username: string;
-  type: "customer" | "admin";
+  type: TypeUserEnum;
 }
 
 export interface User {
@@ -83,7 +88,7 @@ export const authApi = {
    */
   resetPassword: async (
     token: string,
-    password: string
+    password: string,
   ): Promise<ApiResponse<void>> => {
     return apiClient.post<void>("/auth/reset-password", { token, password });
   },

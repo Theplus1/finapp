@@ -17,9 +17,9 @@ import { DataTable } from "@repo/ui/components/data-table";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { ClientPagination } from "@repo/ui/components/client-pagination";
-import CardNameCol from "@repo/ui/components/card-name-col";
 import { Employee } from "@/lib/api/endpoints/employee";
 import { Button } from "@repo/ui/components/button";
+import { Ellipsis } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
@@ -121,11 +121,7 @@ export default function Accounts() {
     {
       header: "Role",
       cell: ({ row }: CellContext<Employee, string>) => {
-        return isLoading ? (
-          <Skeleton />
-        ) : (
-          <span>{upperCaseFirstCharacter(row.original.role)}</span>
-        );
+        return isLoading ? <Skeleton /> : upperCaseFirstCharacter(row.original.role);
       },
     },
     {
@@ -147,7 +143,7 @@ export default function Accounts() {
         ) : (
           <div className="flex justify-center">
             <Popover>
-              <PopoverTrigger className="cursor-pointer">...</PopoverTrigger>
+              <PopoverTrigger className="cursor-pointer"><Ellipsis /></PopoverTrigger>
               <PopoverContent>
                 <ActionsTable
                   employee={row.original}

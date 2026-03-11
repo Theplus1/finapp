@@ -40,7 +40,7 @@ const FormSetAccount = ({
           password: password!,
         })
         .then(() => {
-          toast.success("Account set successfully");
+          toast.success("Account connect successfully");
           onSubmitAccountSuccess();
         })
         .catch((error) => {
@@ -59,14 +59,6 @@ const FormSetAccount = ({
     setUsername(virtualAccount.bossUsername ?? "");
     setEmail(virtualAccount.bossEmail ?? "");
   }, [openDrawer, virtualAccount]);
-
-  const onSubmit = () => {
-    if (!username) {
-      toast.error("Username is required");
-      return;
-    }
-    setAccount();
-  };
 
   const handleDrawerClose = () => {
     setUsername("");
@@ -156,7 +148,7 @@ const FormSetAccount = ({
               "cursor-pointer",
               disableSubmit && "cursor-not-allowed opacity-50",
             )}
-            onClick={!disableSubmit ? onSubmit : undefined}
+            onClick={!disableSubmit ? (setAccount as () => void) : undefined}
           >
             {isLoading ? <Spinner /> : ""}
             Submit

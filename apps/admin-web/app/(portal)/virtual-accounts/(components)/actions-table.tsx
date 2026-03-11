@@ -1,10 +1,12 @@
 import { Button } from "@repo/ui/components/button";
 import { History, Plus, Settings } from "lucide-react";
-import { DrawerType } from "../page";
-import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
+import {
+  DrawerTypeVirtualAccountEnum,
+  VirtualAccount,
+} from "@/lib/api/endpoints/virtual-account";
 
 type Props = {
-  onClickAction: (type: DrawerType) => void;
+  onClickAction: (type: DrawerTypeVirtualAccountEnum) => void;
   virtualAccount: VirtualAccount;
 };
 
@@ -23,7 +25,7 @@ const ActionsTable = ({ onClickAction, virtualAccount }: Props) => {
           onClick={() =>
             !!virtualAccount.bossUsername
               ? undefined
-              : onClickAction("set-account")
+              : onClickAction(DrawerTypeVirtualAccountEnum.SET_ACCOUNT)
           }
         >
           <Settings data-icon="inline-start" />
@@ -33,12 +35,19 @@ const ActionsTable = ({ onClickAction, virtualAccount }: Props) => {
           variant={"outline"}
           size={"default"}
           className="cursor-pointer"
-          onClick={() => onClickAction("recharge")}
+          onClick={() => onClickAction(DrawerTypeVirtualAccountEnum.RECHARGE)}
         >
           <Plus data-icon="inline-start" />
           Recharge
         </Button>
-        <Button variant={"outline"} size={"default"} className="cursor-pointer">
+        <Button
+          variant={"outline"}
+          size={"default"}
+          className="cursor-pointer"
+          onClick={() =>
+            onClickAction(DrawerTypeVirtualAccountEnum.RECHARGE_HISTORY)
+          }
+        >
           <History data-icon="inline-start" />
           Charge histories
         </Button>

@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
-import { RoleUserEnum } from "@/config/navigation";
+import { RoleUserEnum } from "@/lib/api/endpoints/users";
 
 type Props = {
   openDrawer: boolean;
@@ -111,8 +111,10 @@ const FormSetEmployee = ({
             Role
           </label>
           <Select
-            onValueChange={(value) => {
-              setRole(value as RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT);
+            onValueChange={(
+              value: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT,
+            ) => {
+              setRole(value);
             }}
             value={role}
           >
@@ -121,10 +123,10 @@ const FormSetEmployee = ({
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem key="ads" value="ads">
+                <SelectItem key="ads" value={RoleUserEnum.ADS}>
                   Ads
                 </SelectItem>
-                <SelectItem key="accountant" value="accountant">
+                <SelectItem key="accountant" value={RoleUserEnum.ACCOUNTANT}>
                   Accountant
                 </SelectItem>
               </SelectGroup>

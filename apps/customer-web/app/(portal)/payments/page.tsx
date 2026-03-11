@@ -10,14 +10,23 @@ import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { Section, SectionContent } from "@/components/layouts/section";
 import { PageLayout } from "@/components/layouts/page-layout";
 import { DataTable } from "@repo/ui/components/data-table";
-import FilterCard from "./components/filter";
+import FilterTime from "./components/filter";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
-import { Payment, PaymentRow } from "@/lib/api/endpoints/payment";
+import {
+  Payment,
+  PaymentResponse,
+  PaymentRow,
+} from "@/lib/api/endpoints/payment";
 import { EMPTY_LABEL } from "@/app/utils/constants";
-// import Statistic from "./components/statistic";
+import Statistic from "./components/statistic";
+
+const now = new Date();
 
 const initFilter = {
-  month: "2026-02",
+  from: new Date(now.getFullYear(), now.getMonth(), 2)
+    .toISOString()
+    .slice(0, 10),
+  to: now.toISOString().slice(0, 10),
 };
 
 const dateColumnLabel = [
@@ -26,6 +35,25 @@ const dateColumnLabel = [
   "Consume outside US",
   "Consume in US",
 ];
+
+const initDataPayment = {
+  virtualAccountId: "",
+  currency: "USD",
+  timezone: "local",
+  range: {
+    from: "",
+    to: "",
+  },
+  rows: [],
+  summary: {
+    totalDepositCents: 0,
+    totalSpendCents: 0,
+    totalSpendUsCents: 0,
+    totalSpendNonUsCents: 0,
+    totalRefundCents: 0,
+    endingAccountBalanceCents: 0,
+  },
+};
 
 const maskDataTable = Array.from({ length: 4 }, () => {
   return {};
@@ -50,41 +78,23 @@ export default function Cards() {
   const { data: paymentInfors, isLoading } = useQuery({
     queryKey: ["payments", currentFilter],
     queryFn: async () => {
-      const res = await api.payment.getPayments(currentFilter);
+      const res = await api.payment.getPayments({
+        from: currentFilter.from,
+        to: currentFilter.to,
+      });
       return res;
     },
     refetchOnMount: "always",
     gcTime: 0,
   });
 
-  const dataPayment: Payment[] = useMemo(
-    () => paymentInfors?.data ?? [],
+  const dataPayment: PaymentResponse = useMemo(
+    () => paymentInfors?.data ?? initDataPayment,
     [paymentInfors],
   );
 
   const dataPaymentGrouped = useMemo(() => {
     if (isLoading) return maskDataTable;
-    const fakeData: PaymentRow[] = [
-      {
-        date: "2026-02-02",
-        depositCents: 12300,
-        spendCents: 526,
-        spendNonUsCents: 0,
-        spendUsCents: 526,
-        refundCents: 0,
-        accountBalanceCents: -113446905,
-      },
-      {
-        date: "2026-02-11",
-        depositCents: 4324,
-        spendCents: 0,
-        spendNonUsCents: 4234,
-        spendUsCents: 123,
-        refundCents: 0,
-        accountBalanceCents: 0,
-      },
-    ];
-
     function transformPaymentData(data: PaymentRow[]) {
       const result = {
         totalNap: {} as Record<string, number>,
@@ -116,7 +126,7 @@ export default function Cards() {
       ];
     }
 
-    return transformPaymentData(fakeData);
+    return transformPaymentData(dataPayment.rows);
   }, [dataPayment, isLoading]);
 
   function generateDateColumns(
@@ -135,9 +145,7 @@ export default function Cards() {
       return {
         accessorKey: dateKey,
         header: (
-          <div style={{ textAlign: "center", width: "60px" }}>
-            {`${dayStr}/${monthStr}`}
-          </div>
+          <div className="w-[100px] text-center">{`${dayStr}/${monthStr}`}</div>
         ) as unknown as string,
         cell: ({ row }) => {
           return isLoading ? (
@@ -170,23 +178,21 @@ export default function Cards() {
       cell: ({ row }: CellContext<Payment, number>) => {
         return dateColumnLabel[row.index];
       },
-      meta: {
-        className: "sticky left-0 bg-white z-10",
-        style: {
-          width: "600px",
-        },
-      },
     },
     ...generateDateColumns(
-      Number(detectMonthYear(currentFilter.month).month),
-      Number(detectMonthYear(currentFilter.month).year),
+      Number(detectMonthYear(currentFilter.from).month),
+      Number(detectMonthYear(currentFilter.from).year),
     ),
   ] as ColumnDef<Payment>[];
 
-  const handleChangeFilter = (field: string, value: string) => {
+  const handleChangeFilter = (monthYear: string) => {
+    const [year, month] = monthYear.split("-");
+    const firstDateOfMonth = "01";
+    const endDateOfMonth = new Date(Number(year), Number(month), 0).getDate();
     setCurrentFilter((prev) => ({
       ...prev,
-      [field]: value,
+      from: `${year}-${month}-${firstDateOfMonth}`,
+      to: `${year}-${month}-${endDateOfMonth}`,
     }));
   };
 
@@ -198,10 +204,8 @@ export default function Cards() {
 
       <Section>
         <SectionContent>
-          <FilterCard
-            onMonthChange={(month) => handleChangeFilter("month", month)}
-          />
-          {/* <Statistic /> */}
+          <Statistic containerClassName="mb-6" data={dataPayment.summary} />
+          <FilterTime onFilterChange={handleChangeFilter} />
           <DataTable
             columns={columns}
             data={dataPaymentGrouped as Payment[]}

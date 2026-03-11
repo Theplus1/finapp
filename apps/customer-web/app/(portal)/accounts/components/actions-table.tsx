@@ -2,8 +2,12 @@ import { Settings } from "lucide-react";
 import { Employee } from "@/lib/api/endpoints/employee";
 import { Button } from "@repo/ui/components/button";
 
+export enum DrawerTypeEmployeeEnum {
+  SET_ACCOUNT = "set-account",
+}
+
 type Props = {
-  onClickAction: (type: "set-account") => void;
+  onClickAction: (type: DrawerTypeEmployeeEnum) => void;
   employee: Employee;
 };
 
@@ -18,7 +22,9 @@ const ActionsTable = ({ onClickAction, employee }: Props) => {
             !!employee.username ? "cursor-not-allowed" : "cursor-pointer"
           }
           onClick={() =>
-            !!employee.username ? undefined : onClickAction("set-account")
+            !!employee.username
+              ? undefined
+              : onClickAction(DrawerTypeEmployeeEnum.SET_ACCOUNT)
           }
         >
           <Settings data-icon="inline-start" />

@@ -22,8 +22,8 @@ import { ClientPagination } from "@repo/ui/components/client-pagination";
 import CardNameCol from "@repo/ui/components/card-name-col";
 import { cn } from "@/lib/utils";
 import { Employee } from "@/lib/api/endpoints/employee";
-import { RoleUserEnum } from "@/config/navigation";
 import GetConfirmCode from "./components/get-confirm-code";
+import { RoleUserEnum } from "@/lib/api/endpoints/users";
 const initFilter = {
   cardId: "",
   startDate: "",

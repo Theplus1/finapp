@@ -1,16 +1,9 @@
 import { Button } from "@repo/ui/components/button";
 import { Lock, Settings, Trash2, Unlock } from "lucide-react";
-import { Card, CardStatus } from "@/lib/api/endpoints/card";
-export type DrawerCardType =
-  | "lock"
-  | "unlock"
-  | "set-pre-recharge"
-  | "unset-pre-recharge"
-  | "set-spending-limit"
-  | "unset-spending-limit";
+import { Card, CardStatus, DrawerCardTypeEnum } from "@/lib/api/endpoints/card";
 
 type Props = {
-  onClickAction: (type: DrawerCardType) => void;
+  onClickAction: (type: DrawerCardTypeEnum) => void;
   card: Card;
 };
 
@@ -27,7 +20,8 @@ const ActionsTable = ({ onClickAction, card }: Props) => {
               : "cursor-pointer"
           }
           onClick={() =>
-            card.status !== CardStatus.PAUSED && onClickAction("lock")
+            card.status !== CardStatus.PAUSED &&
+            onClickAction(DrawerCardTypeEnum.LOCK)
           }
         >
           <Lock data-icon="inline-start" />
@@ -42,7 +36,8 @@ const ActionsTable = ({ onClickAction, card }: Props) => {
               : "cursor-pointer"
           }
           onClick={() =>
-            card.status !== CardStatus.ACTIVE && onClickAction("unlock")
+            card.status !== CardStatus.ACTIVE &&
+            onClickAction(DrawerCardTypeEnum.UNLOCK)
           }
         >
           <Unlock data-icon="inline-start" />
@@ -52,7 +47,7 @@ const ActionsTable = ({ onClickAction, card }: Props) => {
           variant={"outline"}
           size={"default"}
           className="cursor-pointer"
-          onClick={() => onClickAction("set-pre-recharge")}
+          onClick={() => onClickAction(DrawerCardTypeEnum.SET_PRE_RECHARGE)}
         >
           <Settings data-icon="inline-start" />
           Set pre recharge
@@ -61,7 +56,7 @@ const ActionsTable = ({ onClickAction, card }: Props) => {
           variant={"outline"}
           size={"default"}
           className="cursor-pointer"
-          onClick={() => onClickAction("unset-pre-recharge")}
+          onClick={() => onClickAction(DrawerCardTypeEnum.UNSET_PRE_RECHARGE)}
         >
           <Trash2 data-icon="inline-start" />
           Unset pre recharge
@@ -70,7 +65,7 @@ const ActionsTable = ({ onClickAction, card }: Props) => {
           variant={"outline"}
           size={"default"}
           className="cursor-pointer"
-          onClick={() => onClickAction("set-spending-limit")}
+          onClick={() => onClickAction(DrawerCardTypeEnum.SET_SPENDING_LIMIT)}
         >
           <Settings data-icon="inline-start" />
           Set spending limit
@@ -79,7 +74,7 @@ const ActionsTable = ({ onClickAction, card }: Props) => {
           variant={"outline"}
           size={"default"}
           className="cursor-pointer"
-          onClick={() => onClickAction("unset-spending-limit")}
+          onClick={() => onClickAction(DrawerCardTypeEnum.UNSET_SPENDING_LIMIT)}
         >
           <Trash2 data-icon="inline-start" />
           Unset spending limit

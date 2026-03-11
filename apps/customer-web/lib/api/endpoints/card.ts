@@ -6,6 +6,15 @@ export enum CardStatus {
   PAUSED = "paused",
 }
 
+export enum DrawerCardTypeEnum {
+  LOCK = "lock",
+  UNLOCK = "unlock",
+  SET_PRE_RECHARGE = "set-pre-recharge",
+  UNSET_PRE_RECHARGE = "unset-pre-recharge",
+  SET_SPENDING_LIMIT = "set-spending-limit",
+  UNSET_SPENDING_LIMIT = "unset-spending-limit",
+}
+
 export interface Card {
   _id: string;
   slashId: string;

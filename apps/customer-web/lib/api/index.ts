@@ -13,7 +13,6 @@ export type { ApiResponse, ApiError, RequestConfig } from "./client";
 
 // Import all endpoint modules
 export { authApi } from "./endpoints/auth";
-export { usersApi } from "./endpoints/users";
 
 // Export types (with explicit re-exports to avoid conflicts)
 export type {
@@ -32,7 +31,6 @@ export type {
 
 // Consolidated API object
 import { authApi } from "./endpoints/auth";
-import { usersApi } from "./endpoints/users";
 import { cardsApi } from "./endpoints/card";
 import { transactionsApi } from "./endpoints/transaction";
 import { paymentApi } from "./endpoints/payment";
@@ -40,7 +38,6 @@ import { employeeApi } from "./endpoints/employee";
 
 export const api = {
   auth: authApi,
-  users: usersApi,
   employees: employeeApi,
   cards: cardsApi,
   transactions: transactionsApi,

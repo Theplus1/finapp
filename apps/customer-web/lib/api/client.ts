@@ -152,16 +152,6 @@ class HttpClient {
       };
       throw error;
     }
-    const maybeObject =
-      isJson && typeof data === "object" && data !== null
-        ? (data as Record<string, unknown>)
-        : undefined;
-
-    const payload =
-      maybeObject && "data" in maybeObject
-        ? (maybeObject.data as T)
-        : (data as T);
-
     return data as ApiResponse<T>;
   }
 
