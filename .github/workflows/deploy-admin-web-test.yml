@@ -20,20 +20,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: package-lock.json
-
-      - name: Debug - Check workspace
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Files in root:"
-          ls -la package*.json || echo "No package files found!"
-          echo "Node: $(node -v)"
-          echo "NPM: $(npm -v)"
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
