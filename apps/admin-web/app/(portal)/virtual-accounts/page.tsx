@@ -14,7 +14,10 @@ import { PageLayout } from "@/components/layouts/page-layout";
 import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { SectionContent } from "@/components/layouts/section";
 import { Section } from "@/components/layouts/section";
-import type { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
+import {
+  DrawerTypeVirtualAccountEnum,
+  type VirtualAccount,
+} from "@/lib/api/endpoints/virtual-account";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { DataTable } from "@repo/ui/components/data-table";
@@ -29,6 +32,19 @@ import { CopyIcon } from "@repo/ui/components/copy-button";
 import { ClientPagination } from "@repo/ui/components/client-pagination";
 import FormLinkTelegram from "./(components)/form-link-telegram";
 import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@repo/ui/components/popover";
+import ActionsTable from "./(components)/actions-table";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@repo/ui/components/drawer";
+import FormSetAccount from "./(components)/form-set-account";
 
 const idTelegram = "@finnotisys_bot";
 const maskDataTable = Array.from({ length: 20 }, () => {
@@ -42,6 +58,9 @@ export default function VirtualAccount() {
     total: 0,
   });
   const [openDrawer, setOpenDrawer] = useState(false);
+  const [drawerType, setDrawerType] = useState<DrawerTypeVirtualAccountEnum>(
+    DrawerTypeVirtualAccountEnum.LINK_TELEGRAM,
+  );
   const [virtualAccountEdit, setVirtualAccountEdit] =
     useState<VirtualAccount | null>(null);
   const [countGetList, setCountGetList] = useState(0);
@@ -73,6 +92,15 @@ export default function VirtualAccount() {
     if (isLoading) return maskDataTable;
     return data ?? [];
   }, [isLoading, data]);
+
+  const handleActionVirtualAccount = (
+    type: DrawerTypeVirtualAccountEnum,
+    virtualAccount: VirtualAccount,
+  ) => {
+    setVirtualAccountEdit(virtualAccount);
+    setOpenDrawer(true);
+    setDrawerType(type);
+  };
 
   const columns = [
     {
@@ -196,8 +224,10 @@ export default function VirtualAccount() {
                     typeof telegram === "number" ? "" : "underline",
                   )}
                   onClick={() => {
-                    setVirtualAccountEdit(row.original);
-                    setOpenDrawer(true);
+                    handleActionVirtualAccount(
+                      DrawerTypeVirtualAccountEnum.LINK_TELEGRAM,
+                      row.original,
+                    );
                   }}
                 >
                   {telegram}
@@ -214,8 +244,10 @@ export default function VirtualAccount() {
                 telegram ? "" : "underline",
               )}
               onClick={() => {
-                setVirtualAccountEdit(row.original);
-                setOpenDrawer(true);
+                handleActionVirtualAccount(
+                  DrawerTypeVirtualAccountEnum.LINK_TELEGRAM,
+                  row.original,
+                );
               }}
             >
               {telegram}
@@ -226,8 +258,10 @@ export default function VirtualAccount() {
             <p
               className="text-green-500 cursor-pointer block underline"
               onClick={() => {
-                setVirtualAccountEdit(row.original);
-                setOpenDrawer(true);
+                handleActionVirtualAccount(
+                  DrawerTypeVirtualAccountEnum.LINK_TELEGRAM,
+                  row.original,
+                );
               }}
             >
               Set IDs
@@ -249,15 +283,67 @@ export default function VirtualAccount() {
         );
       },
     },
+    {
+      header: "Boss",
+      cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        return isLoading ? (
+          <Skeleton />
+        ) : (
+          row.original.bossUsername || EMPTY_LABEL
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: <p className="text-center">Actions</p>,
+      cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        return (
+          <div className="flex justify-center">
+            <Popover>
+              <PopoverTrigger className="cursor-pointer">...</PopoverTrigger>
+              <PopoverContent>
+                <ActionsTable
+                  virtualAccount={row.original}
+                  onClickAction={(type) =>
+                    handleActionVirtualAccount(type, row.original)
+                  }
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        );
+      },
+    },
   ] as ColumnDef<VirtualAccount>[];
 
   const handleCancelDrawer = () => {
     setOpenDrawer(false);
   };
 
-  const handleSuccess = () => {
+  const handleSuccessDrawer = () => {
     setOpenDrawer(false);
     setCountGetList((prev) => prev + 1);
+  };
+
+  const renderTitleDrawer = (typeDrawer: DrawerTypeVirtualAccountEnum) => {
+    switch (typeDrawer) {
+      case DrawerTypeVirtualAccountEnum.LINK_TELEGRAM:
+        return (
+          <>
+            Link telegram to virtual account &quot;
+            {virtualAccountEdit?.name ?? EMPTY_LABEL}&quot;
+          </>
+        );
+      case DrawerTypeVirtualAccountEnum.SET_ACCOUNT:
+        return (
+          <>
+            Set account to virtual account &quot;
+            {virtualAccountEdit?.name ?? EMPTY_LABEL}&quot;
+          </>
+        );
+      default:
+        return "";
+    }
   };
 
   return (
@@ -284,12 +370,29 @@ export default function VirtualAccount() {
               }));
             }}
           />
-          <FormLinkTelegram
-            virtualAccount={virtualAccountEdit}
-            openDrawer={openDrawer}
-            onCancel={handleCancelDrawer}
-            onSubmitSuccess={handleSuccess}
-          />
+          <Drawer direction="right" open={openDrawer}>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>{renderTitleDrawer(drawerType)}</DrawerTitle>
+              </DrawerHeader>
+              {drawerType === DrawerTypeVirtualAccountEnum.LINK_TELEGRAM && (
+                <FormLinkTelegram
+                  virtualAccount={virtualAccountEdit}
+                  openDrawer={openDrawer}
+                  onCancelSetTelegram={handleCancelDrawer}
+                  onSubmitTelegramSuccess={handleSuccessDrawer}
+                />
+              )}
+              {drawerType === DrawerTypeVirtualAccountEnum.SET_ACCOUNT && (
+                <FormSetAccount
+                  virtualAccount={virtualAccountEdit}
+                  openDrawer={openDrawer}
+                  onCancelSetAccount={handleCancelDrawer}
+                  onSubmitAccountSuccess={handleSuccessDrawer}
+                />
+              )}
+            </DrawerContent>
+          </Drawer>
         </SectionContent>
       </Section>
     </PageLayout>
