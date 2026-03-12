@@ -8,7 +8,7 @@ on:
       - 'apps/customer-web/**'
       - 'packages/**'
       - '.github/workflows/deploy-customer-web-test.yml'
-  workflow_dispatch:
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   deploy-customer-web:
