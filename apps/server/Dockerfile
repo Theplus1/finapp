@@ -1,8 +1,7 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
-# Force rebuild with fs-extra dependency
 
 # Copy root package files (monorepo)
 COPY package*.json ./
@@ -22,7 +21,7 @@ COPY apps/server/ ./apps/server/
 RUN npm run build:server
 
 # Production stage
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -37,7 +36,7 @@ COPY apps/server/package*.json ./apps/server/
 COPY packages/ ./packages/
 
 # Install production dependencies from root (proper workspace resolution)
-RUN npm ci --only=production --legacy-peer-deps --workspace=server
+RUN npm ci --omit=dev --legacy-peer-deps --workspace=server
 
 # Copy built application from builder
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
