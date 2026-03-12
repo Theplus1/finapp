@@ -3,6 +3,16 @@ import { Document } from 'mongoose';
 
 export type AdminUserDocument = AdminUser & Document;
 
+export const ADMIN_USER_ROLES = [
+  'super-admin',
+  'admin',
+  'boss',
+  'ads',
+  'accountant',
+] as const;
+
+export type AdminUserRole = (typeof ADMIN_USER_ROLES)[number];
+
 @Schema({ timestamps: true, collection: 'admin_users' })
 export class AdminUser {
   @Prop({ required: true })
@@ -11,8 +21,23 @@ export class AdminUser {
   @Prop({ required: true })
   passwordHash: string;
 
-  @Prop({ required: true, enum: ['super-admin', 'admin'], default: 'admin' })
-  role: 'super-admin' | 'admin';
+  @Prop({ required: true, enum: ADMIN_USER_ROLES, default: 'admin' })
+  role: AdminUserRole;
+
+  /**
+   * Slash Virtual Account ID.
+   * - Boss: required (1 VA ↔ 1 Boss)
+   * - Ads/Accountant: inherited from Boss (optional on record if bossId present)
+   */
+  @Prop({ index: true })
+  virtualAccountId?: string;
+
+  /**
+   * Boss linkage for employee accounts (ads/accountant).
+   * Store the boss AdminUser _id as string for simpler queries.
+   */
+  @Prop({ index: true })
+  bossId?: string;
 
   @Prop({ default: true })
   isActive: boolean;
@@ -35,3 +60,12 @@ export const AdminUserSchema = SchemaFactory.createForClass(AdminUser);
 // Add indexes
 AdminUserSchema.index({ username: 1 }, { unique: true });
 AdminUserSchema.index({ isActive: 1 });
+
+// Enforce 1 VA ↔ 1 Boss (only for boss accounts with virtualAccountId set)
+AdminUserSchema.index(
+  { virtualAccountId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { role: 'boss', virtualAccountId: { $exists: true, $ne: null } },
+  },
+);

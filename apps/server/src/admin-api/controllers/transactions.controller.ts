@@ -15,13 +15,16 @@ import {
 } from '@nestjs/swagger';
 import { TransactionQueryDto } from '../dto/transaction-query.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { Roles } from '../decorators/roles.decorator';
+import { RolesGuard } from '../guards/roles.guard';
 import { TransactionsService } from '../../domain/transactions/transactions.service';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 
 @ApiTags('Admin API - Transactions')
 @ApiBearerAuth()
 @Controller('admin-api/transactions')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin', 'super-admin')
 export class TransactionsController {
   private readonly logger = new Logger(TransactionsController.name);
 

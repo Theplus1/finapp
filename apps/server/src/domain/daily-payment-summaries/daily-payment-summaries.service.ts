@@ -31,11 +31,19 @@ export class DailyPaymentSummariesService {
       this.logger.log(`Calculating daily summary for ${virtualAccountId} from ${dayStart.toISOString()} to ${dayEnd.toISOString()}`);
     }
 
-    // Get all transactions for this day
-    const transactions = await this.transactionsService.findAllWithFilters({
+    // Get all spend transactions for this day (PENDING + SETTLED, amount < 0)
+    const spendTransactions = await this.transactionsService.findAllWithFilters({
       virtualAccountId,
       amountCents: { $lt: 0 },
       detailedStatus: { $in: ['pending', 'settled'] },
+      startDate: dayStart.toISOString(),
+      endDate: dayEnd.toISOString(),
+    });
+
+    // Get all refund transactions for this day
+    const refundTransactions = await this.transactionsService.findAllWithFilters({
+      virtualAccountId,
+      detailedStatus: 'refund',
       startDate: dayStart.toISOString(),
       endDate: dayEnd.toISOString(),
     });
@@ -44,14 +52,21 @@ export class DailyPaymentSummariesService {
     let totalDepositCents = 0;
     let totalSpendNonUSCents = 0;
     let totalSpendUSCents = 0;
+    let totalRefundCents = 0;
 
-    transactions.forEach((transaction) => {
+    // Spend: split by US / Non-US, use abs(amountCents)
+    spendTransactions.forEach((transaction) => {
       const spendAmount = Math.abs(transaction.amountCents);
       if (transaction.merchantData?.location?.country === 'US') {
         totalSpendUSCents += spendAmount;
       } else {
         totalSpendNonUSCents += spendAmount;
       }
+    });
+
+    // Refund: all REFUND transactions, use abs(amountCents)
+    refundTransactions.forEach((transaction) => {
+      totalRefundCents += Math.abs(transaction.amountCents);
     });
 
     // Upsert the summary
@@ -66,6 +81,7 @@ export class DailyPaymentSummariesService {
         totalDepositCents,
         totalSpendNonUSCents,
         totalSpendUSCents,
+        totalRefundCents,
         accountBalanceCents: 0, // Will be calculated separately
         currency,
         calculatedAt: new Date(),
@@ -145,6 +161,38 @@ export class DailyPaymentSummariesService {
       await this.calculateAndSaveDailySummary(virtualAccountId, new Date(currentDate), currency, silent);
       currentDate.setDate(currentDate.getDate() + 1);
     }
+  }
+
+  /**
+   * Update totalDepositCents for a given virtual account and date.
+   * If summary does not exist, it will be calculated first (spend/refund from transactions),
+   * then deposit will be overridden.
+   */
+  async upsertDepositForDate(
+    virtualAccountId: string,
+    date: Date,
+    depositCents: number,
+    currency: string,
+  ): Promise<DailyPaymentSummaryDocument> {
+    const dayStart = startOfDay(date);
+
+    // Ensure summary exists (spend/refund calculated)
+    const summary = await this.getOrCalculateDailySummary(
+      virtualAccountId,
+      dayStart,
+      currency,
+    );
+
+    summary.totalDepositCents = depositCents;
+    summary.calculatedAt = new Date();
+
+    await summary.save();
+
+    this.logger.log(
+      `Updated deposit for ${virtualAccountId} on ${dayStart.toISOString()}: depositCents=${depositCents}`,
+    );
+
+    return summary;
   }
 
   /**

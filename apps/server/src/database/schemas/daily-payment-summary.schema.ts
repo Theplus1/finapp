@@ -21,6 +21,9 @@ export class DailyPaymentSummary {
   totalSpendUSCents: number;
 
   @Prop({ default: 0 })
+  totalRefundCents: number;
+
+  @Prop({ default: 0 })
   accountBalanceCents: number;
 
   @Prop({ required: true })

@@ -1,7 +1,15 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AdminUserRepository } from '../../database/repositories/admin-user.repository';
-import { AdminUserDocument } from '../../database/schemas/admin-user.schema';
+import { AdminUserDocument, AdminUserRole } from '../../database/schemas/admin-user.schema';
+
+const EMPLOYEE_ROLES: AdminUserRole[] = ['ads', 'accountant'];
 
 /**
  * Admin Users Domain Service
@@ -26,6 +34,11 @@ export class AdminUsersService {
       return null;
     }
 
+    if (!adminUser.isActive) {
+      this.logger.warn(`Login attempt for inactive user: ${username}`);
+      return null;
+    }
+
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, adminUser.passwordHash);
     if (!isPasswordValid) {
@@ -45,8 +58,9 @@ export class AdminUsersService {
   async createUser(
     username: string, 
     password: string, 
-    role: 'super-admin' | 'admin' = 'admin',
+    role: AdminUserRole = 'admin',
     email?: string,
+    meta?: { virtualAccountId?: string; bossId?: string },
   ): Promise<AdminUserDocument> {
     // Check if user already exists
     const exists = await this.adminUserRepository.exists(username);
@@ -63,6 +77,8 @@ export class AdminUsersService {
       passwordHash,
       role,
       email,
+      virtualAccountId: meta?.virtualAccountId,
+      bossId: meta?.bossId,
       isActive: true,
     });
 
@@ -86,6 +102,26 @@ export class AdminUsersService {
   }
 
   /**
+   * Find active boss by virtual account id
+   */
+  async findBossByVirtualAccountId(virtualAccountId: string): Promise<AdminUserDocument | null> {
+    return this.adminUserRepository.findOne({
+      role: 'boss',
+      virtualAccountId,
+      isActive: true,
+    });
+  }
+
+  /**
+   * Find all active bosses by virtual account ids
+   */
+  async findBossesByVirtualAccountIds(
+    virtualAccountIds: string[],
+  ): Promise<AdminUserDocument[]> {
+    return this.adminUserRepository.findBossesByVirtualAccountIds(virtualAccountIds);
+  }
+
+  /**
    * Update admin user password
    */
   async updatePassword(username: string, newPassword: string): Promise<void> {
@@ -98,7 +134,23 @@ export class AdminUsersService {
    * Deactivate admin user
    */
   async deactivateUser(username: string): Promise<void> {
+    const user = await this.adminUserRepository.findByUsername(username);
+
+    if (!user) {
+      this.logger.warn(`Attempt to deactivate non-existing user: ${username}`);
+      return;
+    }
+
     await this.adminUserRepository.softDelete(username);
+
+    if (user.role === 'boss') {
+      const bossId = String(user._id);
+      await this.adminUserRepository.softDeleteEmployeesByBossId(bossId);
+      this.logger.log(
+        `Cascade deactivated employees for boss ${username} (bossId=${bossId})`,
+      );
+    }
+
     this.logger.log(`Admin user deactivated: ${username}`);
   }
 
@@ -123,5 +175,94 @@ export class AdminUsersService {
    */
   async exists(username: string): Promise<boolean> {
     return this.adminUserRepository.exists(username);
+  }
+
+  /**
+   * Find boss by id (for customer-api: ensure boss exists and get virtualAccountId)
+   */
+  async findBossById(bossId: string): Promise<AdminUserDocument | null> {
+    const user = await this.adminUserRepository.findById(bossId);
+    return user?.role === 'boss' ? user : null;
+  }
+
+  /**
+   * List employees (ads/accountant) of a boss. Boss only.
+   */
+  async findEmployeesByBossId(bossId: string): Promise<AdminUserDocument[]> {
+    return this.adminUserRepository.findEmployeesByBossId(bossId);
+  }
+
+  /**
+   * Create employee (ads/accountant) under a boss. Boss only.
+   */
+  async createEmployee(
+    bossId: string,
+    username: string,
+    password: string,
+    role: 'ads' | 'accountant',
+    email?: string,
+  ): Promise<AdminUserDocument> {
+    const boss = await this.findBossById(bossId);
+    if (!boss) {
+      throw new ForbiddenException('Boss account not found');
+    }
+    if (!boss.virtualAccountId) {
+      throw new BadRequestException('Boss must be linked to a virtual account');
+    }
+    if (!EMPLOYEE_ROLES.includes(role)) {
+      throw new BadRequestException('Role must be ads or accountant');
+    }
+    return this.createUser(username, password, role, email, {
+      bossId,
+      virtualAccountId: boss.virtualAccountId,
+    });
+  }
+
+  /**
+   * Update employee (password, email). Caller must be the boss of this employee.
+   */
+  async updateEmployee(
+    employeeId: string,
+    bossId: string,
+    updates: { password?: string; email?: string },
+  ): Promise<AdminUserDocument> {
+    const employee = await this.adminUserRepository.findById(employeeId);
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+    if (employee.bossId !== bossId) {
+      throw new ForbiddenException('Not allowed to update this employee');
+    }
+    const updateData: { passwordHash?: string; email?: string } = {};
+    if (updates.password !== undefined) {
+      updateData.passwordHash = await bcrypt.hash(updates.password, 10);
+    }
+    if (updates.email !== undefined) {
+      updateData.email = updates.email;
+    }
+    if (Object.keys(updateData).length === 0) {
+      return employee;
+    }
+    const updated = await this.adminUserRepository.updateById(employeeId, updateData);
+    if (!updated) {
+      throw new NotFoundException('Employee not found');
+    }
+    this.logger.log(`Employee ${employeeId} updated by boss ${bossId}`);
+    return updated;
+  }
+
+  /**
+   * Soft-delete employee. Caller must be the boss of this employee.
+   */
+  async deleteEmployee(employeeId: string, bossId: string): Promise<void> {
+    const employee = await this.adminUserRepository.findById(employeeId);
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+    if (employee.bossId !== bossId) {
+      throw new ForbiddenException('Not allowed to delete this employee');
+    }
+    await this.adminUserRepository.softDeleteById(employeeId);
+    this.logger.log(`Employee ${employeeId} deleted by boss ${bossId}`);
   }
 }

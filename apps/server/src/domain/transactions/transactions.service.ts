@@ -42,6 +42,7 @@ export class TransactionsService {
       cardId?: string;
       status?: string;
       detailedStatus?: string | any;
+      amountCents?: number;
       startDate?: string;
       endDate?: string;
       sortBy?: string;
@@ -54,6 +55,7 @@ export class TransactionsService {
     if (filters.cardId) dbFilters.cardId = filters.cardId;
     if (filters.status) dbFilters.status = filters.status;
     if (filters.detailedStatus) dbFilters.detailedStatus = filters.detailedStatus;
+    if (filters.amountCents !== undefined) dbFilters.amountCents = filters.amountCents;
     if (filters.startDate) dbFilters.startDate = new Date(filters.startDate);
     if (filters.endDate) dbFilters.endDate = new Date(filters.endDate);
     
@@ -144,6 +146,21 @@ export class TransactionsService {
    */
   async findBySlashIdWithDetails(slashId: string): Promise<TransactionDocument> {
     return await this.findBySlashId(slashId);
+  }
+
+  /**
+   * Find one transaction by Slash ID and virtual account ID, returns enriched or null
+   */
+  async findBySlashIdAndVirtualAccountId(
+    slashId: string,
+    virtualAccountId: string,
+  ): Promise<TransactionWithRelations | null> {
+    const transaction = await this.transactionRepository.findBySlashId(slashId);
+    if (!transaction || transaction.virtualAccountId !== virtualAccountId) {
+      return null;
+    }
+    const [enriched] = await this.enrichTransactions([transaction]);
+    return enriched ?? null;
   }
 
   /**

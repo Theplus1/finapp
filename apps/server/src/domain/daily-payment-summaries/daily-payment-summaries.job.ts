@@ -1,0 +1,59 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { DailyPaymentSummariesService } from './daily-payment-summaries.service';
+import { AccountsService } from '../accounts/accounts.service';
+import { startOfDay, subDays } from 'date-fns';
+
+@Injectable()
+export class DailyPaymentSummariesJob {
+  private readonly logger = new Logger(DailyPaymentSummariesJob.name);
+
+  // Số ngày gần nhất cần refresh (bao gồm hôm nay)
+  // 2 ngày là đủ vì job chạy 5 phút/lần
+  private static readonly LOOKBACK_DAYS = 2;
+
+  constructor(
+    private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
+    private readonly accountsService: AccountsService,
+  ) {}
+
+  /**
+   * Cron job: định kỳ aggregate lại daily_payment_summaries
+   * Chạy mỗi 15 phút để giữ dữ liệu gần realtime, không phụ thuộc webhook Slash.
+   */
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async recalculateRecentSummariesForAllAccounts(): Promise<void> {
+    const now = new Date();
+    const endDate = startOfDay(now);
+    const startDate = startOfDay(subDays(endDate, DailyPaymentSummariesJob.LOOKBACK_DAYS - 1));
+
+    this.logger.log(
+      `Recalculating daily payment summaries for all accounts from ${startDate.toISOString()} to ${endDate.toISOString()}`,
+    );
+
+    const accounts = await this.accountsService.findAll();
+    if (accounts.length === 0) {
+      this.logger.log('No virtual accounts found. Skipping daily payment summaries recalculation.');
+      return;
+    }
+
+    for (const account of accounts) {
+      try {
+        await this.dailyPaymentSummariesService.recalculateSummariesForRange(
+          account.slashId,
+          startDate,
+          endDate,
+          account.currency,
+          true,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Failed to recalculate daily summaries for VA ${account.slashId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    this.logger.log('Finished recalculating daily payment summaries for all accounts.');
+  }
+}
+
