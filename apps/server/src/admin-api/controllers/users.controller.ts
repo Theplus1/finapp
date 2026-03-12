@@ -9,12 +9,13 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { Roles } from '../decorators/roles.decorator';
 import { RolesGuard } from '../guards/roles.guard';
 import { UsersService } from 'src/users/users.service';
+import { ADMIN_API_ROLES } from '../../common/constants/auth.constants';
 
 @ApiTags('Admin API - Users')
 @ApiBearerAuth()
 @Controller('admin-api/users')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin', 'super-admin')
+@Roles(...ADMIN_API_ROLES)
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
 

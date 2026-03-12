@@ -28,6 +28,7 @@ import { CustomerTransactionQueryDto } from '../dto/transaction-query.dto';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 import type { TransactionWithRelations } from '../../domain/transactions/types/transaction.types';
 import type { TransactionDto } from '../../integrations/slash/dto/transaction.dto';
+import { CUSTOMER_API_ROLES } from '../../common/constants/auth.constants';
 
 const FACEBOOK_VERIFY_AMOUNT_CENTS = -100;
 
@@ -43,7 +44,7 @@ interface RequestUser {
 @ApiBearerAuth()
 @Controller('customer-api/transactions')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('boss', 'ads', 'accountant')
+@Roles(...CUSTOMER_API_ROLES)
 export class CustomerTransactionsController {
   private readonly logger = new Logger(CustomerTransactionsController.name);
 

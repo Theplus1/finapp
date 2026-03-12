@@ -21,6 +21,7 @@ import { Roles } from '../../admin-api/decorators/roles.decorator';
 import { TransactionsService } from '../../domain/transactions/transactions.service';
 import { CardSpendResponseDto } from '../dto/card-spend.dto';
 import { format, startOfDay, endOfDay } from 'date-fns';
+import { BOSS_AND_ACCOUNTANT_ROLES } from '../../common/constants/auth.constants';
 
 interface RequestUser {
   userId: string;
@@ -34,7 +35,7 @@ interface RequestUser {
 @ApiBearerAuth()
 @Controller('customer-api/virtual-accounts')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('boss', 'accountant')
+@Roles(...BOSS_AND_ACCOUNTANT_ROLES)
 export class CustomerCardSpendController {
   constructor(
     private readonly transactionsService: TransactionsService,

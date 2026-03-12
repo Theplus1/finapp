@@ -1,6 +1,7 @@
 import { IsString, IsNotEmpty, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { ADMIN_USER_ROLES } from '../../database/schemas/admin-user.schema';
+import { AUTH_AUDIENCE_TYPES, type AuthAudienceType } from '../../common/constants/auth.constants';
 
 export class AdminLoginDto {
   @ApiProperty({ description: 'Admin username', example: 'admin' })
@@ -31,8 +32,8 @@ export class AdminLoginResponseDto {
   @ApiProperty({ description: 'User role', enum: ADMIN_USER_ROLES })
   role: string;
 
-  @ApiProperty({ description: 'Token audience type', enum: ['admin', 'customer'] })
-  type: 'admin' | 'customer';
+  @ApiProperty({ description: 'Token audience type', enum: AUTH_AUDIENCE_TYPES })
+  type: AuthAudienceType;
 
   @ApiProperty({ description: 'Slash virtual account id (for boss/employee)', required: false })
   virtualAccountId?: string;

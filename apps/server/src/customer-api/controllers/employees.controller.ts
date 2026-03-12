@@ -22,6 +22,7 @@ import { JwtAuthGuard } from '../../admin-api/guards/jwt-auth.guard';
 import { Roles } from '../../admin-api/decorators/roles.decorator';
 import { RolesGuard } from '../../admin-api/guards/roles.guard';
 import { AdminUsersService } from '../../domain/admin-users/admin-users.service';
+import { BOSS_ONLY_ROLES } from '../../common/constants/auth.constants';
 import {
   CreateEmployeeDto,
   UpdateEmployeeDto,
@@ -56,7 +57,7 @@ function toEmployeeResponse(doc: AdminUserDocument): EmployeeResponseDto {
 @ApiBearerAuth()
 @Controller('customer-api/employees')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('boss')
+@Roles(...BOSS_ONLY_ROLES)
 export class EmployeesController {
   private readonly logger = new Logger(EmployeesController.name);
 

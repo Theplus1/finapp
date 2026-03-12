@@ -17,12 +17,13 @@ import { Roles } from '../decorators/roles.decorator';
 import { RolesGuard } from '../guards/roles.guard';
 import { CardGroupsService } from '../../domain/card-groups/card-groups.service';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
+import { ADMIN_API_ROLES } from '../../common/constants/auth.constants';
 
 @ApiTags('Admin API - Card Groups')
 @ApiBearerAuth()
 @Controller('admin-api/card-groups')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin', 'super-admin')
+@Roles(...ADMIN_API_ROLES)
 export class CardGroupsController {
   private readonly logger = new Logger(CardGroupsController.name);
 

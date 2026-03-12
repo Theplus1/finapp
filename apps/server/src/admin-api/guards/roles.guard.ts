@@ -7,12 +7,13 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { AdminUserRole } from '../../database/schemas/admin-user.schema';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import type { AuthAudienceType } from '../../common/constants/auth.constants';
 
 interface RequestUser {
   userId: string;
   username: string;
   role: AdminUserRole;
-  type?: 'admin' | 'customer';
+  type?: AuthAudienceType;
 }
 
 @Injectable()
