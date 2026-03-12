@@ -4,7 +4,6 @@ import { LoginForm } from "@/components/auth/login-form";
 import { useMutation } from "@tanstack/react-query";
 import { api, ApiResponse, AuthResponse } from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { TypeUserEnum } from "@/lib/api/endpoints/auth";
 
 export default function Page() {
   const router = useRouter();
@@ -15,12 +14,7 @@ export default function Page() {
       console.log("Login failed:", error);
     },
     onSuccess: (response: ApiResponse<AuthResponse>) => {
-      const isCustomer = response.data.type === TypeUserEnum.CUSTOMER;
-      if (!isCustomer) {
-        throw new Error("You don't have permission to access this page");
-      }
       const { accessToken, ...userProps } = response.data;
-
       localStorage.setItem("auth_token", accessToken);
       localStorage.setItem("user", JSON.stringify(userProps));
       router.push("/dashboard");

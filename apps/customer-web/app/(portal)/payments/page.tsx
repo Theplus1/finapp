@@ -204,8 +204,12 @@ export default function Cards() {
 
       <Section>
         <SectionContent>
-          <Statistic containerClassName="mb-6" data={dataPayment.summary} />
           <FilterTime onFilterChange={handleChangeFilter} />
+          <Statistic
+            containerClassName="my-6"
+            data={dataPayment.summary}
+            loading={isLoading}
+          />
           <DataTable
             columns={columns}
             data={dataPaymentGrouped as Payment[]}

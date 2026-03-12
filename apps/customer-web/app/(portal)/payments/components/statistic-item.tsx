@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/app/utils/func";
+import { formatDollarByCent } from "@/app/utils/func";
 import {
   ItemTitle,
   ItemDescription,
@@ -9,7 +9,7 @@ import {
 
 type Props = {
   label: string;
-  value: number;
+  value: number | React.ReactNode;
   icon: React.ReactNode;
 };
 
@@ -18,7 +18,9 @@ const StatisticItem = ({ label, value, icon }: Props) => {
     <Item variant="outline">
       <ItemContent>
         <ItemDescription>{label}</ItemDescription>
-        <ItemTitle>{formatCurrency(value)}</ItemTitle>
+        <ItemTitle>
+          {typeof value === "number" ? formatDollarByCent(value) : value}
+        </ItemTitle>
       </ItemContent>
       <ItemActions>{icon}</ItemActions>
     </Item>

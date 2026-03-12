@@ -8,14 +8,26 @@ import {
 } from "lucide-react";
 import StatisticItem from "./statistic-item";
 import { PaymentSummary } from "@/lib/api/endpoints/payment";
+import { Skeleton } from "@repo/ui/components/skeleton";
 
 type Props = {
   data: PaymentSummary;
   containerClassName?: string;
+  loading?: boolean;
 };
 
-const Statistic = ({ data, containerClassName }: Props) => {
+const Statistic = ({ data, containerClassName, loading }: Props) => {
   const dataStatistic = [
+    {
+      label: "Total charge",
+      value: data.totalDepositCents,
+      icon: <DatabaseBackup />,
+    },
+    {
+      label: "Total spend",
+      value: data.totalSpendCents,
+      icon: <ClipboardClock />,
+    },
     {
       label: "Total refund",
       value: data.totalRefundCents,
@@ -36,16 +48,6 @@ const Statistic = ({ data, containerClassName }: Props) => {
       value: data.totalSpendUsCents,
       icon: <Building2 />,
     },
-    {
-      label: "Total charge",
-      value: data.totalDepositCents,
-      icon: <DatabaseBackup />,
-    },
-    {
-      label: "Total spend",
-      value: data.totalSpendCents,
-      icon: <ClipboardClock />,
-    },
   ];
   return (
     <div
@@ -55,7 +57,7 @@ const Statistic = ({ data, containerClassName }: Props) => {
         <StatisticItem
           key={item.label}
           label={item.label}
-          value={item.value}
+          value={loading ? <Skeleton /> : item.value}
           icon={item.icon}
         />
       ))}

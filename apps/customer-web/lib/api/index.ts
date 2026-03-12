@@ -35,6 +35,7 @@ import { cardsApi } from "./endpoints/card";
 import { transactionsApi } from "./endpoints/transaction";
 import { paymentApi } from "./endpoints/payment";
 import { employeeApi } from "./endpoints/employee";
+import { cardSpendApi } from "./endpoints/card-spend";
 
 export const api = {
   auth: authApi,
@@ -42,4 +43,5 @@ export const api = {
   cards: cardsApi,
   transactions: transactionsApi,
   payment: paymentApi,
+  cardSpend: cardSpendApi,
 };
