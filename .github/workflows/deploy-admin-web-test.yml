@@ -57,14 +57,16 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Sync admin-web files to VPS
+      - name: Prepare standalone output
+        run: |
+          cp -r apps/admin-web/.next/static apps/admin-web/.next/standalone/apps/admin-web/.next/static
+          cp -r apps/admin-web/public apps/admin-web/.next/standalone/apps/admin-web/public 2>/dev/null || true
+
+      - name: Sync standalone output to VPS
         run: |
           rsync -avz --delete \
-            --exclude 'node_modules' \
-            --exclude 'src' \
-            --exclude 'coverage' \
             -e "ssh -o StrictHostKeyChecking=no" \
-            apps/admin-web/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.ADMIN_APP_DIR }}/
+            apps/admin-web/.next/standalone/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.ADMIN_APP_DIR }}/
 
       - name: Deploy admin-web to VPS
         env:
@@ -77,11 +79,8 @@ jobs:
             set -e
             cd ${{ vars.ADMIN_APP_DIR }}
             
-            echo "📦 Installing dependencies..."
-            npm install --omit=dev --legacy-peer-deps
-            
-            echo "🔄 Restarting admin-web..."
-            pm2 restart admin-web || pm2 start npm --name admin-web -- start -- -p ${{ vars.ADMIN_PORT }}
+            echo "� Restarting admin-web..."
+            PORT=${{ vars.ADMIN_PORT }} pm2 restart admin-web || PORT=${{ vars.ADMIN_PORT }} pm2 start apps/admin-web/server.js --name admin-web
             pm2 save
             
             echo "✅ Deployment complete"
