@@ -4,20 +4,22 @@ import { ChevronDownIcon } from "lucide-react";
 import { Label } from "./label";
 import { Button } from "./button";
 import { Calendar } from "./calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "./popover";
+import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { useState } from "react";
 
 type Props = {
-  label?: string;
+  label?: string | React.ReactNode;
   onChange: (date?: Date) => void;
   showClear?: boolean;
+  triggerClassName?: string;
 };
 
-export function DatePicker({ label, onChange, showClear = true }: Props) {
+export function DatePicker({
+  label,
+  onChange,
+  showClear = true,
+  triggerClassName,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(undefined);
   const handleChange = (date: Date | undefined) => {
@@ -38,7 +40,7 @@ export function DatePicker({ label, onChange, showClear = true }: Props) {
           <Button
             variant="outline"
             data-empty={!date}
-            className="data-[empty=true]:text-muted-foreground w-48 justify-between font-normal"
+            className={`data-[empty=true]:text-muted-foreground w-48 justify-between font-normal ${triggerClassName}`}
           >
             {date ? date.toLocaleDateString() : "Select date"}
             <ChevronDownIcon />

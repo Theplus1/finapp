@@ -129,62 +129,62 @@ export default function Cards() {
     return transformPaymentData(dataPayment.rows);
   }, [dataPayment, isLoading]);
 
-  function generateDateColumns(
-    month: number,
-    year: number,
-  ): ColumnDef<Payment>[] {
-    const days = new Date(year, month, 0).getDate();
+  const columns = useMemo(() => {
+    function generateDateColumns(
+      month: number,
+      year: number,
+    ): ColumnDef<Payment>[] {
+      const days = new Date(year, month, 0).getDate();
 
-    return Array.from({ length: days }, (_, index) => {
-      const day = index + 1;
-      const dayStr = String(day).padStart(2, "0");
-      const monthStr = String(month).padStart(2, "0");
+      return Array.from({ length: days }, (_, index) => {
+        const day = index + 1;
+        const dayStr = String(day).padStart(2, "0");
+        const monthStr = String(month).padStart(2, "0");
 
-      const dateKey = `${year}-${monthStr}-${dayStr}`;
+        const dateKey = `${year}-${monthStr}-${dayStr}`;
 
-      return {
-        accessorKey: dateKey,
-        header: (
-          <div className="w-[100px] text-center">{`${dayStr}/${monthStr}`}</div>
-        ) as unknown as string,
-        cell: ({ row }) => {
-          return isLoading ? (
-            <Skeleton />
-          ) : (
-            <div style={{ textAlign: "end" }}>
-              {(
-                row.original as Payment & {
-                  data: Record<string, number>;
-                }
-              ).data[dateKey] > 0
-                ? formatDollarByCent(
-                    (
-                      row.original as Payment & {
-                        data: Record<string, number>;
-                      }
-                    ).data[dateKey],
-                  )
-                : EMPTY_LABEL}
-            </div>
-          );
+        return {
+          accessorKey: dateKey,
+          header: (
+            <div className="w-[100px] text-center">{`${dayStr}/${monthStr}`}</div>
+          ) as unknown as string,
+          cell: ({ row }) => {
+            return isLoading ? (
+              <Skeleton />
+            ) : (
+              <div style={{ textAlign: "end" }}>
+                {(
+                  row.original as Payment & {
+                    data: Record<string, number>;
+                  }
+                ).data[dateKey] > 0
+                  ? formatDollarByCent(
+                      (
+                        row.original as Payment & {
+                          data: Record<string, number>;
+                        }
+                      ).data[dateKey],
+                    )
+                  : EMPTY_LABEL}
+              </div>
+            );
+          },
+        };
+      });
+    }
+    return [
+      {
+        header: "Date",
+        cell: ({ row }: CellContext<Payment, number>) => {
+          return dateColumnLabel[row.index];
         },
-      };
-    });
-  }
-
-  const columns = [
-    {
-      header: "Date",
-      cell: ({ row }: CellContext<Payment, number>) => {
-        return dateColumnLabel[row.index];
       },
-    },
-    ...generateDateColumns(
-      Number(detectMonthYear(currentFilter.from).month),
-      Number(detectMonthYear(currentFilter.from).year),
-    ),
-  ] as ColumnDef<Payment>[];
-
+      ...generateDateColumns(
+        Number(detectMonthYear(currentFilter.from).month),
+        Number(detectMonthYear(currentFilter.from).year),
+      ),
+    ] as ColumnDef<Payment>[];
+  }, [currentFilter.from, isLoading]);
   const handleChangeFilter = (monthYear: string) => {
     const [year, month] = monthYear.split("-");
     const firstDateOfMonth = "01";
