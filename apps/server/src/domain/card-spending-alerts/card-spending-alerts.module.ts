@@ -3,12 +3,18 @@ import { AccountsModule } from '../accounts/accounts.module';
 import { UsersModule } from '../../users/users.module';
 import { BotModule } from '../../bot/bot.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { GoogleSheetsModule } from '../../integrations/google-sheets/google-sheets.module';
+import { TransactionsModule } from '../transactions/transactions.module';
 import { CardSpendingAlertsService } from './card-spending-alerts.service';
 import { CardSpendingAlertsJob } from './card-spending-alerts.job';
 
 @Module({
-  imports: [AccountsModule, UsersModule, BotModule, NotificationsModule, GoogleSheetsModule],
+  imports: [
+    AccountsModule,
+    UsersModule,
+    BotModule,
+    NotificationsModule,
+    TransactionsModule,
+  ],
   providers: [CardSpendingAlertsService, CardSpendingAlertsJob],
   exports: [CardSpendingAlertsService],
 })

@@ -52,7 +52,7 @@ export class BalanceAlertsJob implements OnModuleInit {
    */
   async checkBalancesAndSendAlerts() {
     if (!this.enableBalanceAlert) {
-      this.logger.debug('Balance alert feature is disabled. Skipping check.');
+      this.logger.log('Balance alert feature is disabled. Skipping check.');
       return;
     }
 
