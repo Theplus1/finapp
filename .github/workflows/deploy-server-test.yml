@@ -34,7 +34,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/theplus1/finapp-server
+          images: ghcr.io/theplus1/finapp-server-test
           tags: |
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
@@ -62,7 +62,7 @@ jobs:
 
       - name: Deploy to VPS
         env:
-          IMAGE_NAME: ghcr.io/theplus1/finapp-server:latest
+          IMAGE_NAME: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
         run: |
           ssh ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} << ENDSSH
             set -e
@@ -116,7 +116,7 @@ jobs:
               ${IMAGE_NAME}
 
             # Clean up old images (keep last 3)
-            docker images ghcr.io/theplus1/finapp-server --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | \
+            docker images ghcr.io/theplus1/finapp-server-test --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | \
               tail -n +4 | tail -n +4 | awk '{print $1}' | \
               xargs -r docker rmi
 
