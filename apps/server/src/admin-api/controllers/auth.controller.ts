@@ -28,6 +28,7 @@ import { SuperAdminAuthGuard } from '../guards/super-admin-auth.guard';
 import { AdminLoginDto, AdminLoginResponseDto, AdminProfileDto } from '../dto/admin-auth.dto';
 import { CreateAdminDto, AdminUserResponseDto, UpdatePasswordDto } from '../dto/create-admin.dto';
 import type { AuthenticatedUser } from '../services/admin-auth.service';
+import { isAdminApiRole } from '../../common/constants/auth.constants';
 
 @ApiTags('Admin API - Authentication')
 @Controller('admin-api/auth')
@@ -50,9 +51,15 @@ export class AuthController {
     type: AdminLoginResponseDto 
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 403, description: 'Account is for customer portal' })
   async login(
     @Request() req: { user: AuthenticatedUser },
   ): Promise<AdminLoginResponseDto> {
+    if (!isAdminApiRole(req.user.role)) {
+      throw new ForbiddenException(
+        'This account must sign in via the customer portal.',
+      );
+    }
     this.logger.log(`Login successful for user: ${req.user.username}`);
     return this.adminAuthService.login(req.user);
   }
