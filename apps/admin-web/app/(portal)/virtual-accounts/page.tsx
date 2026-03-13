@@ -45,6 +45,7 @@ import {
   DrawerTitle,
 } from "@repo/ui/components/drawer";
 import FormSetAccount from "./(components)/form-set-account";
+import FormRecharge from "./(components)/form-recharge";
 
 const idTelegram = "@finnotisys_bot";
 const maskDataTable = Array.from({ length: 20 }, () => {
@@ -341,6 +342,13 @@ export default function VirtualAccount() {
             {virtualAccountEdit?.name ?? EMPTY_LABEL}&quot;
           </>
         );
+      case DrawerTypeVirtualAccountEnum.RECHARGE:
+        return (
+          <>
+            Deposit virtual account &quot;
+            {virtualAccountEdit?.name ?? EMPTY_LABEL}&quot;
+          </>
+        );
       default:
         return "";
     }
@@ -389,6 +397,14 @@ export default function VirtualAccount() {
                   openDrawer={openDrawer}
                   onCancelSetAccount={handleCancelDrawer}
                   onSubmitAccountSuccess={handleSuccessDrawer}
+                />
+              )}
+              {drawerType === DrawerTypeVirtualAccountEnum.RECHARGE && (
+                <FormRecharge
+                  virtualAccount={virtualAccountEdit}
+                  openDrawer={openDrawer}
+                  onCancelRecharge={handleCancelDrawer}
+                  onSubmitRechargeSuccess={handleSuccessDrawer}
                 />
               )}
             </DrawerContent>

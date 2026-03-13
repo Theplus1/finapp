@@ -85,4 +85,13 @@ export const virtualAccountsApi = {
       body,
     );
   },
+  dailyDeposit: async (
+    virtualAccountId: string,
+    body: { date: string; depositCents: number },
+  ): Promise<ApiResponse<VirtualAccount>> => {
+    return await apiClient.post(
+      `/virtual-account/${virtualAccountId}/deposits`,
+      body,
+    );
+  },
 };

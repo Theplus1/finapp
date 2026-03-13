@@ -10,7 +10,7 @@ import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { Section, SectionContent } from "@/components/layouts/section";
 import { PageLayout } from "@/components/layouts/page-layout";
 import { DataTable } from "@repo/ui/components/data-table";
-import FilterTime from "./components/filter";
+import FilterCardSpend from "./components/filter";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Payment } from "@/lib/api/endpoints/payment";
 import { EMPTY_LABEL } from "@/app/utils/constants";
@@ -18,7 +18,7 @@ import {
   CardSpendResponse,
   CardSpendRow,
 } from "@/lib/api/endpoints/card-spend";
-import { TableCell, TableFooter, TableRow } from "@repo/ui/components/table";
+import { useDebounce } from "@repo/ui/hooks/use-debounce";
 
 const now = new Date();
 
@@ -50,9 +50,15 @@ const detectMonthYear = (month: string) => {
   return { year, month: monthNum };
 };
 
+type RowData = Payment & {
+  data: Record<string, number>;
+};
+
 export default function Cards() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const [currentFilter, setCurrentFilter] = useState(initFilter);
+  const [keywordCard, setKeywordCard] = useState("");
+  const keywordCardDebounce = useDebounce(keywordCard, 300).toLowerCase();
 
   useEffect(() => {
     setBreadcrumbs([
@@ -79,13 +85,20 @@ export default function Cards() {
     [cardSpendInfors],
   );
 
-  const dataPaymentGrouped = useMemo(() => {
+  const dataCardSpendGrouped = useMemo(() => {
     if (isLoading) return maskDataTable;
-    function transformCardSpendData(data: CardSpendRow[]) {
-      const lastItem = data.pop();
-      data.unshift(lastItem!);
-      return data.map((d) => {
+    function transformCardSpendData(data: CardSpendRow[]): CardSpendRow[] {
+      const cloned = [...data];
+      const lastItem = cloned.pop();
+      if (lastItem) cloned.unshift(lastItem);
+
+      return cloned.map((d) => {
         return {
+          cardId: d.cardId,
+          cardName: d.cardName,
+          isTotal: d.isTotal,
+          daySpendCents: d.daySpendCents,
+          totalSpendCents: d.totalSpendCents,
           label: d.cardName,
           key: d.cardId,
           data: d.daySpendCents,
@@ -96,67 +109,59 @@ export default function Cards() {
     return transformCardSpendData(dataCardSpend.rows);
   }, [dataCardSpend, isLoading]);
 
-  function generateDateColumns(
-    month: number,
-    year: number,
-  ): ColumnDef<Payment>[] {
-    const days = new Date(year, month, 0).getDate();
+  const columns = useMemo(() => {
+    function generateDateColumns(
+      month: number,
+      year: number,
+    ): ColumnDef<Payment>[] {
+      const days = new Date(year, month, 0).getDate();
 
-    return Array.from({ length: days }, (_, index) => {
-      const day = index + 1;
-      const dayStr = String(day).padStart(2, "0");
-      const monthStr = String(month).padStart(2, "0");
+      return Array.from({ length: days }, (_, index) => {
+        const day = index + 1;
+        const dayStr = String(day).padStart(2, "0");
+        const monthStr = String(month).padStart(2, "0");
 
-      const dateKey = `${year}-${monthStr}-${dayStr}`;
+        const dateKey = `${year}-${monthStr}-${dayStr}`;
 
-      return {
-        accessorKey: dateKey,
-        header: (
-          <div style={{ textAlign: "center", width: "100px" }}>
-            {`${dayStr}/${monthStr}`}
-          </div>
-        ) as unknown as string,
-        cell: ({ row }) => {
-          return isLoading ? (
-            <Skeleton />
-          ) : (
-            <div style={{ textAlign: "end" }}>
-              {(
-                row.original as Payment & {
-                  data: Record<string, number>;
-                }
-              ).data[dateKey] > 0
-                ? formatDollarByCent(
-                    (
-                      row.original as Payment & {
-                        data: Record<string, number>;
-                      }
-                    ).data[dateKey],
-                  )
-                : EMPTY_LABEL}
+        return {
+          accessorKey: dateKey,
+          header: (
+            <div style={{ textAlign: "center", width: "100px" }}>
+              {`${dayStr}/${monthStr}`}
             </div>
-          );
+          ) as unknown as string,
+          cell: ({ row }) => {
+            return isLoading ? (
+              <Skeleton />
+            ) : (
+              <div style={{ textAlign: "end" }}>
+                {(row.original as RowData).data[dateKey] > 0
+                  ? formatDollarByCent((row.original as RowData).data[dateKey])
+                  : EMPTY_LABEL}
+              </div>
+            );
+          },
+        };
+      });
+    }
+
+    return [
+      {
+        header: "Card",
+        cell: ({
+          row,
+        }: CellContext<CardSpendRow & { label: string }, number>) => {
+          return isLoading ? <Skeleton /> : row.original.label;
         },
-      };
-    });
-  }
-
-  const columns = [
-    {
-      header: "Card",
-      cell: ({
-        row,
-      }: CellContext<CardSpendRow & { label: string }, number>) => {
-        return row.original.label;
       },
-    },
-    ...generateDateColumns(
-      Number(detectMonthYear(currentFilter.from).month),
-      Number(detectMonthYear(currentFilter.from).year),
-    ),
-  ] as ColumnDef<CardSpendRow>[];
+      ...generateDateColumns(
+        Number(detectMonthYear(currentFilter.from).month),
+        Number(detectMonthYear(currentFilter.from).year),
+      ),
+    ] as ColumnDef<CardSpendRow>[];
+  }, [currentFilter.from, isLoading]);
 
-  const handleChangeFilter = (monthYear: string) => {
+  const handleChangeMonth = (monthYear: string) => {
     const [year, month] = monthYear.split("-");
     const firstDateOfMonth = "01";
     const endDateOfMonth = new Date(Number(year), Number(month), 0).getDate();
@@ -167,6 +172,18 @@ export default function Cards() {
     }));
   };
 
+  const handleChangeCard = (card: string) => {
+    setKeywordCard(card);
+  };
+
+  const dataCardSpendRender = useMemo(() => {
+    return dataCardSpendGrouped.filter(
+      (item: any) =>
+        item.label === "Total" ||
+        item.label?.toLowerCase().includes(keywordCardDebounce),
+    );
+  }, [dataCardSpendGrouped, keywordCardDebounce]);
+
   return (
     <PageLayout>
       <PageHeader>
@@ -175,10 +192,14 @@ export default function Cards() {
 
       <Section>
         <SectionContent>
-          <FilterTime onFilterChange={handleChangeFilter} />
+          <FilterCardSpend
+            keywordCard={keywordCard}
+            onFilterMonthChange={handleChangeMonth}
+            onFilterCardChange={handleChangeCard}
+          />
           <DataTable
             columns={columns}
-            data={dataPaymentGrouped as CardSpendRow[]}
+            data={dataCardSpendRender}
             maxHeight={"70vh"}
           />
         </SectionContent>
