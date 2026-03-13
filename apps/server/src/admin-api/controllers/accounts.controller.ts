@@ -40,12 +40,14 @@ import { AdminUserResponseDto } from '../dto/create-admin.dto';
 import { DailyPaymentSummariesService } from '../../domain/daily-payment-summaries/daily-payment-summaries.service';
 import { UpsertDepositDto } from '../dto/upsert-deposit.dto';
 import { startOfDay } from 'date-fns';
+import { ADMIN_API_ROLES } from '../../common/constants/auth.constants';
+import { parseYyyyMmDdAsLocalDate } from '../../common/utils/date.utils';
 
 @ApiTags('Admin API - Virtual Accounts')
 @ApiBearerAuth()
 @Controller('admin-api/virtual-accounts')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin', 'super-admin')
+@Roles(...ADMIN_API_ROLES)
 export class AccountsController {
   private readonly logger = new Logger(AccountsController.name);
 
@@ -323,7 +325,8 @@ export class AccountsController {
 
     const virtualAccount = await this.accountsService.findBySlashId(slashId);
 
-    const date = startOfDay(new Date(dto.date));
+    // Parse as LOCAL date to match how daily summaries are normalized/stored (GGS behavior)
+    const date = startOfDay(parseYyyyMmDdAsLocalDate(dto.date));
     if (Number.isNaN(date.getTime())) {
       throw new BadRequestException('Invalid date');
     }

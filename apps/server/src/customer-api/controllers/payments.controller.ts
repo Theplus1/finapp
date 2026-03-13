@@ -21,6 +21,8 @@ import { Roles } from '../../admin-api/decorators/roles.decorator';
 import { DailyPaymentSummariesService } from '../../domain/daily-payment-summaries/daily-payment-summaries.service';
 import { PaymentSummaryResponseDto } from '../dto/payment-summary.dto';
 import { format } from 'date-fns';
+import { BOSS_AND_ACCOUNTANT_ROLES } from '../../common/constants/auth.constants';
+import { parseYyyyMmDdAsLocalDate } from '../../common/utils/date.utils';
 
 interface RequestUser {
   userId: string;
@@ -34,7 +36,7 @@ interface RequestUser {
 @ApiBearerAuth()
 @Controller('customer-api/virtual-accounts')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('boss', 'accountant')
+@Roles(...BOSS_AND_ACCOUNTANT_ROLES)
 export class CustomerPaymentsController {
   constructor(
     private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
@@ -86,8 +88,9 @@ export class CustomerPaymentsController {
       throw new BadRequestException('from and to query params are required');
     }
 
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
+    // Parse as LOCAL date to match how daily summaries are normalized/stored (GGS behavior)
+    const fromDate = parseYyyyMmDdAsLocalDate(from);
+    const toDate = parseYyyyMmDdAsLocalDate(to);
     if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
       throw new BadRequestException('Invalid from/to date');
     }
@@ -95,14 +98,15 @@ export class CustomerPaymentsController {
     if (toDate < fromDate) {
       throw new BadRequestException('to must be greater than or equal to from');
     }
-
+    console.log('fromDate', fromDate);
+    console.log('toDate', toDate);
     const summaries =
       await this.dailyPaymentSummariesService.getDailySummaries(
         slashId,
         fromDate,
         toDate,
       );
-
+    console.log('summaries', summaries);
     const rows = summaries.map((s) => {
       const dateStr = format(s.date, 'yyyy-MM-dd');
       const spendUsCents = s.totalSpendUSCents ?? 0;

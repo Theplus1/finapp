@@ -4,6 +4,8 @@ import { JwtService } from '@nestjs/jwt';
 import { AdminUsersService } from '../../domain/admin-users/admin-users.service';
 import type { AdminUserRole } from '../../database/schemas/admin-user.schema';
 import type { StringValue } from 'ms';
+import type { AuthAudienceType } from '../../common/constants/auth.constants';
+import { isAdminApiRole } from '../../common/constants/auth.constants';
 
 export interface AdminLoginResponse {
   accessToken: string;
@@ -11,7 +13,7 @@ export interface AdminLoginResponse {
   expiresIn: number;
   username: string;
   role: AdminUserRole;
-  type: 'admin' | 'customer';
+  type: AuthAudienceType;
   virtualAccountId?: string;
   bossId?: string;
 }
@@ -99,8 +101,7 @@ export class AdminAuthService implements OnModuleInit {
    */
   async login(user: AuthenticatedUser): Promise<AdminLoginResponse> {
     const role = user.role;
-    const type: 'admin' | 'customer' =
-      role === 'admin' || role === 'super-admin' ? 'admin' : 'customer';
+    const type: AuthAudienceType = isAdminApiRole(role) ? 'admin' : 'customer';
 
     // Generate JWT token
     const payload = {

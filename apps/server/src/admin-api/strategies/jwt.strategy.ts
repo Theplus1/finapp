@@ -3,12 +3,13 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AdminUserRole } from '../../database/schemas/admin-user.schema';
+import type { AuthAudienceType } from '../../common/constants/auth.constants';
 
 interface JwtPayload {
   sub: string;
   username: string;
   role: AdminUserRole;
-  type?: 'admin' | 'customer';
+  type?: AuthAudienceType;
   virtualAccountId?: string;
   bossId?: string;
 }

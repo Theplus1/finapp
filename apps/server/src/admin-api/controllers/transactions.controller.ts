@@ -19,12 +19,13 @@ import { Roles } from '../decorators/roles.decorator';
 import { RolesGuard } from '../guards/roles.guard';
 import { TransactionsService } from '../../domain/transactions/transactions.service';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
+import { ADMIN_API_ROLES } from '../../common/constants/auth.constants';
 
 @ApiTags('Admin API - Transactions')
 @ApiBearerAuth()
 @Controller('admin-api/transactions')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin', 'super-admin')
+@Roles(...ADMIN_API_ROLES)
 export class TransactionsController {
   private readonly logger = new Logger(TransactionsController.name);
 

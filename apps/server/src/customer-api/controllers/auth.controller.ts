@@ -6,6 +6,7 @@ import {
   Logger,
   Post,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -18,6 +19,7 @@ import {
   AdminLoginDto,
   AdminLoginResponseDto,
 } from '../../admin-api/dto/admin-auth.dto';
+import { isAdminApiRole } from '../../common/constants/auth.constants';
 
 @ApiTags('Customer API - Authentication')
 @Controller('customer-api/auth')
@@ -40,6 +42,7 @@ export class CustomerAuthController {
     type: AdminLoginResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 403, description: 'Account is for admin portal' })
   async login(
     @Body() body: AdminLoginDto,
   ): Promise<AdminLoginResponseDto> {
@@ -53,6 +56,12 @@ export class CustomerAuthController {
         `Customer login failed for username: ${body.username}`,
       );
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (isAdminApiRole(user.role)) {
+      throw new ForbiddenException(
+        'This account must sign in via the admin portal.',
+      );
     }
 
     this.logger.log(`Customer login successful for user: ${body.username}`);
