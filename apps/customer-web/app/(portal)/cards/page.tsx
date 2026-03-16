@@ -29,6 +29,8 @@ import {
   DrawerTitle,
 } from "@repo/ui/components/drawer";
 import FormActionCard from "./components/form-action-card";
+import CardCVVCol from "./components/card-cvv-col";
+import { useDebounce } from "@repo/ui/hooks/use-debounce";
 
 const initFilter = {
   status: "",
@@ -74,12 +76,17 @@ export default function Cards() {
   const [drawerType, setDrawerType] = useState<DrawerCardTypeEnum>(
     DrawerCardTypeEnum.LOCK,
   );
+  const [transGettedCVV, setTransGettedCVV] = useState<Record<string, string>>(
+    {},
+  );
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
     total: 0,
   });
   const [currentFilter, setCurrentFilter] = useState(initFilter);
+  const [keywordCard, setKeywordCard] = useState("");
+  const keywordCardDebounce = useDebounce(keywordCard, 300).toLowerCase();
   const [countGetList, setCountGetList] = useState(0);
 
   useEffect(() => {
@@ -90,12 +97,19 @@ export default function Cards() {
   }, [setBreadcrumbs]);
 
   const { data: cardInfors, isLoading } = useQuery({
-    queryKey: ["cards", pagination.page, currentFilter, countGetList],
+    queryKey: [
+      "cards",
+      pagination.page,
+      currentFilter,
+      countGetList,
+      keywordCardDebounce,
+    ],
     queryFn: async () => {
       const res = await api.cards.getCards({
         ...currentFilter,
         page: pagination.page,
         limit: pagination.pageSize,
+        search: keywordCardDebounce,
       });
       setPagination((prev) => ({
         ...prev,
@@ -106,6 +120,14 @@ export default function Cards() {
     refetchOnMount: "always",
     gcTime: 0,
   });
+
+  useEffect(() => {
+    setPagination((prev) => ({
+      ...prev,
+      page: 1,
+      search: keywordCardDebounce,
+    }));
+  }, [keywordCardDebounce]);
 
   const dataCard: Card[] = useMemo(() => cardInfors?.data ?? [], [cardInfors]);
 
@@ -141,6 +163,26 @@ export default function Cards() {
       header: "Card Name",
       cell: ({ row }: CellContext<Card, string>) => {
         return isLoading ? <Skeleton /> : <CardNameCol card={row.original} />;
+      },
+    },
+    {
+      header: "CVV",
+      cell: ({ row }: CellContext<Card, string>) => {
+        return isLoading ? (
+          <Skeleton />
+        ) : transGettedCVV[row.original._id] ? (
+          transGettedCVV[row.original._id]
+        ) : (
+          <CardCVVCol
+            card={row.original}
+            onGetCodeSuccess={(cvv) => {
+              setTransGettedCVV((prev) => ({
+                ...prev,
+                [row.original._id]: cvv,
+              }));
+            }}
+          />
+        );
       },
     },
     {
@@ -263,6 +305,10 @@ export default function Cards() {
     setCountGetList((prev) => prev + 1);
   };
 
+  const handleChangeCard = (card: string) => {
+    setKeywordCard(card);
+  };
+
   return (
     <PageLayout>
       <PageHeader>
@@ -273,6 +319,8 @@ export default function Cards() {
         <SectionContent>
           <FilterCard
             onStatusChange={(status) => handleChangeFilter("status", status)}
+            onCardChange={handleChangeCard}
+            keywordCard={keywordCard}
           />
           <DataTable
             columns={columns}

@@ -46,6 +46,7 @@ import {
 } from "@repo/ui/components/drawer";
 import FormSetAccount from "./(components)/form-set-account";
 import FormRecharge from "./(components)/form-recharge";
+import FormRechargeHistories from "./(components)/form-recharge-histories";
 
 const idTelegram = "@finnotisys_bot";
 const maskDataTable = Array.from({ length: 20 }, () => {
@@ -349,6 +350,14 @@ export default function VirtualAccount() {
             {virtualAccountEdit?.name ?? EMPTY_LABEL}&quot;
           </>
         );
+
+      case DrawerTypeVirtualAccountEnum.RECHARGE_HISTORY:
+        return (
+          <>
+            Deposit history virtual account &quot;
+            {virtualAccountEdit?.name ?? EMPTY_LABEL}&quot;
+          </>
+        );
       default:
         return "";
     }
@@ -405,6 +414,13 @@ export default function VirtualAccount() {
                   openDrawer={openDrawer}
                   onCancelRecharge={handleCancelDrawer}
                   onSubmitRechargeSuccess={handleSuccessDrawer}
+                />
+              )}
+              {drawerType === DrawerTypeVirtualAccountEnum.RECHARGE_HISTORY && (
+                <FormRechargeHistories
+                  virtualAccount={virtualAccountEdit}
+                  countGetList={countGetList}
+                  handleDrawerClose={handleCancelDrawer}
                 />
               )}
             </DrawerContent>

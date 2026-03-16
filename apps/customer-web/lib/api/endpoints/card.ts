@@ -47,6 +47,7 @@ export interface Card {
 type Params = {
   page: number;
   limit: number;
+  search?: string;
 };
 
 export interface CardsDetailResponse {
@@ -97,5 +98,8 @@ export const cardsApi = {
   },
   unsetLimit: async (id: string): Promise<ApiResponse<Card>> => {
     return await apiClient.post(`/card/${id}/unset-limit`);
+  },
+  getCardCVV: async (id: string): Promise<ApiResponse<{ cvv: string }>> => {
+    return await apiClient.post(`/card/${id}/cvv`);
   },
 };

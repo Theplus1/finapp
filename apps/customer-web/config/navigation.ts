@@ -28,8 +28,8 @@ export const navMain: NavSection[] = [
     roleAccept: [RoleUserEnum.BOSS, RoleUserEnum.ACCOUNTANT],
   },
   {
-    title: "Cards spend",
-    url: "/cards-spend",
+    title: "Card spend",
+    url: "/card-spend",
     icon: BanknoteArrowDown,
     roleAccept: [RoleUserEnum.BOSS, RoleUserEnum.ACCOUNTANT],
   },

@@ -88,9 +88,24 @@ export default function Cards() {
     gcTime: 0,
   });
 
+  const { data: overallPaymentInfors, isLoading: isOverallLoading } = useQuery({
+    queryKey: ["overall-payments"],
+    queryFn: async () => {
+      const res = await api.payment.getOverallPayments();
+      return res;
+    },
+    refetchOnMount: "always",
+    gcTime: 0,
+  });
+
   const dataPayment: PaymentResponse = useMemo(
     () => paymentInfors?.data ?? initDataPayment,
     [paymentInfors],
+  );
+  
+  const overallDataPayment: PaymentResponse = useMemo(
+    () => overallPaymentInfors?.data ?? initDataPayment,
+    [overallPaymentInfors],
   );
 
   const dataPaymentGrouped = useMemo(() => {
@@ -204,12 +219,12 @@ export default function Cards() {
 
       <Section>
         <SectionContent>
-          <FilterTime onFilterChange={handleChangeFilter} />
           <Statistic
-            containerClassName="my-6"
-            data={dataPayment.summary}
-            loading={isLoading}
+            containerClassName="mb-6"
+            data={overallDataPayment.summary}
+            loading={isOverallLoading}
           />
+          <FilterTime onFilterChange={handleChangeFilter} />
           <DataTable
             columns={columns}
             data={dataPaymentGrouped as Payment[]}

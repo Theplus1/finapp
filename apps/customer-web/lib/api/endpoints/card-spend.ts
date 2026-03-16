@@ -22,6 +22,7 @@ export interface CardSpend {
 export interface CardSpendRow {
   cardId: string;
   cardName: string;
+  cardLast4: string;
   isTotal: boolean;
   daySpendCents: {
     [key: string]: number;

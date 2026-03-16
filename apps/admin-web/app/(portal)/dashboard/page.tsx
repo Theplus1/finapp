@@ -135,7 +135,7 @@ export default function Dashboard() {
       {
         header: "Status",
         cell: ({ row }: CellContext<Transaction, string>) => {
-          return isLoading ? <Skeleton /> : row.original.status;
+          return isLoading ? <Skeleton /> : row.original.detailedStatus;
         },
       },
       {

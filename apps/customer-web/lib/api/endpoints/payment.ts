@@ -65,4 +65,11 @@ export const paymentApi = {
       { params },
     );
   },
+  getOverallPayments: async (): Promise<ApiResponse<PaymentResponse>> => {
+    const user = localStorage.getItem("user");
+    const virtualAccountId = JSON.parse(user || "{}")?.virtualAccountId;
+    return apiClient.get(
+      `/virtual-account/${virtualAccountId}/payment-summary/overall`,
+    );
+  },
 };

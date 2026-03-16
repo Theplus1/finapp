@@ -41,7 +41,7 @@ const initDataPayment = {
   rows: [],
 };
 
-const maskDataTable = Array.from({ length: 4 }, () => {
+const maskDataTable = Array.from({ length: 10 }, () => {
   return {};
 }) as CardSpendRow[];
 
@@ -63,7 +63,7 @@ export default function Cards() {
   useEffect(() => {
     setBreadcrumbs([
       { label: "Dashboard", href: "/dashboard" },
-      { label: "Cards Spend", href: "/cards-spend" },
+      { label: "Card Spend", href: "/card-spend" },
     ]);
   }, [setBreadcrumbs]);
 
@@ -92,14 +92,19 @@ export default function Cards() {
       const lastItem = cloned.pop();
       if (lastItem) cloned.unshift(lastItem);
 
+      const label = (cardName: string, cardLast4: string) => {
+        if (cardName === "Total") return "Total (all cards)";
+        return cardName + (cardLast4 ? " - " + cardLast4 : "");
+      };
       return cloned.map((d) => {
         return {
           cardId: d.cardId,
           cardName: d.cardName,
+          cardLast4: d.cardLast4,
           isTotal: d.isTotal,
           daySpendCents: d.daySpendCents,
           totalSpendCents: d.totalSpendCents,
-          label: d.cardName,
+          label: label(d.cardName, d.cardLast4),
           key: d.cardId,
           data: d.daySpendCents,
         };
@@ -177,17 +182,16 @@ export default function Cards() {
   };
 
   const dataCardSpendRender = useMemo(() => {
-    return dataCardSpendGrouped.filter(
-      (item: any) =>
-        item.label === "Total" ||
-        item.label?.toLowerCase().includes(keywordCardDebounce),
+    if (isLoading) return maskDataTable;
+    return dataCardSpendGrouped.filter((item: any) =>
+      item.label?.toLowerCase().includes(keywordCardDebounce),
     );
   }, [dataCardSpendGrouped, keywordCardDebounce]);
 
   return (
     <PageLayout>
       <PageHeader>
-        <PageTitle>Cards Spend</PageTitle>
+        <PageTitle>Card Spend</PageTitle>
       </PageHeader>
 
       <Section>

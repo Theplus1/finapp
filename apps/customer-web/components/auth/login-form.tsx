@@ -14,6 +14,7 @@ import {
   FieldLabel,
 } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
+import { Spinner } from "@repo/ui/components/spinner";
 
 export function LoginForm({
   className,
@@ -73,7 +74,7 @@ export function LoginForm({
               </Field>
               <Field>
                 <Button type="submit" disabled={loading}>
-                  Login
+                  {loading ? <Spinner /> : "Login"}
                 </Button>
                 {/* <Button variant="outline" type="button">
                   Login with Google

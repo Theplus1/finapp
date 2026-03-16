@@ -34,7 +34,7 @@ const FormRecharge = ({
         .dailyDeposit(virtualAccount!.slashId, {
           // date format YYYY-MM-DD
           date: new Date(date!).toLocaleDateString("en-CA"),
-          depositCents: parseInt(amount) * 100,
+          depositAmount: parseInt(amount),
         })
         .then(() => {
           toast.success("Deposit created successfully");

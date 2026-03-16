@@ -20,6 +20,7 @@ export interface Transaction {
   isDeleted: boolean;
   lastSyncedAt: string;
   status: string;
+  detailedStatus: string;
   syncSource: string;
   updatedAt: string;
   virtualAccountId: string;

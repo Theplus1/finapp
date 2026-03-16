@@ -123,6 +123,7 @@ const FormSetAccount = ({
           <Field data-invalid={password !== confirmPassword}>
             <InputGroup className="pr-1">
               <InputGroupInput
+                type="password"
                 placeholder="Enter confirm password"
                 value={confirmPassword}
                 onChange={(e) => {

@@ -45,12 +45,37 @@ export interface VirtualAccount {
 type Params = {
   page: number;
   limit: number;
+  date?: string;
 };
 
 export interface VirtualAccountsDetailResponse {
   success: true;
   message: string;
   data: VirtualAccount;
+  meta: {
+    timestamp: string;
+  };
+}
+
+export interface DataRechargeHistory {
+  id: string;
+  date: string;
+  amountCents: number;
+  currency: string;
+  createdAt: string;
+}
+
+export interface VirtualAccountsRechargeHistoryResponse {
+  success: true;
+  message: string;
+  data: {
+    virtualAccountId: string;
+    data: DataRechargeHistory[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
   meta: {
     timestamp: string;
   };
@@ -87,11 +112,20 @@ export const virtualAccountsApi = {
   },
   dailyDeposit: async (
     virtualAccountId: string,
-    body: { date: string; depositCents: number },
+    body: { date: string; depositAmount: number },
   ): Promise<ApiResponse<VirtualAccount>> => {
     return await apiClient.post(
       `/virtual-account/${virtualAccountId}/deposits`,
       body,
+    );
+  },
+  getDailyDeposit: async (
+    virtualAccountId: string,
+    params: Params,
+  ): Promise<ApiResponse<VirtualAccountsRechargeHistoryResponse>> => {
+    return await apiClient.get(
+      `/virtual-account/${virtualAccountId}/deposits`,
+      { params },
     );
   },
 };
