@@ -30,6 +30,7 @@ import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants
 import { CardStatus } from '../../integrations/slash/dto/card.dto';
 import type { CardWithRelations } from '../../domain/cards/types/card.types';
 import { CARDS_API_ROLES } from '../../common/constants/auth.constants';
+import { CvvRevealRepository } from '../../database/repositories/cvv-reveal.repository';
 
 interface RequestUser {
   userId: string;
@@ -50,6 +51,7 @@ export class CustomerCardsController {
   constructor(
     private readonly cardsService: CardsService,
     private readonly slashApiService: SlashApiService,
+    private readonly cvvRevealRepository: CvvRevealRepository,
   ) {}
 
   private getVirtualAccountId(req: { user?: RequestUser }): string {
@@ -58,6 +60,131 @@ export class CustomerCardsController {
       throw new ForbiddenException('No virtual account linked to this user');
     }
     return vaId;
+  }
+
+  @Post(':id/cvv')
+  @ApiOperation({
+    summary: 'Get CVV code for a card and record reveal history',
+    description:
+      'Fetch CVV from Slash vault for the given card (if it belongs to current virtual account) and record who retrieved it.',
+  })
+  @ApiParam({ name: 'id', description: 'Card Slash ID' })
+  @ApiResponse({ status: 200, description: 'CVV retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - card not in your VA' })
+  @ApiResponse({ status: 404, description: 'Card not found' })
+  async getCvv(
+    @Param('id') cardSlashId: string,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{ cvv: string; last4: string; cardName: string }> {
+    const virtualAccountId = this.getVirtualAccountId(req);
+    const owned = await this.cardsService.verifyOwnership(
+      cardSlashId,
+      virtualAccountId,
+    );
+    if (!owned) {
+      throw new ForbiddenException(
+        'Card not found or not in your virtual account',
+      );
+    }
+
+    const card = await this.slashApiService.getCardDecrypted(
+      cardSlashId,
+      false,
+      true,
+    );
+    if (!card || !card.cvv) {
+      throw new BadRequestException('CVV is not available for this card');
+    }
+
+    const user = req.user;
+    const revealedByUserId = user?.userId ?? '';
+    const revealedByUsername = user?.username ?? '';
+    if (!revealedByUserId || !revealedByUsername) {
+      this.logger.warn(
+        `Missing user information when recording CVV reveal for card ${cardSlashId}`,
+      );
+    }
+
+    await this.cvvRevealRepository.create({
+      cardSlashId,
+      virtualAccountId,
+      revealedByUserId: revealedByUserId || 'unknown',
+      revealedByUsername: revealedByUsername || 'unknown',
+    });
+
+    this.logger.log(
+      `CVV retrieved for card ${cardSlashId} by ${revealedByUsername || 'unknown'}`,
+    );
+
+    return {
+      cvv: card.cvv,
+      last4: card.last4 ?? '',
+      cardName: card.name ?? '',
+    };
+  }
+
+  @Get(':id/cvv-history')
+  @ApiOperation({
+    summary: 'List CVV reveal history for a card',
+    description:
+      'Returns who and when retrieved CVV for the given card, ordered by most recent first.',
+  })
+  @ApiParam({ name: 'id', description: 'Card Slash ID' })
+  @ApiResponse({ status: 200, description: 'History retrieved successfully' })
+  async getCvvHistory(
+    @Param('id') cardSlashId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Request() req: { user?: RequestUser },
+  ): Promise<{
+    cardId: string;
+    data: Array<{
+      revealedAt: Date;
+      revealedByUserId: string;
+      revealedByUsername: string;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const virtualAccountId = this.getVirtualAccountId(req);
+    const owned = await this.cardsService.verifyOwnership(
+      cardSlashId,
+      virtualAccountId,
+    );
+    if (!owned) {
+      throw new ForbiddenException(
+        'Card not found or not in your virtual account',
+      );
+    }
+
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 20;
+
+    const [items, total] = await this.cvvRevealRepository.findByCardSlashId(
+      cardSlashId,
+      pageNum,
+      limitNum,
+    );
+
+    const data = items.map((doc) => ({
+      revealedAt: doc.revealedAt,
+      revealedByUserId: doc.revealedByUserId,
+      revealedByUsername: doc.revealedByUsername,
+    }));
+
+    const totalPages =
+      limitNum > 0 ? Math.ceil(total / limitNum) || 1 : 1;
+
+    return {
+      cardId: cardSlashId,
+      data,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages,
+    };
   }
 
   @Get()

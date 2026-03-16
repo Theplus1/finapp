@@ -10,6 +10,7 @@ import { SyncLog, SyncLogSchema } from './schemas/sync-log.schema';
 import { Notification, NotificationSchema } from './schemas/notification.schema';
 import { ConfirmCodeReveal, ConfirmCodeRevealSchema } from './schemas/confirm-code-reveal.schema';
 import { DepositHistory, DepositHistorySchema } from './schemas/deposit-history.schema';
+import { CvvReveal, CvvRevealSchema } from './schemas/cvv-reveal.schema';
 
 // Repositories
 import { CardRepository } from './repositories/card.repository';
@@ -19,6 +20,7 @@ import { VirtualAccountRepository } from './repositories/virtual-account.reposit
 import { NotificationRepository } from './repositories/notification.repository';
 import { ConfirmCodeRevealRepository } from './repositories/confirm-code-reveal.repository';
 import { DepositHistoryRepository } from './repositories/deposit-history.repository';
+import { CvvRevealRepository } from './repositories/cvv-reveal.repository';
 
 @Module({
   imports: [
@@ -31,6 +33,7 @@ import { DepositHistoryRepository } from './repositories/deposit-history.reposit
       { name: Notification.name, schema: NotificationSchema },
       { name: ConfirmCodeReveal.name, schema: ConfirmCodeRevealSchema },
       { name: DepositHistory.name, schema: DepositHistorySchema },
+      { name: CvvReveal.name, schema: CvvRevealSchema },
     ]),
   ],
   providers: [
@@ -41,6 +44,7 @@ import { DepositHistoryRepository } from './repositories/deposit-history.reposit
     NotificationRepository,
     ConfirmCodeRevealRepository,
     DepositHistoryRepository,
+    CvvRevealRepository,
   ],
   exports: [
     CardRepository,
@@ -50,6 +54,7 @@ import { DepositHistoryRepository } from './repositories/deposit-history.reposit
     NotificationRepository,
     ConfirmCodeRevealRepository,
     DepositHistoryRepository,
+    CvvRevealRepository,
   ],
 })
 export class DatabaseModule {}
