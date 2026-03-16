@@ -59,6 +59,13 @@ export const AdminUserSchema = SchemaFactory.createForClass(AdminUser);
 
 // Add indexes
 AdminUserSchema.index({ username: 1 }, { unique: true });
+AdminUserSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    sparse: true,
+  },
+);
 AdminUserSchema.index({ isActive: 1 });
 
 // Enforce 1 VA ↔ 1 Boss (only for boss accounts with virtualAccountId set)

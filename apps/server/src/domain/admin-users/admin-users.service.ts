@@ -7,9 +7,13 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AdminUserRepository } from '../../database/repositories/admin-user.repository';
-import { AdminUserDocument, AdminUserRole } from '../../database/schemas/admin-user.schema';
+import {
+  AdminUserDocument,
+  AdminUserRole,
+} from '../../database/schemas/admin-user.schema';
 
 const EMPLOYEE_ROLES: AdminUserRole[] = ['ads', 'accountant'];
+const CUSTOMER_LOGIN_ROLES: AdminUserRole[] = ['boss', 'ads', 'accountant'];
 
 /**
  * Admin Users Domain Service
@@ -24,30 +28,68 @@ export class AdminUsersService {
   ) {}
 
   /**
-   * Validate user credentials
+   * Validate user credentials.
+   *
+   * - Customer roles (boss/ads/accountant): allow login by username OR email.
+   * - Admin roles (admin/super-admin): login by username only.
    */
-  async validateCredentials(username: string, password: string): Promise<AdminUserDocument | null> {
-    // Find admin user in database
-    const adminUser = await this.adminUserRepository.findByUsername(username);
-    if (!adminUser) {
-      this.logger.warn(`Login attempt with invalid username: ${username}`);
-      return null;
+  async validateCredentials(
+    identifier: string,
+    password: string,
+  ): Promise<AdminUserDocument | null> {
+    const trimmed = identifier.trim();
+    const looksLikeEmail = trimmed.includes('@');
+
+    let adminUser: AdminUserDocument | null;
+
+    if (looksLikeEmail) {
+      // Customer login by email
+      adminUser = await this.adminUserRepository.findOne({
+        email: trimmed,
+        isActive: true,
+      });
+
+      if (!adminUser) {
+        this.logger.warn(`Login attempt with invalid email: ${trimmed}`);
+        return null;
+      }
+
+      if (!CUSTOMER_LOGIN_ROLES.includes(adminUser.role)) {
+        this.logger.warn(
+          `Login attempt by email for non-customer role: ${trimmed} (role=${adminUser.role})`,
+        );
+        return null;
+      }
+    } else {
+      // Username login for all roles
+      adminUser = await this.adminUserRepository.findByUsername(trimmed);
+      if (!adminUser) {
+        this.logger.warn(`Login attempt with invalid username: ${trimmed}`);
+        return null;
+      }
     }
 
     if (!adminUser.isActive) {
-      this.logger.warn(`Login attempt for inactive user: ${username}`);
+      this.logger.warn(
+        `Login attempt for inactive user: ${adminUser.username} (${trimmed})`,
+      );
       return null;
     }
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, adminUser.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      adminUser.passwordHash,
+    );
     if (!isPasswordValid) {
-      this.logger.warn(`Login attempt with invalid password for user: ${username}`);
+      this.logger.warn(
+        `Login attempt with invalid password for user: ${adminUser.username}`,
+      );
       return null;
     }
 
-    // Update last login time
-    await this.adminUserRepository.updateLastLogin(username);
+    // Update last login time (tracked by username)
+    await this.adminUserRepository.updateLastLogin(adminUser.username);
 
     return adminUser;
   }
@@ -62,15 +104,25 @@ export class AdminUsersService {
     email?: string,
     meta?: { virtualAccountId?: string; bossId?: string },
   ): Promise<AdminUserDocument> {
-    // Check if user already exists
+    // Check if username already exists
     const exists = await this.adminUserRepository.exists(username);
     if (exists) {
       throw new BadRequestException('Admin user already exists');
     }
 
+    // Check if email already exists (if provided)
+    if (email) {
+      const existingEmailUser = await this.adminUserRepository.findOne({
+        email,
+      });
+      if (existingEmailUser) {
+        throw new BadRequestException('Email is already in use');
+      }
+    }
+
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
-    
+
     // Create user in database
     const adminUser = await this.adminUserRepository.create({
       username,
