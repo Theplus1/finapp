@@ -209,6 +209,7 @@ export class CustomerCardsController {
         cardGroupId: query.cardGroupId,
         sortBy: query.sortBy,
         sortOrder: query.sortOrder,
+        search: query.search,
       },
       {
         page: query.page ?? PAGINATION_DEFAULTS.PAGE,

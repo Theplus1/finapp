@@ -26,6 +26,7 @@ export interface CardFilters {
   virtualAccountId?: string;
   sortBy?: string;
   sortOrder?: SortOrder;
+  search?: string;
 }
 
 @Injectable()
@@ -176,6 +177,14 @@ export class CardsService {
 
     if (filters.virtualAccountId) {
       mongoFilter.virtualAccountId = filters.virtualAccountId;
+    }
+
+    if (filters.search && filters.search.trim().length > 0) {
+      const regex = new RegExp(filters.search.trim(), 'i');
+      mongoFilter.$or = [
+        { name: regex },
+        { last4: regex },
+      ];
     }
 
     return mongoFilter;
