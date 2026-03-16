@@ -411,7 +411,7 @@ export class AccountsController {
   @ApiOperation({
     summary: 'Upsert daily deposit for virtual account',
     description:
-      'Admin sets the total deposit (in cents) for a given virtual account and date',
+      'Admin sets the total deposit (in USD, major units) for a given virtual account and date',
   })
   @ApiParam({ name: 'id', description: 'Virtual Account Slash ID' })
   @ApiBody({ type: UpsertDepositDto })
@@ -447,12 +447,30 @@ export class AccountsController {
       );
     }
 
+    const depositCents = Math.round(dto.depositAmount * 100);
+    const currency = 'USD';
+
+    // Write deposit history
+    await this.depositHistoryRepository.create({
+      virtualAccountId: virtualAccount.slashId,
+      date,
+      amountCents: depositCents,
+      currency,
+    });
+
+    // Calculate total deposit for the day from history
+    const totalDepositCents =
+      await this.depositHistoryRepository.sumByVirtualAccountAndDate(
+        virtualAccount.slashId,
+        date,
+      );
+
     try {
       await this.dailyPaymentSummariesService.upsertDepositForDate(
         virtualAccount.slashId,
         date,
-        dto.depositCents,
-        virtualAccount.currency,
+        totalDepositCents,
+        currency,
       );
     } catch (error: any) {
       const message = error?.message ?? '';

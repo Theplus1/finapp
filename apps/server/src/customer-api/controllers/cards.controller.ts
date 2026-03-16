@@ -29,7 +29,7 @@ import { SetCardLimitDto } from '../dto/set-card-limit.dto';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 import { CardStatus } from '../../integrations/slash/dto/card.dto';
 import type { CardWithRelations } from '../../domain/cards/types/card.types';
-import { CUSTOMER_API_ROLES } from '../../common/constants/auth.constants';
+import { CARDS_API_ROLES } from '../../common/constants/auth.constants';
 
 interface RequestUser {
   userId: string;
@@ -43,7 +43,7 @@ interface RequestUser {
 @ApiBearerAuth()
 @Controller('customer-api/cards')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...CUSTOMER_API_ROLES)
+@Roles(...CARDS_API_ROLES)
 export class CustomerCardsController {
   private readonly logger = new Logger(CustomerCardsController.name);
 
