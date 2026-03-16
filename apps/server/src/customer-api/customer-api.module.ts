@@ -10,6 +10,7 @@ import { CustomerCardsController } from './controllers/cards.controller';
 import { CustomerTransactionsController } from './controllers/transactions.controller';
 import { CustomerAuthController } from './controllers/auth.controller';
 import { DailyPaymentSummariesModule } from '../domain/daily-payment-summaries/daily-payment-summaries.module';
+import { PaymentSummaryModule } from '../domain/payment-summary/payment-summary.module';
 import { CustomerPaymentsController } from './controllers/payments.controller';
 import { CustomerCardSpendController } from './controllers/card-spend.controller';
 
@@ -22,6 +23,7 @@ import { CustomerCardSpendController } from './controllers/card-spend.controller
     SlashIntegrationModule,
     DatabaseModule,
     DailyPaymentSummariesModule,
+    PaymentSummaryModule,
   ],
   controllers: [
     CustomerAuthController,

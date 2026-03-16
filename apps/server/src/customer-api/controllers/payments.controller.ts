@@ -18,11 +18,10 @@ import {
 import { JwtAuthGuard } from '../../admin-api/guards/jwt-auth.guard';
 import { RolesGuard } from '../../admin-api/guards/roles.guard';
 import { Roles } from '../../admin-api/decorators/roles.decorator';
-import { DailyPaymentSummariesService } from '../../domain/daily-payment-summaries/daily-payment-summaries.service';
 import { PaymentSummaryResponseDto } from '../dto/payment-summary.dto';
-import { format } from 'date-fns';
 import { BOSS_AND_ACCOUNTANT_ROLES } from '../../common/constants/auth.constants';
 import { parseYyyyMmDdAsLocalDate } from '../../common/utils/date.utils';
+import { PaymentSummaryService } from '../../domain/payment-summary/payment-summary.service';
 
 interface RequestUser {
   userId: string;
@@ -39,7 +38,7 @@ interface RequestUser {
 @Roles(...BOSS_AND_ACCOUNTANT_ROLES)
 export class CustomerPaymentsController {
   constructor(
-    private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
+    private readonly paymentSummaryService: PaymentSummaryService,
   ) {}
 
   @Get(':id/payment-summary')
@@ -98,73 +97,58 @@ export class CustomerPaymentsController {
     if (toDate < fromDate) {
       throw new BadRequestException('to must be greater than or equal to from');
     }
-    console.log('fromDate', fromDate);
-    console.log('toDate', toDate);
-    const summaries =
-      await this.dailyPaymentSummariesService.getDailySummaries(
-        slashId,
-        fromDate,
-        toDate,
-      );
-    console.log('summaries', summaries);
-    const rows = summaries.map((s) => {
-      const dateStr = format(s.date, 'yyyy-MM-dd');
-      const spendUsCents = s.totalSpendUSCents ?? 0;
-      const spendNonUsCents = s.totalSpendNonUSCents ?? 0;
-      const spendCents = spendUsCents + spendNonUsCents;
-      const refundCents = s.totalRefundCents ?? 0;
-
-      return {
-        date: dateStr,
-        depositCents: s.totalDepositCents ?? 0,
-        spendCents,
-        spendUsCents,
-        spendNonUsCents,
-        refundCents,
-      };
-    });
-
-    const currency = summaries[0]?.currency ?? 'USD';
-
-    const totalDepositCents = rows.reduce(
-      (acc, r) => acc + (r.depositCents ?? 0),
-      0,
+    return this.paymentSummaryService.getRangeSummary(
+      slashId,
+      fromDate,
+      toDate,
+      from,
+      to,
     );
-    const totalSpendUsCents = rows.reduce(
-      (acc, r) => acc + (r.spendUsCents ?? 0),
-      0,
-    );
-    const totalSpendNonUsCents = rows.reduce(
-      (acc, r) => acc + (r.spendNonUsCents ?? 0),
-      0,
-    );
-    const totalSpendCents = totalSpendUsCents + totalSpendNonUsCents;
-    const totalRefundCents = rows.reduce(
-      (acc, r) => acc + (r.refundCents ?? 0),
-      0,
-    );
+  }
 
-    const endingAccountBalanceCents =
-      totalDepositCents - totalSpendCents + totalRefundCents;
-
-    return {
-      virtualAccountId: slashId,
-      currency,
-      timezone: 'local',
-      range: {
-        from,
-        to,
-      },
-      rows,
-      summary: {
-        totalDepositCents,
-        totalSpendCents,
-        totalSpendUsCents,
-        totalSpendNonUsCents,
-        totalRefundCents,
-        endingAccountBalanceCents,
-      },
+  @Get(':id/payment-summary/overall')
+  @ApiOperation({
+    summary: 'Get overall payment summary for a virtual account (all time)',
+    description:
+      'Returns aggregated totals (deposit/spend/refund/balance) for the entire history of the virtual account.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Virtual Account Slash ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Overall payment summary returned successfully',
+    type: PaymentSummaryResponseDto,
+  })
+  async getOverallPaymentSummary(
+    @Param('id') slashId: string,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{
+    virtualAccountId: string;
+    currency: string;
+    timezone: string;
+    summary: {
+      totalDepositCents: number;
+      totalSpendCents: number;
+      totalSpendUsCents: number;
+      totalSpendNonUsCents: number;
+      totalRefundCents: number;
+      endingAccountBalanceCents: number;
     };
+  }> {
+    const vaIdFromToken = req.user?.virtualAccountId;
+    if (!vaIdFromToken) {
+      throw new BadRequestException('No virtual account linked to this user');
+    }
+
+    if (vaIdFromToken !== slashId) {
+      throw new BadRequestException(
+        'You can only access payment summary for your own virtual account',
+      );
+    }
+
+    return this.paymentSummaryService.getOverallSummary(slashId);
   }
 }
 
