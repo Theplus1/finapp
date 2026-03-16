@@ -7,6 +7,12 @@ export class CardSpendRowDto {
   @ApiProperty({ description: 'Card name or \"Total\" row label' })
   cardName: string;
 
+  @ApiPropertyOptional({
+    description: 'Last 4 digits of the card number, empty for total row',
+    example: '1234',
+  })
+  cardLast4?: string;
+
   @ApiProperty({ description: 'Whether this row is the total row' })
   isTotal: boolean;
 
