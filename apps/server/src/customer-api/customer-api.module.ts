@@ -7,6 +7,7 @@ import { SlashIntegrationModule } from '../integrations/slash/slash-integration.
 import { DatabaseModule } from '../database/database.module';
 import { EmployeesController } from './controllers/employees.controller';
 import { CustomerCardsController } from './controllers/cards.controller';
+import { CustomerCardsLookupController } from './controllers/cards-lookup.controller';
 import { CustomerTransactionsController } from './controllers/transactions.controller';
 import { CustomerAuthController } from './controllers/auth.controller';
 import { DailyPaymentSummariesModule } from '../domain/daily-payment-summaries/daily-payment-summaries.module';
@@ -29,6 +30,7 @@ import { CustomerCardSpendController } from './controllers/card-spend.controller
     CustomerAuthController,
     EmployeesController,
     CustomerCardsController,
+    CustomerCardsLookupController,
     CustomerTransactionsController,
     CustomerPaymentsController,
     CustomerCardSpendController,

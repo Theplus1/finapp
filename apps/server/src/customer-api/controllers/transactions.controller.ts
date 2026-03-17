@@ -84,6 +84,7 @@ export class CustomerTransactionsController {
       TransactionDetailedStatus.REVERSED,
       TransactionDetailedStatus.PENDING,
       TransactionDetailedStatus.SETTLED,
+      TransactionDetailedStatus.DECLINED,
     ]);
 
     // Boss and accountant: default to pending + settled only (no refund/reversed in list)
