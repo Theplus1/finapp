@@ -442,6 +442,7 @@ export class SlashSyncService {
 
         cursor = response.metadata?.nextCursor;
         
+        this.logger.log(`Fetched ${response.metadata?.count || 0} transactions, next cursor: ${cursor}`);
         // Add delay between pagination requests for additional rate limit protection
         if (cursor) {
           await delay(10000); // 10s delay between pages
