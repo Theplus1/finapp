@@ -34,6 +34,7 @@ const dateColumnLabel = [
   "Consume",
   "Consume outside US",
   "Consume in US",
+  "Refund",
 ];
 
 const initDataPayment = {
@@ -116,6 +117,7 @@ export default function Cards() {
         totalTieu: {} as Record<string, number>,
         spendNonUsCents: {} as Record<string, number>,
         spendUsCents: {} as Record<string, number>,
+        refundCents: {} as Record<string, number>,
       };
 
       data.forEach((item) => {
@@ -123,6 +125,7 @@ export default function Cards() {
         result.totalTieu[item.date] = item.spendCents;
         result.spendNonUsCents[item.date] = item.spendNonUsCents;
         result.spendUsCents[item.date] = item.spendUsCents;
+        result.refundCents[item.date] = item.refundCents;
       });
 
       return [
@@ -137,6 +140,11 @@ export default function Cards() {
           label: "Consume in US",
           key: "spendUsCents",
           data: result.spendUsCents,
+        },
+        {
+          label: "Refund",
+          key: "refundCents",
+          data: result.refundCents,
         },
       ];
     }
