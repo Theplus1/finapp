@@ -86,6 +86,7 @@ export class CustomerTransactionsController {
 
     const filters = {
       virtualAccountId,
+      slashId: query.transactionId,
       cardId: query.cardId,
       status: query.status,
       detailedStatus: query.detailedStatus ?? defaultDetailedStatus,

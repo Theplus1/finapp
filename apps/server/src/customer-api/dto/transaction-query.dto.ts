@@ -23,6 +23,11 @@ import {
  * virtualAccountId is always taken from JWT, not from query.
  */
 export class CustomerTransactionQueryDto {
+  @ApiPropertyOptional({ description: 'Transaction Slash ID (exact match)' })
+  @IsOptional()
+  @IsString()
+  transactionId?: string;
+
   @ApiPropertyOptional({ description: 'Card Slash ID' })
   @IsOptional()
   @IsString()

@@ -5,6 +5,7 @@ import { Transaction, TransactionDocument } from '../schemas/transaction.schema'
 
 export interface TransactionFilters {
   virtualAccountId?: string;
+  slashId?: string;
   cardId?: string;
   status?: string;
   detailedStatus?: string | any;
@@ -41,6 +42,10 @@ export class TransactionRepository {
 
     if (filters.virtualAccountId) {
       query.virtualAccountId = filters.virtualAccountId;
+    }
+
+    if (filters.slashId) {
+      query.slashId = filters.slashId;
     }
 
     if (filters.cardId) {

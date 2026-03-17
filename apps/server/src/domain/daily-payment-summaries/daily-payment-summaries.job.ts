@@ -19,7 +19,7 @@ export class DailyPaymentSummariesJob {
   /**
    * Cron job: recalculate daily_payment_summaries
    */
-  //@Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async recalculateRecentSummariesForAllAccounts(): Promise<void> {
     const now = new Date();
     const endDate = new Date(Date.UTC(
