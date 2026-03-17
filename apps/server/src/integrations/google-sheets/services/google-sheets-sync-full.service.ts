@@ -57,6 +57,67 @@ export class GoogleSheetsSyncFullService {
   }
 
   /**
+   * Helper to distribute transactions into sheet-specific buckets.
+   *
+   * When `limit` được truyền vào, chỉ lấy tối đa `limit` transaction mới nhất
+   * cho các sheet theo dòng (Transactions History, Hold, Reversed, Refund).
+   * Khi `limit` là `undefined`, sẽ dùng toàn bộ transaction (không giới hạn 25k).
+   */
+  private distributeTransactionsForSheets(
+    allTransactions: any[],
+    refundTransactions: any[],
+    limit?: number,
+  ): {
+    transactionsHistoryTransactions: any[];
+    holdTransactions: any[];
+    reversedTransactions: any[];
+    refundedTransactionsSorted: any[];
+  } {
+    const allTransactionsDesc = [...allTransactions].sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    const latestTransactions =
+      typeof limit === 'number' && limit > 0
+        ? allTransactionsDesc.slice(0, limit)
+        : allTransactionsDesc;
+
+    const transactionsHistoryTransactions = latestTransactions.filter((t) =>
+      [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING].includes(
+        t.detailedStatus,
+      ),
+    );
+
+    const holdTransactions = latestTransactions.filter(
+      (t) => t.detailedStatus === TransactionDetailedStatus.PENDING,
+    );
+
+    const reversedTransactions = latestTransactions.filter(
+      (t) => t.detailedStatus === TransactionDetailedStatus.REVERSED,
+    );
+
+    const refundedTransactionsSortedBase = refundTransactions.sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    const refundedTransactionsSorted =
+      typeof limit === 'number' && limit > 0
+        ? refundedTransactionsSortedBase.slice(0, limit)
+        : refundedTransactionsSortedBase;
+
+    return {
+      transactionsHistoryTransactions,
+      holdTransactions,
+      reversedTransactions,
+      refundedTransactionsSorted,
+    };
+  }
+
+  /**
    * Sync full data for a virtual account
    */
   async syncFullDataVirtualAccountToSheets(
@@ -158,45 +219,17 @@ export class GoogleSheetsSyncFullService {
       // Generate Payment sheet using all transactions
       const virtualAccount = await this.accountsService.findBySlashId(virtualAccountId);
       
-      // Extract latest 25k transactions
-      const allTransactionsDesc = [...allTransactions].sort((a, b) => {
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        return dateB - dateA;
-      });
-      
-      const latest25kTransactions = allTransactionsDesc.slice(0, 25000);
-      
-      this.logger.log(
-        `Extracted ${latest25kTransactions.length} latest transactions (from ${allTransactions.length} total)`,
-      );
-
-      // Process and distribute latest 25k transactions   
-      const transactionsHistoryTransactions = latest25kTransactions.filter(
-        (t) => [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING].includes(t.detailedStatus),
-      );
-      
-      const holdTransactions = latest25kTransactions.filter(
-        (t) => t.detailedStatus === TransactionDetailedStatus.PENDING,
-      );
-      
-      const reversedTransactions = latest25kTransactions.filter(
-        (t) => t.detailedStatus === TransactionDetailedStatus.REVERSED,
-      );
-      
       const refundedTransactions = allTransactions.filter(
         (t) => t.detailedStatus === TransactionDetailedStatus.REFUND,
       );
-      
-      // Sort refund transactions
-      const refundedTransactionsSorted = refundedTransactions
-        .sort((a, b) => {
-          const dateA = a.date ? new Date(a.date).getTime() : 0;
-          const dateB = b.date ? new Date(b.date).getTime() : 0;
-          return dateB - dateA;
-        })
-        .slice(0, 25000);
-      
+
+      const {
+        transactionsHistoryTransactions,
+        holdTransactions,
+        reversedTransactions,
+        refundedTransactionsSorted,
+      } = this.distributeTransactionsForSheets(allTransactions, refundedTransactions, 25000);
+
       this.logger.log(
         `Filtered transactions: ` +
         `Transactions History (${transactionsHistoryTransactions.length}), ` +
@@ -415,7 +448,7 @@ export class GoogleSheetsSyncFullService {
 
     try {
       const reports = await this.googleSheetReportAllService.findAll();
-      
+
       if (!reports || reports.length === 0) {
         this.logger.warn('No Google Sheet reports found. Please create reports first.');
         return;
@@ -429,7 +462,7 @@ export class GoogleSheetsSyncFullService {
       // Sync each virtual account sequentially
       for (let i = 0; i < reports.length; i++) {
         const report = reports[i];
-        
+
         try {
           await this.syncFullDataVirtualAccountToSheets(report.virtualAccountId);
           success++;
@@ -458,6 +491,189 @@ export class GoogleSheetsSyncFullService {
       );
     } catch (error) {
       this.logger.error('Failed to sync full data for all accounts:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync full data for a virtual account to a specific Google Sheet without 25k limit.
+   *
+   * Dùng toàn bộ Transaction của VA (không giới hạn 25k) và ghi vào file `sheetId` được truyền vào.
+   */
+  async syncFullDataVirtualAccountToCustomSheet(
+    virtualAccountId: string,
+    sheetId: string,
+  ): Promise<void> {
+    const startTime = Date.now();
+    const now = new Date();
+
+    this.logger.log(
+      `Starting full data sync (no 25k limit) for VA ${virtualAccountId} to sheet ${sheetId}...`,
+    );
+
+    try {
+      const exists = await this.googleSheetsService.spreadsheetExists(sheetId);
+      if (!exists) {
+        const errorMsg = `Spreadsheet ${sheetId} not found. Please check the sheet ID.`;
+        this.logger.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      const filters: any = {
+        virtualAccountId,
+        detailedStatus: {
+          $in: [
+            TransactionDetailedStatus.SETTLED,
+            TransactionDetailedStatus.PENDING,
+            TransactionDetailedStatus.REVERSED,
+          ],
+        },
+        cardId: { $ne: null },
+        merchantData: { $ne: null },
+        amountCents: { $lt: 0 },
+      };
+
+      const nonRefundTransactions =
+        await this.transactionsService.findAllWithFilters(filters);
+
+      const refundFilters: any = {
+        virtualAccountId,
+        detailedStatus: TransactionDetailedStatus.REFUND,
+        cardId: { $ne: null },
+        merchantData: { $ne: null },
+      };
+
+      const refundTransactions =
+        await this.transactionsService.findAllWithFilters(refundFilters);
+
+      const allTransactions = [...nonRefundTransactions, ...refundTransactions];
+
+      allTransactions.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateA - dateB;
+      });
+
+      if (allTransactions.length === 0) {
+        this.logger.warn(`No transactions found for VA ${virtualAccountId}`);
+        return;
+      }
+
+      this.logger.log(
+        `Loaded ${allTransactions.length} total transactions (sorted by date ASC) for custom sheet`,
+      );
+
+      let firstTransactionDate: Date;
+      if (allTransactions.length > 0) {
+        const firstTx = allTransactions[0];
+        if (!firstTx.date) {
+          throw new Error('First transaction has no date');
+        }
+        firstTransactionDate = normalizeDateToLocalMidnight(
+          new Date(firstTx.date),
+        );
+      } else {
+        firstTransactionDate = normalizeDateToLocalMidnight(now);
+      }
+
+      const rangeEnd = normalizeDateToLocalMidnight(now);
+
+      this.logger.log(
+        `Date range (custom sheet): ${firstTransactionDate.toISOString()} to ${rangeEnd.toISOString()}`,
+      );
+
+      const fullDateRange = {
+        startDate: firstTransactionDate,
+        endDate: rangeEnd,
+        today: rangeEnd,
+        days: generateDateRange(firstTransactionDate, rangeEnd).length,
+      };
+
+      const virtualAccount =
+        await this.accountsService.findBySlashId(virtualAccountId);
+
+      const {
+        transactionsHistoryTransactions,
+        holdTransactions,
+        reversedTransactions,
+        refundedTransactionsSorted,
+      } = this.distributeTransactionsForSheets(
+        allTransactions,
+        refundTransactions,
+      );
+
+      this.logger.log(
+        `Filtered transactions for custom sheet: ` +
+          `Transactions History (${transactionsHistoryTransactions.length}), ` +
+          `Hold (${holdTransactions.length}), ` +
+          `Reversed (${reversedTransactions.length}), ` +
+          `Refund (${refundedTransactionsSorted.length} from ${refundTransactions.length} total)`,
+      );
+
+      if (refundedTransactionsSorted.length > 0) {
+        this.logger.log(
+          `Found ${refundedTransactionsSorted.length} refund transactions for custom sheet. ` +
+            `Sample dates: ${refundedTransactionsSorted
+              .slice(0, 5)
+              .map((t) => t.date)
+              .join(', ')}`,
+        );
+      } else {
+        this.logger.warn(
+          `No REFUND transactions found for VA ${virtualAccountId} (custom sheet)`,
+        );
+      }
+
+      const paymentLocationTransactions = allTransactions.filter((t) =>
+        [TransactionDetailedStatus.PENDING, TransactionDetailedStatus.SETTLED].includes(
+          t.detailedStatus,
+        ),
+      );
+
+      const sheets = await this.generateFullDataSheets(
+        virtualAccount,
+        paymentLocationTransactions,
+        fullDateRange,
+        transactionsHistoryTransactions,
+        holdTransactions,
+        reversedTransactions,
+        refundedTransactionsSorted,
+      );
+
+      this.logger.log(
+        `Writing data to Google Sheets (overwrite mode) for custom sheet ${sheetId}...`,
+      );
+
+      if (sheets.length > 0) {
+        this.logger.log(
+          `Updating ${sheets.length} sheets: ${sheets
+            .map((s) => s.name)
+            .join(', ')} on spreadsheet ${sheetId}`,
+        );
+        await this.googleSheetsService.updateSheets(sheetId, sheets);
+      }
+
+      await this.googleSheetReportAllService.createOrUpdate({
+        sheetId,
+        virtualAccountId,
+      });
+
+      const transactionCount = allTransactions.length;
+      const duration = Date.now() - startTime;
+      this.logger.log(
+        `Synced custom sheet ${sheetId} successfully (${transactionCount} transactions, ${duration}ms)`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to sync full data (no 25k limit) for VA ${virtualAccountId} to sheet ${sheetId}:`,
+        error,
+      );
+
+      await this.googleSheetReportAllService.createOrUpdate({
+        sheetId,
+        virtualAccountId,
+      });
+
       throw error;
     }
   }

@@ -54,5 +54,52 @@ export class GoogleSheetsSyncFullController {
       message: 'Full data sync started for all virtual accounts' 
     };
   }
+
+  @Post('account/custom-sheet')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({
+    summary:
+      'Sync full data for a virtual account to a specific Google Sheet (no 25k limit)',
+    description:
+      'Sync toàn bộ Transaction của một virtual account sang file Google Sheet chỉ định (sheetId được truyền vào), không giới hạn 25k bản ghi. Nghiệp vụ sheet giống sync full hiện tại.',
+  })
+  @ApiQuery({
+    name: 'virtualAccountId',
+    required: true,
+    description: 'Virtual Account ID (VRId)',
+  })
+  @ApiQuery({
+    name: 'sheetId',
+    required: true,
+    description: 'ID của file Google Sheet đích',
+  })
+  @ApiResponse({
+    status: 202,
+    description:
+      'Full data sync (no 25k limit) started for this virtual account and sheet',
+  })
+  async syncFullDataForAccountToCustomSheet(
+    @Query('virtualAccountId') virtualAccountId: string,
+    @Query('sheetId') sheetId: string,
+  ) {
+    if (!virtualAccountId || !sheetId) {
+      return {
+        error: 'virtualAccountId và sheetId đều là bắt buộc',
+      };
+    }
+
+    this.googleSheetsSyncFullService
+      .syncFullDataVirtualAccountToCustomSheet(virtualAccountId, sheetId)
+      .catch((error) => {
+        this.logger.error(
+          `Full data sync (no 25k limit) failed for VA ${virtualAccountId} and sheet ${sheetId}:`,
+          error,
+        );
+      });
+
+    return {
+      message: `Full data sync (no 25k limit) started for virtual account ${virtualAccountId} to sheet ${sheetId}`,
+    };
+  }
 }
 
