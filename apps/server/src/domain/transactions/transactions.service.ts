@@ -40,8 +40,8 @@ export class TransactionsService {
     filters: {
       virtualAccountId?: string;
       slashId?: string;
-      cardId?: string;
-      status?: string;
+      cardId?: string | any;
+      status?: string | any;
       detailedStatus?: string | any;
       amountCents?: any;
       startDate?: string;
