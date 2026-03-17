@@ -10,7 +10,6 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Spinner } from "@repo/ui/components/spinner";
-import { Card } from "@/lib/api/endpoints/card";
 import { Input } from "@repo/ui/components/input";
 import { useMemo, useState } from "react";
 import { Label } from "@repo/ui/components/label";
@@ -18,7 +17,6 @@ import { Label } from "@repo/ui/components/label";
 type Props = {
   onCardChange: (cardId: string) => void;
 };
-const limitPerRequest = 100;
 
 const FilterCard = ({ onCardChange }: Props) => {
   const [value, setValue] = useState("all");
@@ -27,22 +25,9 @@ const FilterCard = ({ onCardChange }: Props) => {
   const { data: cardInfos, isLoading: isLoadingCardInfos } = useQuery({
     queryKey: ["card-infos"],
     queryFn: async () => {
-      let totalCardInfors: Card[] = [];
-      let hasNext = true;
-      let page = 1;
-      while (hasNext) {
-        const res = await api.cards.getCards({
-          page,
-          limit: limitPerRequest,
-        });
-        const { pagination: paginationRes, data } = res;
-        totalCardInfors = [...totalCardInfors, ...data];
-        hasNext =
-          (paginationRes?.total || 0) >=
-          (paginationRes?.page || 1) * (paginationRes?.limit || 1);
-        page++;
-      }
-      return totalCardInfors;
+      const res = await api.cards.getCardsLookup();
+      const { data } = res;
+      return data;
     },
   });
 
@@ -51,7 +36,7 @@ const FilterCard = ({ onCardChange }: Props) => {
     onCardChange(value === "all" ? "" : value);
   };
 
-  const cardInforsSelect = useMemo(() => {
+  const cardInfosSelect = useMemo(() => {
     return cardInfos?.filter((card) => {
       return card.name.toLowerCase().includes(textSearch.trim().toLowerCase());
     });
@@ -85,7 +70,7 @@ const FilterCard = ({ onCardChange }: Props) => {
             <SelectItem key="all" value="all">
               All
             </SelectItem>
-            {cardInforsSelect?.map((card) => (
+            {cardInfosSelect?.map((card) => (
               <SelectItem key={card._id} value={card.slashId}>
                 {card.name}
               </SelectItem>

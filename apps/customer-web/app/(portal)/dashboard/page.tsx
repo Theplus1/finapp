@@ -76,16 +76,24 @@ export default function Dashboard() {
   const { data, isLoading } = useQuery({
     queryKey: ["transactions", pagination.page, currentFilter],
     queryFn: async () => {
-      const res = await api.transactions.getTransactions({
-        ...currentFilter,
-        page: pagination.page,
-        limit: pagination.pageSize,
-      });
-      setPagination((prev) => ({
-        ...prev,
-        total: res.pagination?.total ?? 0,
-      }));
-      return res.data;
+      try {
+        const res = await api.transactions.getTransactions({
+          ...currentFilter,
+          page: pagination.page,
+          limit: pagination.pageSize,
+        });
+        setPagination((prev) => ({
+          ...prev,
+          total: res.pagination?.total ?? 0,
+        }));
+        return res.data;
+      } catch (error) {
+        setPagination((prev) => ({
+          ...prev,
+          total: 0,
+        }));
+        throw error;
+      }
     },
     refetchOnMount: "always",
     gcTime: 0,

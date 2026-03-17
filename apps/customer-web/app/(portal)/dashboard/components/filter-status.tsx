@@ -14,13 +14,14 @@ type Props = {
   onStatusChange: (status?: string) => void;
 };
 
-type Status = "Pending" | "Settled" | "Reversed" | "Refund";
+type Status = "Pending" | "Settled" | "Reversed" | "Refund" | "Declined";
 
 const arrStatus: Record<Status, string> = {
   Pending: "pending",
   Settled: "settled",
   Reversed: "reversed",
   Refund: "refund",
+  Declined: "declined",
 };
 
 const FilterStatus = ({ onStatusChange }: Props) => {
