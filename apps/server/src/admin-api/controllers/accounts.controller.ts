@@ -42,7 +42,7 @@ import { DailyPaymentSummariesService } from '../../domain/daily-payment-summari
 import { UpsertDepositDto } from '../dto/upsert-deposit.dto';
 import { startOfDay, format } from 'date-fns';
 import { ADMIN_API_ROLES } from '../../common/constants/auth.constants';
-import { parseYyyyMmDdAsLocalDate } from '../../common/utils/date.utils';
+import { parseYyyyMmDdAsUtcDate } from '../../common/utils/date.utils';
 import { DepositHistoryRepository } from '../../database/repositories/deposit-history.repository';
 
 @ApiTags('Admin API - Virtual Accounts')
@@ -168,7 +168,7 @@ export class AccountsController {
 
     let forDate: Date | undefined;
     if (dateStr) {
-      const parsed = parseYyyyMmDdAsLocalDate(dateStr);
+      const parsed = parseYyyyMmDdAsUtcDate(dateStr);
       if (Number.isNaN(parsed.getTime())) {
         throw new BadRequestException('Invalid date filter (must be YYYY-MM-DD)');
       }
@@ -433,8 +433,7 @@ export class AccountsController {
 
     const virtualAccount = await this.accountsService.findBySlashId(slashId);
 
-    // Parse as LOCAL date to match how daily summaries are normalized/stored (GGS behavior)
-    const date = startOfDay(parseYyyyMmDdAsLocalDate(dto.date));
+    const date = parseYyyyMmDdAsUtcDate(dto.date);
     if (Number.isNaN(date.getTime())) {
       throw new BadRequestException('Invalid date');
     }
@@ -488,5 +487,72 @@ export class AccountsController {
     }
 
     return { success: true };
+  }
+
+  @Delete(':id/deposits/:historyId')
+  @ApiOperation({
+    summary: 'Delete a single deposit history record by id',
+    description:
+      'Admin deletes one deposit history record and recalculates daily_payment_summaries for that day.',
+  })
+  @ApiParam({ name: 'id', description: 'Virtual Account Slash ID' })
+  @ApiParam({ name: 'historyId', description: 'Deposit history document ID' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Deposit history record deleted and daily summary updated',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - invalid or missing date',
+  })
+  async deleteDepositHistoryForDate(
+    @Param('id') slashId: string,
+    @Param('historyId') historyId: string,
+  ): Promise<{
+    success: true;
+    deletedId: string;
+    virtualAccountId: string;
+    date: string;
+    totalDepositCents: number;
+  }> {
+    const virtualAccount = await this.accountsService.findBySlashId(slashId);
+
+    const deletedDoc = await this.depositHistoryRepository.deleteById(
+      historyId,
+    );
+    if (!deletedDoc) {
+      throw new BadRequestException('Deposit history not found');
+    }
+
+    if (deletedDoc.virtualAccountId !== virtualAccount.slashId) {
+      throw new BadRequestException(
+        'Deposit history does not belong to this virtual account',
+      );
+    }
+
+    const date = deletedDoc.date;
+
+    // Recalculate total deposit for the day from remaining history (likely 0)
+    const totalDepositCents =
+      await this.depositHistoryRepository.sumByVirtualAccountAndDate(
+        virtualAccount.slashId,
+        date,
+      );
+
+    await this.dailyPaymentSummariesService.upsertDepositForDate(
+      virtualAccount.slashId,
+      date,
+      totalDepositCents,
+      virtualAccount.currency ?? 'USD',
+    );
+
+    return {
+      success: true,
+      deletedId: historyId,
+      virtualAccountId: virtualAccount.slashId,
+      date: format(date, 'yyyy-MM-dd'),
+      totalDepositCents,
+    };
   }
 }

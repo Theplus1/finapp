@@ -96,5 +96,19 @@ export class DepositHistoryRepository {
 
     return [data, total];
   }
+
+  async deleteById(id: string): Promise<DepositHistoryDocument | null> {
+    const doc = await this.model.findByIdAndDelete(id).exec();
+    if (!doc) {
+      this.logger.warn(`No deposit history found to delete with id ${id}`);
+      return null;
+    }
+
+    this.logger.log(
+      `Deleted deposit history ${id} for VA ${doc.virtualAccountId} on ${doc.date.toISOString()}`,
+    );
+
+    return doc;
+  }
 }
 

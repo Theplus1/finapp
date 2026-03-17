@@ -2,15 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DailyPaymentSummariesService } from './daily-payment-summaries.service';
 import { AccountsService } from '../accounts/accounts.service';
-import { startOfDay, subDays } from 'date-fns';
+import { subDays } from 'date-fns';
 
 @Injectable()
 export class DailyPaymentSummariesJob {
   private readonly logger = new Logger(DailyPaymentSummariesJob.name);
 
-  // Số ngày gần nhất cần refresh (bao gồm hôm nay)
-  // 2 ngày là đủ vì job chạy 5 phút/lần
-  private static readonly LOOKBACK_DAYS = 20;
+  // Number of days to recalculate (including today)
+  private static readonly LOOKBACK_DAYS = 2;
 
   constructor(
     private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
@@ -18,14 +17,24 @@ export class DailyPaymentSummariesJob {
   ) {}
 
   /**
-   * Cron job: định kỳ aggregate lại daily_payment_summaries
-   * Chạy mỗi 15 phút để giữ dữ liệu gần realtime, không phụ thuộc webhook Slash.
+   * Cron job: recalculate daily_payment_summaries
    */
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async recalculateRecentSummariesForAllAccounts(): Promise<void> {
     const now = new Date();
-    const endDate = startOfDay(now);
-    const startDate = startOfDay(subDays(endDate, DailyPaymentSummariesJob.LOOKBACK_DAYS - 1));
+    const endDate = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      0, 0, 0, 0,
+    ));
+    const start = subDays(endDate, DailyPaymentSummariesJob.LOOKBACK_DAYS - 1);
+    const startDate = new Date(Date.UTC(
+      start.getUTCFullYear(),
+      start.getUTCMonth(),
+      start.getUTCDate(),
+      0, 0, 0, 0,
+    ));
 
     this.logger.log(
       `Recalculating daily payment summaries for all accounts from ${startDate.toISOString()} to ${endDate.toISOString()}`,

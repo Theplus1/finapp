@@ -20,7 +20,7 @@ import { RolesGuard } from '../../admin-api/guards/roles.guard';
 import { Roles } from '../../admin-api/decorators/roles.decorator';
 import { PaymentSummaryResponseDto } from '../dto/payment-summary.dto';
 import { BOSS_AND_ACCOUNTANT_ROLES } from '../../common/constants/auth.constants';
-import { parseYyyyMmDdAsLocalDate } from '../../common/utils/date.utils';
+import { parseYyyyMmDdAsUtcDate } from '../../common/utils/date.utils';
 import { PaymentSummaryService } from '../../domain/payment-summary/payment-summary.service';
 
 interface RequestUser {
@@ -87,9 +87,8 @@ export class CustomerPaymentsController {
       throw new BadRequestException('from and to query params are required');
     }
 
-    // Parse as LOCAL date to match how daily summaries are normalized/stored (GGS behavior)
-    const fromDate = parseYyyyMmDdAsLocalDate(from);
-    const toDate = parseYyyyMmDdAsLocalDate(to);
+    const fromDate = parseYyyyMmDdAsUtcDate(from);
+    const toDate = parseYyyyMmDdAsUtcDate(to);
     if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
       throw new BadRequestException('Invalid from/to date');
     }
