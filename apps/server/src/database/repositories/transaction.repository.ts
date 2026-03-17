@@ -140,6 +140,15 @@ export class TransactionRepository {
     return this.transactionModel.countDocuments(query).exec();
   }
 
+  async findFirstByVirtualAccountId(
+    virtualAccountId: string,
+  ): Promise<TransactionDocument | null> {
+    return this.transactionModel
+      .findOne({ virtualAccountId, isDeleted: false })
+      .sort({ date: 1 })
+      .exec();
+  }
+
   async getSpendingByCategory(
     virtualAccountId: string,
     startDate?: Date,

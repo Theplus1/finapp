@@ -128,6 +128,14 @@ export class TransactionsService {
     return this.getStats(filters);
   }
 
+  async findFirstByVirtualAccountId(
+    virtualAccountId: string,
+  ): Promise<TransactionDocument | null> {
+    return this.transactionRepository.findFirstByVirtualAccountId(
+      virtualAccountId,
+    );
+  }
+
   /**
    * Find transaction by Slash ID
    */
