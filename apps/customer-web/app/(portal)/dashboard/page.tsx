@@ -24,10 +24,12 @@ import { cn } from "@/lib/utils";
 import { Employee } from "@/lib/api/endpoints/employee";
 import GetConfirmCode from "./components/get-confirm-code";
 import { RoleUserEnum } from "@/lib/api/endpoints/users";
+import { Spinner } from "@repo/ui/components/spinner";
 const initFilter = {
   cardId: "",
   startDate: "",
   endDate: "",
+  detailedStatus: undefined as string | undefined,
 };
 
 const maskDataTable = Array.from({ length: 20 }, () => {
@@ -219,16 +221,38 @@ export default function Dashboard() {
     }));
   };
 
+  const pageTitle = () => {
+    if (isLoading) {
+      return <Spinner />;
+    }
+    return (
+      <>
+        ({pagination.total}
+        {currentFilter.detailedStatus
+          ? ` - ${currentFilter.detailedStatus}`
+          : " - Total"}
+        )
+      </>
+    );
+  };
+
   return (
     <PageLayout>
       <PageHeader>
-        <PageTitle>Transactions</PageTitle>
+        <PageTitle>
+          <div className="flex items-center gap-2">
+            Transactions {pageTitle()}
+          </div>
+        </PageTitle>
       </PageHeader>
 
       <Section>
         <SectionContent>
           <FilterTransaction
             onCardChange={(cardId) => handleChangeFilter("cardId", cardId)}
+            onStatusChange={(status) =>
+              handleChangeFilter("detailedStatus", status)
+            }
             onDateFromChange={(date) => handleChangeFilter("startDate", date)}
             onDateToChange={(date) => handleChangeFilter("endDate", date)}
             onSearch={(search) => handleChangeFilter("transactionId", search)}
