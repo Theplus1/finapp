@@ -8,6 +8,7 @@ import {
 import { TransactionsModule } from '../transactions/transactions.module';
 import { DailyPaymentSummariesJob } from './daily-payment-summaries.job';
 import { AccountsModule } from '../accounts/accounts.module';
+import { DatabaseModule } from 'src/database/database.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AccountsModule } from '../accounts/accounts.module';
     ]),
     TransactionsModule,
     AccountsModule,
+    DatabaseModule,
   ],
   providers: [DailyPaymentSummariesService, DailyPaymentSummariesJob],
   exports: [DailyPaymentSummariesService],

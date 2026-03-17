@@ -5,6 +5,7 @@ import { Transaction, TransactionDocument } from '../schemas/transaction.schema'
 
 export interface TransactionFilters {
   virtualAccountId?: string;
+  slashId?: string;
   cardId?: string;
   status?: string;
   detailedStatus?: string | any;
@@ -41,6 +42,10 @@ export class TransactionRepository {
 
     if (filters.virtualAccountId) {
       query.virtualAccountId = filters.virtualAccountId;
+    }
+
+    if (filters.slashId) {
+      query.slashId = filters.slashId;
     }
 
     if (filters.cardId) {
@@ -138,6 +143,15 @@ export class TransactionRepository {
   async count(filters: Omit<TransactionFilters, 'limit' | 'skip'>): Promise<number> {
     const query = this.buildFilterQuery(filters);
     return this.transactionModel.countDocuments(query).exec();
+  }
+
+  async findFirstByVirtualAccountId(
+    virtualAccountId: string,
+  ): Promise<TransactionDocument | null> {
+    return this.transactionModel
+      .findOne({ virtualAccountId, isDeleted: false })
+      .sort({ date: 1 })
+      .exec();
   }
 
   async getSpendingByCategory(

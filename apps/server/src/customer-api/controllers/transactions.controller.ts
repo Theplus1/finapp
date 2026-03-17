@@ -78,11 +78,18 @@ export class CustomerTransactionsController {
     const role = req.user?.role;
     this.logger.log(`Listing transactions for VA ${virtualAccountId}, role=${role}`);
 
+    // Boss and accountant: default to pending + settled only (no refund/reversed in list)
+    const defaultDetailedStatus =
+      role === 'boss' || role === 'accountant'
+        ? { $in: ['pending', 'settled'] as const }
+        : undefined;
+
     const filters = {
       virtualAccountId,
+      slashId: query.transactionId,
       cardId: query.cardId,
       status: query.status,
-      detailedStatus: query.detailedStatus,
+      detailedStatus: query.detailedStatus ?? defaultDetailedStatus,
       startDate: query.startDate,
       endDate: query.endDate,
       sortBy: query.sortBy,

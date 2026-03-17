@@ -39,6 +39,7 @@ export class TransactionsService {
   async findAllWithFiltersAndPagination(
     filters: {
       virtualAccountId?: string;
+      slashId?: string;
       cardId?: string;
       status?: string;
       detailedStatus?: string | any;
@@ -52,6 +53,7 @@ export class TransactionsService {
   ): Promise<[TransactionWithRelations[], number]> {
     const dbFilters: any = {};
     if (filters.virtualAccountId) dbFilters.virtualAccountId = filters.virtualAccountId;
+    if (filters.slashId) dbFilters.slashId = filters.slashId;
     if (filters.cardId) dbFilters.cardId = filters.cardId;
     if (filters.status) dbFilters.status = filters.status;
     if (filters.detailedStatus) dbFilters.detailedStatus = filters.detailedStatus;
@@ -83,6 +85,7 @@ export class TransactionsService {
   async findAllWithFilters(
     filters: {
       virtualAccountId?: string;
+      slashId?: string;
       cardId?: string | any;
       status?: string;
       detailedStatus?: string | any;
@@ -96,6 +99,7 @@ export class TransactionsService {
   ): Promise<TransactionWithRelations[]> {
     const dbFilters: any = {};
     if (filters.virtualAccountId) dbFilters.virtualAccountId = filters.virtualAccountId;
+    if (filters.slashId) dbFilters.slashId = filters.slashId;
     if (filters.cardId) dbFilters.cardId = filters.cardId;
     if (filters.status) dbFilters.status = filters.status;
     if (filters.detailedStatus) dbFilters.detailedStatus = filters.detailedStatus;
@@ -126,6 +130,14 @@ export class TransactionsService {
     if (query.endDate) filters.endDate = new Date(query.endDate);
     
     return this.getStats(filters);
+  }
+
+  async findFirstByVirtualAccountId(
+    virtualAccountId: string,
+  ): Promise<TransactionDocument | null> {
+    return this.transactionRepository.findFirstByVirtualAccountId(
+      virtualAccountId,
+    );
   }
 
   /**

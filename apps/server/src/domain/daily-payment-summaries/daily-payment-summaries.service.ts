@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { DailyPaymentSummary, DailyPaymentSummaryDocument } from 'src/database/schemas/daily-payment-summary.schema';
+import {
+  DailyPaymentSummary,
+  DailyPaymentSummaryDocument,
+} from 'src/database/schemas/daily-payment-summary.schema';
 import { TransactionsService } from '../transactions/transactions.service';
+import { DepositHistoryRepository } from 'src/database/repositories/deposit-history.repository';
 
 @Injectable()
 export class DailyPaymentSummariesService {
@@ -12,7 +16,8 @@ export class DailyPaymentSummariesService {
     @InjectModel(DailyPaymentSummary.name)
     private readonly dailyPaymentSummaryModel: Model<DailyPaymentSummaryDocument>,
     private readonly transactionsService: TransactionsService,
-  ) { }
+    private readonly depositHistoryRepository: DepositHistoryRepository,
+  ) {}
 
   /**
    * Calculate and save daily payment summary for a specific date
@@ -58,7 +63,11 @@ export class DailyPaymentSummariesService {
     });
 
     // Calculate totals
-    let totalDepositCents = 0;
+    const totalDepositCents =
+      await this.depositHistoryRepository.sumByVirtualAccountAndDate(
+        virtualAccountId,
+        dayStart,
+      );
     let totalSpendNonUSCents = 0;
     let totalSpendUSCents = 0;
     let totalRefundCents = 0;
