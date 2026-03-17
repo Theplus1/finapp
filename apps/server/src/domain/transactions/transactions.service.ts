@@ -43,11 +43,12 @@ export class TransactionsService {
       cardId?: string;
       status?: string;
       detailedStatus?: string | any;
-      amountCents?: number;
+      amountCents?: any;
       startDate?: string;
       endDate?: string;
       sortBy?: string;
       sortOrder?: SortOrder;
+      merchantData?: any;
     },
     pagination: PaginationOptions,
   ): Promise<[TransactionWithRelations[], number]> {
@@ -60,6 +61,7 @@ export class TransactionsService {
     if (filters.amountCents !== undefined) dbFilters.amountCents = filters.amountCents;
     if (filters.startDate) dbFilters.startDate = new Date(filters.startDate);
     if (filters.endDate) dbFilters.endDate = new Date(filters.endDate);
+    if (filters.merchantData) dbFilters.merchantData = filters.merchantData;
     
     const sortField = filters.sortBy || 'createdAt';
     const sortDirection = filters.sortOrder === SortOrder.ASC ? 1 : -1;

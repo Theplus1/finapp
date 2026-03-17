@@ -45,19 +45,23 @@ export class DailyPaymentSummariesService {
       this.logger.log(`Calculating daily summary for ${virtualAccountId} from ${dayStart.toISOString()} to ${dayEnd.toISOString()}`);
     }
 
-    // Get all spend transactions for this day (PENDING + SETTLED, amount < 0)
+    // Get all spend transactions for this day (PENDING + SETTLED, amount < 0, with card & merchant data)
     const spendTransactions = await this.transactionsService.findAllWithFilters({
       virtualAccountId,
       amountCents: { $lt: 0 },
+      cardId: { $ne: null },
+      merchantData: { $ne: null },
       detailedStatus: { $in: ['pending', 'settled'] },
       startDate: dayStart.toISOString(),
       endDate: dayEnd.toISOString(),
     });
 
-    // Get all refund transactions for this day
+    // Get all refund transactions for this day (only those with card & merchant data)
     const refundTransactions = await this.transactionsService.findAllWithFilters({
       virtualAccountId,
       detailedStatus: 'refund',
+      cardId: { $ne: null },
+      merchantData: { $ne: null },
       startDate: dayStart.toISOString(),
       endDate: dayEnd.toISOString(),
     });
