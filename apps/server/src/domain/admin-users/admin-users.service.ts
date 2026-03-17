@@ -67,6 +67,14 @@ export class AdminUsersService {
         this.logger.warn(`Login attempt with invalid username: ${trimmed}`);
         return null;
       }
+
+      // For customer roles, enforce login by email only
+      if (CUSTOMER_LOGIN_ROLES.includes(adminUser.role)) {
+        this.logger.warn(
+          `Customer user attempted to login by username instead of email: ${trimmed} (role=${adminUser.role})`,
+        );
+        return null;
+      }
     }
 
     if (!adminUser.isActive) {
