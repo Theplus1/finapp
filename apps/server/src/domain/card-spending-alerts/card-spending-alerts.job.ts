@@ -57,10 +57,10 @@ export class CardSpendingAlertsJob implements OnModuleInit {
       return;
     }
 
-    this.logger.debug('Starting scheduled card spending alert check...');
+    this.logger.log('Starting scheduled card spending alert check...');
     try {
       await this.cardSpendingAlertsService.checkAndSendAlerts();
-      this.logger.debug('Scheduled card spending alert check completed successfully');
+      this.logger.log('Scheduled card spending alert check completed successfully');
     } catch (error) {
       this.logger.error('Scheduled card spending alert check failed:', error);
     }

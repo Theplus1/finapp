@@ -34,11 +34,11 @@ export class SlashSyncJob {
     }
 
     const startTime = Date.now();
-    this.logger.debug('Starting scheduled card sync...');
+    this.logger.log('Starting scheduled card sync...');
     try {
       await this.slashSyncService.syncAllCards();
       const duration = Date.now() - startTime;
-      this.logger.debug(`Scheduled card sync completed successfully in ${duration}ms`);
+      this.logger.log(`Scheduled card sync completed successfully in ${duration}ms`);
     } catch (error) {
       const duration = Date.now() - startTime;
       this.logger.error(`Scheduled card sync failed after ${duration}ms:`, error);
@@ -61,12 +61,12 @@ export class SlashSyncJob {
 
     this.isSyncingTransactions = true;
     const startTime = Date.now();
-    this.logger.debug('Starting scheduled recent transaction sync...');
+    this.logger.log('Starting scheduled recent transaction sync...');
     try {
       // Sync transactions from last 30 seconds (runs every 10s for 3x overlap)
       await this.slashSyncService.syncRecentTransactionsBySeconds(30);
       const duration = Date.now() - startTime;
-      this.logger.debug(`Scheduled recent transaction sync completed successfully in ${duration}ms`);
+      this.logger.log(`Scheduled recent transaction sync completed successfully in ${duration}ms`);
     } catch (error) {
       const duration = Date.now() - startTime;
       this.logger.error(`Scheduled recent transaction sync failed after ${duration}ms:`, error);
@@ -132,11 +132,11 @@ export class SlashSyncJob {
     }
 
     const startTime = Date.now();
-    this.logger.debug('Starting scheduled virtual account sync...');
+    this.logger.log('Starting scheduled virtual account sync...');
     try {
       await this.slashSyncService.syncAllVirtualAccounts();
       const duration = Date.now() - startTime;
-      this.logger.debug(`Scheduled virtual account sync completed successfully in ${duration}ms`);
+      this.logger.log(`Scheduled virtual account sync completed successfully in ${duration}ms`);
     } catch (error) {
       const duration = Date.now() - startTime;
       this.logger.error(`Scheduled virtual account sync failed after ${duration}ms:`, error);

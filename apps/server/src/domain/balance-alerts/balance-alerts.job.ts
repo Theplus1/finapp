@@ -56,10 +56,10 @@ export class BalanceAlertsJob implements OnModuleInit {
       return;
     }
 
-    this.logger.debug('Starting scheduled balance alert check...');
+    this.logger.log('Starting scheduled balance alert check...');
     try {
       await this.balanceAlertsService.checkAndSendAlerts();
-      this.logger.debug('Scheduled balance alert check completed successfully');
+      this.logger.log('Scheduled balance alert check completed successfully');
     } catch (error) {
       this.logger.error('Scheduled balance alert check failed:', error);
     }

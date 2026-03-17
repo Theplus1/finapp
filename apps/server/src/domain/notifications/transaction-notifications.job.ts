@@ -15,10 +15,10 @@ export class TransactionNotificationsJob {
 
   @Cron(CronExpression.EVERY_10_SECONDS)
   async checkAndNotifyNewTransactions() {
-    this.logger.debug('Starting transaction notifications check...');
+    this.logger.log('Starting transaction notifications check...');
     try {
       await this.transactionNotificationsService.checkAndNotifyNewTransactions();
-      this.logger.debug('Transaction notifications check completed successfully');
+      this.logger.log('Transaction notifications check completed successfully');
     } catch (error) {
       this.logger.error('Transaction notifications check failed:', error);
     }

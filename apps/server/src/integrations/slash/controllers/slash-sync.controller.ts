@@ -72,7 +72,7 @@ export class SlashSyncController {
     const days = daysBack ? parseInt(daysBack.toString(), 10) : 90;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
-    this.logger.log(`Starting full transaction sync from ${startDate.toISOString()}`);
+    
     // Run async without waiting
     this.slashSyncService.syncAllTransactions(startDate).catch((error) => {
       this.logger.error('Manual full transaction sync failed:', error);
