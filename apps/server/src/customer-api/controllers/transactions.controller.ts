@@ -29,6 +29,7 @@ import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants
 import type { TransactionWithRelations } from '../../domain/transactions/types/transaction.types';
 import type { TransactionDto } from '../../integrations/slash/dto/transaction.dto';
 import { CUSTOMER_API_ROLES } from '../../common/constants/auth.constants';
+import { TransactionDetailedStatus } from '../../integrations/slash/dto/transaction.dto';
 
 const FACEBOOK_VERIFY_AMOUNT_CENTS = -100;
 
@@ -78,22 +79,46 @@ export class CustomerTransactionsController {
     const role = req.user?.role;
     this.logger.log(`Listing transactions for VA ${virtualAccountId}, role=${role}`);
 
+    const allowedDetailedStatusesSet = new Set<TransactionDetailedStatus>([
+      TransactionDetailedStatus.REFUND,
+      TransactionDetailedStatus.REVERSED,
+      TransactionDetailedStatus.PENDING,
+      TransactionDetailedStatus.SETTLED,
+    ]);
+
     // Boss and accountant: default to pending + settled only (no refund/reversed in list)
     const defaultDetailedStatus =
       role === 'boss' || role === 'accountant'
-        ? { $in: ['pending', 'settled'] as const }
+        ? {
+            $in: Array.from(allowedDetailedStatusesSet),
+          }
         : undefined;
+
+    if ((role === 'boss' || role === 'accountant') && query.detailedStatus) {
+      if (!allowedDetailedStatusesSet.has(query.detailedStatus)) {
+        throw new BadRequestException(
+          `Boss/accountant can only filter detailedStatus in: ${Array.from(allowedDetailedStatusesSet).join(', ')}`,
+        );
+      }
+    }
+
+    const baseAmountFilter =
+      role === 'ads' ? undefined : { $lt: 0 };
 
     const filters = {
       virtualAccountId,
       slashId: query.transactionId,
-      cardId: query.cardId,
+      cardId: query.cardId ?? { $ne: null },
       status: query.status,
-      detailedStatus: query.detailedStatus ?? defaultDetailedStatus,
+      detailedStatus:
+        query.detailedStatus ??
+        defaultDetailedStatus,
       startDate: query.startDate,
       endDate: query.endDate,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
+      merchantData: { $ne: null },
+      ...(baseAmountFilter ? { amountCents: baseAmountFilter } : {}),
       ...(role === 'ads' ? { amountCents: FACEBOOK_VERIFY_AMOUNT_CENTS } : {}),
     };
 
