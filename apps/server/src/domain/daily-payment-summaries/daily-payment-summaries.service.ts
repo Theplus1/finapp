@@ -3,7 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { DailyPaymentSummary, DailyPaymentSummaryDocument } from 'src/database/schemas/daily-payment-summary.schema';
 import { TransactionsService } from '../transactions/transactions.service';
-import { startOfDay, endOfDay } from 'date-fns';
 
 @Injectable()
 export class DailyPaymentSummariesService {
@@ -24,8 +23,18 @@ export class DailyPaymentSummariesService {
     currency: string,
     silent: boolean = false,
   ): Promise<DailyPaymentSummaryDocument> {
-    const dayStart = startOfDay(date);
-    const dayEnd = endOfDay(date);
+    const dayStart = new Date(Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      0, 0, 0, 0,
+    ));
+    const dayEnd = new Date(Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      23, 59, 59, 999,
+    ));
 
     if (!silent) {
       this.logger.log(`Calculating daily summary for ${virtualAccountId} from ${dayStart.toISOString()} to ${dayEnd.toISOString()}`);
@@ -109,12 +118,25 @@ export class DailyPaymentSummariesService {
     startDate: Date,
     endDate: Date,
   ): Promise<DailyPaymentSummaryDocument[]> {
+    const from = new Date(Date.UTC(
+      startDate.getUTCFullYear(),
+      startDate.getUTCMonth(),
+      startDate.getUTCDate(),
+      0, 0, 0, 0,
+    ));
+    const to = new Date(Date.UTC(
+      endDate.getUTCFullYear(),
+      endDate.getUTCMonth(),
+      endDate.getUTCDate(),
+      0, 0, 0, 0,
+    ));
+
     return this.dailyPaymentSummaryModel
       .find({
         virtualAccountId,
         date: {
-          $gte: startOfDay(startDate),
-          $lte: startOfDay(endDate),
+          $gte: from,
+          $lte: to,
         },
       })
       .sort({ date: 1 })
@@ -129,7 +151,12 @@ export class DailyPaymentSummariesService {
     date: Date,
     currency: string,
   ): Promise<DailyPaymentSummaryDocument> {
-    const dayStart = startOfDay(date);
+    const dayStart = new Date(Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      0, 0, 0, 0,
+    ));
 
     const summary = await this.dailyPaymentSummaryModel.findOne({
       virtualAccountId,
@@ -137,7 +164,7 @@ export class DailyPaymentSummariesService {
     });
 
     if (!summary) {
-      return this.calculateAndSaveDailySummary(virtualAccountId, date, currency);
+      return this.calculateAndSaveDailySummary(virtualAccountId, dayStart, currency);
     }
 
     return summary;
@@ -171,7 +198,12 @@ export class DailyPaymentSummariesService {
     depositCents: number,
     currency: string,
   ): Promise<DailyPaymentSummaryDocument> {
-    const dayStart = startOfDay(date);
+    const dayStart = new Date(Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      0, 0, 0, 0,
+    ));
 
     // Ensure summary exists (spend/refund calculated)
     const summary = await this.getOrCalculateDailySummary(

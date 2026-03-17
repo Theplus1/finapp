@@ -42,7 +42,7 @@ import { DailyPaymentSummariesService } from '../../domain/daily-payment-summari
 import { UpsertDepositDto } from '../dto/upsert-deposit.dto';
 import { startOfDay, format } from 'date-fns';
 import { ADMIN_API_ROLES } from '../../common/constants/auth.constants';
-import { parseYyyyMmDdAsLocalDate } from '../../common/utils/date.utils';
+import { parseYyyyMmDdAsUtcDate } from '../../common/utils/date.utils';
 import { DepositHistoryRepository } from '../../database/repositories/deposit-history.repository';
 
 @ApiTags('Admin API - Virtual Accounts')
@@ -168,7 +168,7 @@ export class AccountsController {
 
     let forDate: Date | undefined;
     if (dateStr) {
-      const parsed = parseYyyyMmDdAsLocalDate(dateStr);
+      const parsed = parseYyyyMmDdAsUtcDate(dateStr);
       if (Number.isNaN(parsed.getTime())) {
         throw new BadRequestException('Invalid date filter (must be YYYY-MM-DD)');
       }
@@ -433,8 +433,7 @@ export class AccountsController {
 
     const virtualAccount = await this.accountsService.findBySlashId(slashId);
 
-    // Parse as LOCAL date to match how daily summaries are normalized/stored (GGS behavior)
-    const date = startOfDay(parseYyyyMmDdAsLocalDate(dto.date));
+    const date = parseYyyyMmDdAsUtcDate(dto.date);
     if (Number.isNaN(date.getTime())) {
       throw new BadRequestException('Invalid date');
     }
