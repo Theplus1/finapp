@@ -25,6 +25,13 @@ export class CustomerCardQueryDto {
   @IsEnum(CardStatus)
   status?: CardStatus;
 
+  @ApiPropertyOptional({
+    description: 'Search keyword for card name or last 4 digits',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
   @ApiPropertyOptional({ description: 'Card group Slash ID' })
   @IsOptional()
   @IsString()

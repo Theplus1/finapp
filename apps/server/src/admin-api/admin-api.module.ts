@@ -9,6 +9,7 @@ import { CardGroupsModule } from '../domain/card-groups/card-groups.module';
 import { TransactionsModule } from '../domain/transactions/transactions.module';
 import { AccountsModule } from '../domain/accounts/accounts.module';
 import { AdminUsersModule } from '../domain/admin-users/admin-users.module';
+import { DatabaseModule } from '../database/database.module';
 
 // Controllers
 import { AuthController } from './controllers/auth.controller';
@@ -54,7 +55,8 @@ import { DailyPaymentSummariesModule } from 'src/domain/daily-payment-summaries/
     TransactionsModule, // Domain logic for transactions
     AccountsModule, // Domain logic for accounts
     AdminUsersModule, // Domain logic for admin users
-    DailyPaymentSummariesModule
+    DailyPaymentSummariesModule,
+    DatabaseModule, // Access to repositories like DepositHistoryRepository
   ],
   controllers: [
     AuthController,

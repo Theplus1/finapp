@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsInt,
   IsNotEmpty,
+  IsNumber,
   IsString,
   Matches,
   Min,
@@ -20,11 +20,11 @@ export class UpsertDepositDto {
   date: string;
 
   @ApiProperty({
-    description: 'Total deposit amount in cents for the day',
-    example: 123000,
+    description: 'Deposit amount in USD (major units) for the day',
+    example: 123.45,
   })
-  @IsInt()
+  @IsNumber()
   @Min(0)
-  depositCents: number;
+  depositAmount: number;
 }
 

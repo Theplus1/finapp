@@ -105,12 +105,16 @@ export class CustomerCardSpendController {
       endDate: toDate.toISOString(),
     });
 
-    // Gom các ngày có giao dịch
+    // Collect days that have transactions
     const daySet = new Set<string>();
-    // Map cardId -> { cardName, daySpendCents: Record<date, cents> }
+    // Map cardId -> { cardName, cardLast4?, daySpendCents: Record<date, cents> }
     const perCard = new Map<
       string,
-      { cardName: string; daySpendCents: Record<string, number> }
+      {
+        cardName: string;
+        cardLast4?: string;
+        daySpendCents: Record<string, number>;
+      }
     >();
 
     for (const tx of transactions) {
@@ -124,18 +128,24 @@ export class CustomerCardSpendController {
 
       const amountCents = Math.abs(tx.amountCents || 0);
 
-      // cardName từ enriched card (nếu có), fallback cardId
+      // Card name and last4 from enriched card (if available), fallback to cardId
       const cardName =
         (tx as any).card?.name ??
         (tx as any).card?.slashId ??
         cardId;
+      const cardLast4: string | undefined = (tx as any).card?.last4;
 
       const existing =
         perCard.get(cardId) ??
         {
           cardName,
+          cardLast4,
           daySpendCents: {} as Record<string, number>,
         };
+
+      if (!existing.cardLast4 && cardLast4) {
+        existing.cardLast4 = cardLast4;
+      }
 
       existing.daySpendCents[dayKey] =
         (existing.daySpendCents[dayKey] ?? 0) + amountCents;
@@ -148,7 +158,10 @@ export class CustomerCardSpendController {
 
     // Build rows per card
     const rows = Array.from(perCard.entries()).map(([cardId, data]) => {
-      const daySpendCents: Record<string, number> = {} as Record<string, number>;
+      const daySpendCents: Record<string, number> = {} as Record<
+        string,
+        number
+      >;
       let totalSpendCents = 0;
       for (const day of days) {
         const value = data.daySpendCents[day] ?? 0;
@@ -158,6 +171,7 @@ export class CustomerCardSpendController {
       return {
         cardId,
         cardName: data.cardName,
+        cardLast4: data.cardLast4,
         isTotal: false,
         daySpendCents,
         totalSpendCents,
@@ -178,6 +192,7 @@ export class CustomerCardSpendController {
     rows.push({
       cardId: null as any,
       cardName: 'Total',
+      cardLast4: undefined,
       isTotal: true,
       daySpendCents: totalDaySpend,
       totalSpendCents: totalRowSum,

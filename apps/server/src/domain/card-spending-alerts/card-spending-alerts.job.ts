@@ -53,7 +53,7 @@ export class CardSpendingAlertsJob implements OnModuleInit {
    */
   async checkCardSpendingAndSendAlerts() {
     if (!this.enableCardSpendingAlert) {
-      this.logger.debug('Card spending alert feature is disabled. Skipping check.');
+      this.logger.log('Card spending alert feature is disabled. Skipping check.');
       return;
     }
 

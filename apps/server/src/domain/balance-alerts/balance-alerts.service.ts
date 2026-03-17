@@ -4,16 +4,15 @@ import { AccountsService } from '../accounts/accounts.service';
 import { UsersService } from '../../users/users.service';
 import { BotService } from '../../bot/bot.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { GoogleSheetsService } from '../../integrations/google-sheets/services/google-sheets.service';
-import { GoogleSheetReportAllService } from '../../integrations/google-sheets/services/google-sheet-report-all.service';
-import { SheetName } from '../../integrations/google-sheets/constants/sheet-names.constant';
+import { SlashApiService } from '../../integrations/slash/services/slash-api.service';
 import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
 import { NotificationStatus, NotificationType } from '../../database/schemas/notification.schema';
 import { Messages } from '../../bot/constants/messages.constant';
 
 /**
  * Balance Alert Service
- * Handles checking virtual account balances and sending alerts when balance is low
+ * Checks virtual account balances via Slash API and sends alerts when balance is low.
+ * No longer depends on Google Sheets.
  */
 @Injectable()
 export class BalanceAlertsService {
@@ -27,44 +26,36 @@ export class BalanceAlertsService {
     private readonly botService: BotService,
     private readonly notificationsService: NotificationsService,
     private readonly configService: ConfigService,
-    private readonly googleSheetsService: GoogleSheetsService,
-    private readonly googleSheetReportAllService: GoogleSheetReportAllService,
+    private readonly slashApiService: SlashApiService,
   ) {
     const thresholdUsd = this.configService.get<number>('balanceAlert.thresholdUsd', 5000);
-    this.thresholdCents = thresholdUsd * 100; // Convert USD to cents
+    this.thresholdCents = thresholdUsd * 100;
     this.cooldownHours = this.configService.get<number>('balanceAlert.cooldownHours', 24);
   }
 
   /**
-   * Check all virtual accounts and send alerts for low balances
-   * Reads balance from Google Sheet Payment sheet, cell E2
+   * Check all virtual accounts and send alerts for low balances.
+   * Reads balance from Slash API (real-time).
    */
   async checkAndSendAlerts(): Promise<void> {
-    this.logger.log('Starting balance alert check from Google Sheets...');
+    this.logger.log('Starting balance alert check (Slash API)...');
 
     try {
-      // Get all Google Sheet Report All records
-      const sheetReports = await this.googleSheetReportAllService.findAll();
-
-      this.logger.log(`Found ${sheetReports.length} Google Sheet reports to check`);
-
-      // Get all virtual accounts at once to avoid N+1 queries
       const virtualAccounts = await this.accountsService.findAll();
       const vaMap = new Map<string, VirtualAccountDocument>();
       virtualAccounts.forEach((va) => {
         vaMap.set(va.slashId, va);
       });
 
-      this.logger.log(`Loaded ${virtualAccounts.length} virtual accounts into memory`);
+      this.logger.log(`Loaded ${virtualAccounts.length} virtual accounts`);
 
-      // Process each sheet report
       let sentCount = 0;
       let skippedCount = 0;
       let errorCount = 0;
 
-      for (const report of sheetReports) {
+      for (const va of virtualAccounts) {
         try {
-          const result = await this.processSheetReport(report, vaMap);
+          const result = await this.processVirtualAccount(va, vaMap);
           if (result === 'sent') {
             sentCount++;
           } else if (result === 'skipped') {
@@ -75,8 +66,8 @@ export class BalanceAlertsService {
         } catch (error) {
           errorCount++;
           this.logger.error(
-            `Error processing sheet report for VA ${report.virtualAccountId} (sheetId: ${report.sheetId}):`,
-            error,
+            `Error processing VA ${va.slashId} (${va.name}):`,
+            error instanceof Error ? error.message : String(error),
           );
         }
       }
@@ -91,81 +82,63 @@ export class BalanceAlertsService {
   }
 
   /**
-   * Process a single Google Sheet report and send alert if balance is low
-   * @returns 'sent' if alert was sent, 'skipped' if skipped, 'error' if error occurred
+   * Process a single virtual account: fetch balance from Slash, send alert if low.
    */
-  private async processSheetReport(
-    report: any,
-    vaMap: Map<string, VirtualAccountDocument>,
+  private async processVirtualAccount(
+    va: VirtualAccountDocument,
+    _vaMap: Map<string, VirtualAccountDocument>,
   ): Promise<'sent' | 'skipped' | 'error'> {
     try {
-      // Read balance from Google Sheet Payment sheet, cell E2
-      const balanceResult = await this.readBalanceFromSheet(report.sheetId);
-
-      if (balanceResult === null) {
-        this.logger.error(
-          `Could not read balance from sheet ${report.sheetId} for VA ${report.virtualAccountId}. This is an error.`,
+      let balanceCents: number;
+      try {
+        const details = await this.slashApiService.getVirtualAccount(va.slashId);
+        if (details?.balance?.amountCents == null) {
+          this.logger.warn(`No balance in Slash response for VA ${va.slashId}. Skipping.`);
+          return 'skipped';
+        }
+        balanceCents = Math.round(Number(details.balance.amountCents));
+      } catch (apiError) {
+        this.logger.warn(
+          `Failed to get balance from Slash for VA ${va.slashId}: ${apiError instanceof Error ? apiError.message : String(apiError)}`,
         );
         return 'error';
       }
 
-      const balanceCents = Math.round(balanceResult * 100);
-
-      // Check if balance is below threshold
       if (balanceCents >= this.thresholdCents) {
         this.logger.log(
-          `Balance ${balanceCents / 100} USD for VA ${report.virtualAccountId} is above threshold. Skipping.`,
+          `Balance ${balanceCents / 100} USD for VA ${va.slashId} is above threshold. Skipping.`,
         );
         return 'skipped';
       }
 
-      const va = vaMap.get(report.virtualAccountId);
-      if (!va) {
-        this.logger.log(
-          `Virtual account ${report.virtualAccountId} not found in map. Skipping alert.`,
-        );
-        return 'skipped';
-      }
-
-      const user = await this.usersService.findByVirtualAccountId(report.virtualAccountId);
-
+      const user = await this.usersService.findByVirtualAccountId(va.slashId);
       if (!user) {
-        this.logger.log(
-          `No user found for virtual account ${report.virtualAccountId} (${va.name}). Skipping alert.`,
-        );
+        this.logger.log(`No user found for VA ${va.slashId} (${va.name}). Skipping.`);
         return 'skipped';
       }
 
       const userLabel = user.telegramId ?? user.telegramIds?.[0] ?? user.id;
-
-      // Check if user has notification destinations
       const destinations = this.usersService.getDestinations(user);
       if (destinations.length === 0) {
         this.logger.log(
-          `User ${userLabel} has no notification destinations for VA ${report.virtualAccountId}. Skipping alert.`,
+          `User ${userLabel} has no notification destinations for VA ${va.slashId}. Skipping.`,
         );
         return 'skipped';
       }
 
-      // Check cooldown
       const alreadySent = await this.notificationsService.isBalanceAlertSent(
         user.id,
-        report.virtualAccountId,
+        va.slashId,
         this.cooldownHours,
       );
-
       if (alreadySent) {
         this.logger.log(
-          `Balance alert already sent for VA ${report.virtualAccountId} within cooldown period. Skipping.`,
+          `Balance alert already sent for VA ${va.slashId} within cooldown. Skipping.`,
         );
         return 'skipped';
       }
 
-      const thresholdUsd = this.thresholdCents / 100;
       const message = Messages.balanceAlert(va.name, balanceCents / 100);
-      
-      // Gửi vào topic Warning nếu đã set warningThreadId, ngược lại gửi vào General (không thread)
-      // Chỉ truyền message_thread_id khi gửi vào topic khác General. General = không truyền (thread 1 gây lỗi "message thread not found").
       const results = await Promise.allSettled(
         destinations.map((dest) =>
           this.botService.sendMessage(dest.chatId, message.text, {
@@ -181,142 +154,48 @@ export class BalanceAlertsService {
 
       if (successCount === 0 && failedCount > 0) {
         this.logger.error(
-          `Failed to send message for VA ${report.virtualAccountId} to user ${userLabel}: All ${failedCount} destinations failed`,
+          `Failed to send balance alert for VA ${va.slashId} to user ${userLabel}: all ${failedCount} destinations failed`,
         );
         await this.notificationsService.createNotification({
           userId: user.id,
           type: NotificationType.BALANCE_ALERT,
           status: NotificationStatus.FAILED,
           data: {
-            virtualAccountId: report.virtualAccountId,
+            virtualAccountId: va.slashId,
             virtualAccountName: va.name,
             balanceCents,
             thresholdCents: this.thresholdCents,
-            sheetId: report.sheetId,
             error: `All ${failedCount} message destinations failed`,
           },
         });
         return 'error';
-      } else if (failedCount > 0) {
+      }
+
+      if (failedCount > 0) {
         this.logger.log(
-          `Partial failure: ${successCount} succeeded, ${failedCount} failed for VA ${report.virtualAccountId}`,
+          `Partial failure for VA ${va.slashId}: ${successCount} succeeded, ${failedCount} failed`,
         );
       }
 
-      const sendSuccess = true;
+      await this.notificationsService.createNotification({
+        userId: user.id,
+        type: NotificationType.BALANCE_ALERT,
+        status: NotificationStatus.SENT,
+        data: {
+          virtualAccountId: va.slashId,
+          virtualAccountName: va.name,
+          balanceCents,
+          thresholdCents: this.thresholdCents,
+        },
+      });
 
-      if (sendSuccess) {
-        await this.notificationsService.createNotification({
-          userId: user.id,
-          type: NotificationType.BALANCE_ALERT,
-          status: NotificationStatus.SENT,
-          data: {
-            virtualAccountId: report.virtualAccountId,
-            virtualAccountName: va.name,
-            balanceCents,
-            thresholdCents: this.thresholdCents,
-            sheetId: report.sheetId,
-          },
-        });
-
-        this.logger.log(
-          `Balance alert sent to user ${userLabel} for VA ${report.virtualAccountId} (${va.name}) - Balance: ${balanceCents / 100} USD`,
-        );
-        return 'sent';
-      } else {
-        await this.notificationsService.createNotification({
-          userId: user.id,
-          type: NotificationType.BALANCE_ALERT,
-          status: NotificationStatus.FAILED,
-          data: {
-            virtualAccountId: report.virtualAccountId,
-            virtualAccountName: va.name,
-            balanceCents,
-            thresholdCents: this.thresholdCents,
-            sheetId: report.sheetId,
-            error: 'Failed to send message',
-          },
-        });
-        return 'error';
-      }
-    } catch (error) {
-      this.logger.error(
-        `Failed to process sheet report for VA ${report.virtualAccountId}:`,
-        error,
+      this.logger.log(
+        `Balance alert sent to user ${userLabel} for VA ${va.slashId} (${va.name}) - Balance: ${balanceCents / 100} USD`,
       );
-
-      try {
-        const user = await this.usersService.findByVirtualAccountId(report.virtualAccountId);
-        if (user) {
-          await this.notificationsService.createNotification({
-            userId: user.id,
-            type: NotificationType.BALANCE_ALERT,
-            status: NotificationStatus.FAILED,
-            data: {
-              virtualAccountId: report.virtualAccountId,
-              balanceCents: 0,
-              thresholdCents: this.thresholdCents,
-              sheetId: report.sheetId,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            },
-          });
-        }
-      } catch (notificationError) {
-        this.logger.error('Failed to save notification record:', notificationError);
-      }
-
+      return 'sent';
+    } catch (error) {
+      this.logger.error(`Failed to process VA ${va.slashId}:`, error instanceof Error ? error.message : String(error));
       return 'error';
     }
   }
-
-  /**
-   * Read balance from Google Sheet Payment sheet, cell E2
-   * @param sheetId - Google Spreadsheet ID
-   * @returns Balance in USD (number) or null if error
-   */
-  private async readBalanceFromSheet(sheetId: string): Promise<number | null> {
-    try {
-      // Read cell E2 from Payment sheet
-      const range = 'E2';
-      const data = await this.googleSheetsService.readSheetData(
-        sheetId,
-        SheetName.PAYMENT,
-        range,
-      );
-
-      if (!data || data.length === 0 || !data[0] || data[0].length === 0) {
-        this.logger.log(`No data found in cell E2 of Payment sheet for sheetId ${sheetId}`);
-        return null;
-      }
-
-      const cellValue = data[0][0];
-      if (cellValue === undefined || cellValue === null || cellValue === '') {
-        this.logger.log(`Cell E2 is empty for sheetId ${sheetId}`);
-        return null;
-      }
-
-      let balance: number;
-      if (typeof cellValue === 'number') {
-        balance = cellValue;
-      } else if (typeof cellValue === 'string') {
-        // Remove currency symbols and commas, then parse
-        const cleaned = cellValue.replace(/[$,\s]/g, '');
-        balance = parseFloat(cleaned);
-        if (isNaN(balance)) {
-          this.logger.log(`Could not parse balance value "${cellValue}" from sheetId ${sheetId}`);
-          return null;
-        }
-      } else {
-        this.logger.error(`Unexpected balance value type: ${typeof cellValue} for sheetId ${sheetId}`);
-        return null;
-      }
-
-      return balance;
-    } catch (error) {
-      this.logger.error(`Error reading balance from sheet ${sheetId}:`, error);
-      return null;
-    }
-  }
 }
-
-

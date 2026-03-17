@@ -19,6 +19,7 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { VirtualAccountQueryDto } from '../dto/virtual-account-query.dto';
 import { UpdateVirtualAccountDto } from '../../integrations/slash/dto/account.dto';
@@ -39,9 +40,10 @@ import { SetBossAccountDto } from '../dto/set-boss-account.dto';
 import { AdminUserResponseDto } from '../dto/create-admin.dto';
 import { DailyPaymentSummariesService } from '../../domain/daily-payment-summaries/daily-payment-summaries.service';
 import { UpsertDepositDto } from '../dto/upsert-deposit.dto';
-import { startOfDay } from 'date-fns';
+import { startOfDay, format } from 'date-fns';
 import { ADMIN_API_ROLES } from '../../common/constants/auth.constants';
 import { parseYyyyMmDdAsLocalDate } from '../../common/utils/date.utils';
+import { DepositHistoryRepository } from '../../database/repositories/deposit-history.repository';
 
 @ApiTags('Admin API - Virtual Accounts')
 @ApiBearerAuth()
@@ -58,6 +60,7 @@ export class AccountsController {
     private readonly adminAuthService: AdminAuthService,
     private readonly adminUsersService: AdminUsersService,
     private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
+    private readonly depositHistoryRepository: DepositHistoryRepository,
   ) {}
 
   @Get()
@@ -93,6 +96,111 @@ export class AccountsController {
         limit: query.limit || PAGINATION_DEFAULTS.LIMIT,
         total,
       },
+    };
+  }
+
+  @Get(':id/deposits')
+  @ApiOperation({
+    summary: 'List deposit history for virtual account (paginated)',
+    description:
+      'Returns deposit records for the VA with pagination. Optional `date` (YYYY-MM-DD) filters to a specific day. Use page & limit for infinite scroll (hasMore = page < totalPages).',
+  })
+  @ApiParam({ name: 'id', description: 'Virtual Account Slash ID' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Filter by date (YYYY-MM-DD). If omitted, return all history.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Deposit history retrieved successfully',
+  })
+  async listDeposits(
+    @Param('id') slashId: string,
+    @Query('page') pageRaw?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('date') dateStr?: string,
+  ): Promise<{
+    virtualAccountId: string;
+    data: Array<{
+      id: string;
+      date: string;
+      amountCents: number;
+      currency: string;
+      note?: string;
+      createdAt: string;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const virtualAccount = await this.accountsService.findBySlashId(slashId);
+
+    const page =
+      pageRaw !== undefined
+        ? Math.max(
+            PAGINATION_DEFAULTS.MIN_PAGE,
+            Number.isNaN(Number(pageRaw)) ? PAGINATION_DEFAULTS.PAGE : Number(pageRaw),
+          )
+        : PAGINATION_DEFAULTS.PAGE;
+
+    const limit =
+      limitRaw !== undefined
+        ? Math.min(
+            PAGINATION_DEFAULTS.MAX_LIMIT,
+            Math.max(
+              PAGINATION_DEFAULTS.MIN_LIMIT,
+              Number.isNaN(Number(limitRaw)) ? PAGINATION_DEFAULTS.LIMIT : Number(limitRaw),
+            ),
+          )
+        : PAGINATION_DEFAULTS.LIMIT;
+
+    let forDate: Date | undefined;
+    if (dateStr) {
+      const parsed = parseYyyyMmDdAsLocalDate(dateStr);
+      if (Number.isNaN(parsed.getTime())) {
+        throw new BadRequestException('Invalid date filter (must be YYYY-MM-DD)');
+      }
+      forDate = parsed;
+    }
+
+    const [rows, total] =
+      await this.depositHistoryRepository.findWithPagination(
+        virtualAccount.slashId,
+        page,
+        limit,
+        forDate,
+      );
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const data = rows.map((r) => ({
+      id: String(r._id),
+      date: format(r.date, 'yyyy-MM-dd'),
+      amountCents: r.amountCents,
+      currency: r.currency,
+      note: r.note,
+      createdAt: r.createdAt?.toISOString() ?? '',
+    }));
+
+    return {
+      virtualAccountId: virtualAccount.slashId,
+      data,
+      total,
+      page,
+      limit,
+      totalPages,
     };
   }
 
@@ -303,7 +411,7 @@ export class AccountsController {
   @ApiOperation({
     summary: 'Upsert daily deposit for virtual account',
     description:
-      'Admin sets the total deposit (in cents) for a given virtual account and date',
+      'Admin sets the total deposit (in USD, major units) for a given virtual account and date',
   })
   @ApiParam({ name: 'id', description: 'Virtual Account Slash ID' })
   @ApiBody({ type: UpsertDepositDto })
@@ -331,12 +439,53 @@ export class AccountsController {
       throw new BadRequestException('Invalid date');
     }
 
-    await this.dailyPaymentSummariesService.upsertDepositForDate(
-      virtualAccount.slashId,
+    // Không cho phép ghi nhận nạp tiền ở ngày tương lai
+    const today = startOfDay(new Date());
+    if (date > today) {
+      throw new BadRequestException(
+        'Cannot record deposit for a future date. Please use today or a past date.',
+      );
+    }
+
+    const depositCents = Math.round(dto.depositAmount * 100);
+    const currency = 'USD';
+
+    // Write deposit history
+    await this.depositHistoryRepository.create({
+      virtualAccountId: virtualAccount.slashId,
       date,
-      dto.depositCents,
-      virtualAccount.currency,
-    );
+      amountCents: depositCents,
+      currency,
+    });
+
+    // Calculate total deposit for the day from history
+    const totalDepositCents =
+      await this.depositHistoryRepository.sumByVirtualAccountAndDate(
+        virtualAccount.slashId,
+        date,
+      );
+
+    try {
+      await this.dailyPaymentSummariesService.upsertDepositForDate(
+        virtualAccount.slashId,
+        date,
+        totalDepositCents,
+        currency,
+      );
+    } catch (error: any) {
+      const message = error?.message ?? '';
+      if (
+        message.includes('DailyPaymentSummary validation failed') &&
+        message.includes('currency') &&
+        message.includes('required')
+      ) {
+        throw new BadRequestException(
+          'Deposit currency is required. Please ensure this virtual account has a valid `currency` before recording deposits.',
+        );
+      }
+
+      throw error;
+    }
 
     return { success: true };
   }

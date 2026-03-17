@@ -10,7 +10,7 @@ export class DailyPaymentSummariesJob {
 
   // Số ngày gần nhất cần refresh (bao gồm hôm nay)
   // 2 ngày là đủ vì job chạy 5 phút/lần
-  private static readonly LOOKBACK_DAYS = 2;
+  private static readonly LOOKBACK_DAYS = 20;
 
   constructor(
     private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
@@ -21,7 +21,7 @@ export class DailyPaymentSummariesJob {
    * Cron job: định kỳ aggregate lại daily_payment_summaries
    * Chạy mỗi 15 phút để giữ dữ liệu gần realtime, không phụ thuộc webhook Slash.
    */
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_MINUTE)
   async recalculateRecentSummariesForAllAccounts(): Promise<void> {
     const now = new Date();
     const endDate = startOfDay(now);
