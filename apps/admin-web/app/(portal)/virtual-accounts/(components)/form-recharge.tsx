@@ -24,7 +24,7 @@ const FormRecharge = ({
   onSubmitRechargeSuccess,
 }: Props) => {
   const [date, setDate] = useState<Date | undefined>(undefined);
-  const [amount, setAmount] = useState<string>("");
+  const [amount, setAmount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const { mutateAsync: deposit } = useMutation({
@@ -34,7 +34,7 @@ const FormRecharge = ({
         .dailyDeposit(virtualAccount!.slashId, {
           // date format YYYY-MM-DD
           date: new Date(date!).toLocaleDateString("en-CA"),
-          depositAmount: parseInt(amount),
+          depositAmount: amount,
         })
         .then(() => {
           toast.success("Deposit created successfully");
@@ -58,7 +58,7 @@ const FormRecharge = ({
 
   const handleDrawerClose = () => {
     setDate(undefined);
-    setAmount("");
+    setAmount(0);
     onCancelRecharge();
   };
 
@@ -85,12 +85,12 @@ const FormRecharge = ({
             Amount ($)
           </label>
           <Input
-            type="number"
             placeholder="Enter amount"
             value={amount}
+            type="number"
             onChange={(e) => {
               const value = e.target.value;
-              setAmount(value);
+              setAmount(Number(value));
             }}
           />
         </div>

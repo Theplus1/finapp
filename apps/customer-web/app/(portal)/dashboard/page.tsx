@@ -231,6 +231,7 @@ export default function Dashboard() {
             onCardChange={(cardId) => handleChangeFilter("cardId", cardId)}
             onDateFromChange={(date) => handleChangeFilter("startDate", date)}
             onDateToChange={(date) => handleChangeFilter("endDate", date)}
+            onSearch={(search) => handleChangeFilter("transactionId", search)}
           />
           <DataTable
             columns={columns}
