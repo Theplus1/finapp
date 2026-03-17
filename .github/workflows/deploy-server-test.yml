@@ -116,9 +116,10 @@ jobs:
               ${IMAGE_NAME}
 
             # Clean up old images (keep last 3)
-            docker images ghcr.io/theplus1/finapp-server-test --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | \
-              tail -n +4 | tail -n +4 | awk '{print $1}' | \
-              xargs -r docker rmi
+            docker images ghcr.io/theplus1/finapp-server-test --format "{{.Repository}}:{{.Tag}}" | \
+              grep -v '<none>' | \
+              tail -n +4 | \
+              xargs -r docker rmi || true
 
             echo "✅ Deployment complete"
             docker ps --filter "name=finapp-server"
