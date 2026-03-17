@@ -5,6 +5,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { WinstonLogger } from './common/utils/logger';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { setDefaultResultOrder } from 'node:dns';
 import { randomUUID } from 'node:crypto';
@@ -31,8 +32,11 @@ async function bootstrap() {
   // Enable CORS if needed
   app.enableCors();
 
-  // Apply global response interceptor
-  app.useGlobalInterceptors(new ResponseInterceptor());
+  // Apply global interceptors
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new ResponseInterceptor(),
+  );
 
   // Apply global exception filter
   app.useGlobalFilters(new HttpExceptionFilter());

@@ -324,7 +324,7 @@ export class SlashSyncService {
       });
 
       this.logger.log(
-        `Completed full transaction sync: ${result.totalProcessed} processed, ` +
+        `Completed full transaction sync from ${startDate?.toISOString()} to ${endDate?.toISOString()}: ${result.totalProcessed} processed, ` +
         `${result.totalCreated} created, ${result.totalUpdated} updated, ${result.totalFailed} failed`,
       );
     } catch (error) {
@@ -439,7 +439,7 @@ export class SlashSyncService {
             if (itemResult.failed) result.totalFailed++;
           }
         }
-
+        this.logger.log(`Fetched ${response.metadata?.count || 0} transactions, has more: ${!!response.metadata?.nextCursor}`);
         cursor = response.metadata?.nextCursor;
         
         // Add delay between pagination requests for additional rate limit protection

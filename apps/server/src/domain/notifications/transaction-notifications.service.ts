@@ -25,7 +25,7 @@ export class TransactionNotificationsService {
   ) { }
 
   async checkAndNotifyNewTransactions(): Promise<void> {
-    this.logger.log('Scanning database for new transactions to notify...');
+    this.logger.debug('Scanning database for new transactions to notify...');
 
     const lookbackSeconds = 30;
     const lookbackDate = new Date(Date.now() - lookbackSeconds * 1000);
@@ -37,7 +37,7 @@ export class TransactionNotificationsService {
       limit: 100,
     });
 
-    this.logger.log(`Found ${recentTransactions.length} recent transactions to check`);
+    this.logger.debug(`Found ${recentTransactions.length} recent transactions to check`);
 
     for (const transaction of recentTransactions) {
       await this.notifyUserAboutTransaction(transaction);
@@ -45,7 +45,7 @@ export class TransactionNotificationsService {
   }
 
   private async notifyUserAboutTransaction(transaction: any): Promise<void> {
-    this.logger.log(`Processing notification for transaction: ${transaction.slashId}`);
+    this.logger.debug(`Processing notification for transaction: ${transaction.slashId}`);
 
     if (transaction.amountCents !== -100) {
       this.logger.debug(
@@ -110,7 +110,7 @@ export class TransactionNotificationsService {
     const hasCardName = !!card?.name;
     const description = transactionDto.merchantData?.description;
     if (!hasCardName || !description) {
-      this.logger.log(
+      this.logger.debug(
         `Skip sending notification for transaction ${transaction.slashId} because card name or description is missing`,
       );
       return;
@@ -137,6 +137,6 @@ export class TransactionNotificationsService {
       },
     });
 
-    this.logger.log(`Notification sent for transaction: ${transaction.slashId}`);
+    this.logger.debug(`Notification sent for transaction: ${transaction.slashId}`);
   }
 }

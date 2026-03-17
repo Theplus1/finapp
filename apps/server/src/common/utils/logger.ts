@@ -5,8 +5,11 @@ export class WinstonLogger implements LoggerService {
   private logger: winston.Logger;
 
   constructor() {
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    const logLevel = process.env.LOG_LEVEL || (isDevelopment ? 'info' : 'warn');
+
     this.logger = winston.createLogger({
-      level: 'info',
+      level: logLevel,
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.errors({ stack: true }),
@@ -16,12 +19,17 @@ export class WinstonLogger implements LoggerService {
       defaultMeta: { service: 'finapp-server' },
       transports: [
         new winston.transports.Console({
-          format: process.env.NODE_ENV === 'production'
-            ? winston.format.json()
-            : winston.format.combine(
+          format: isDevelopment
+            ? winston.format.combine(
                 winston.format.colorize(),
-                winston.format.simple(),
-              ),
+                winston.format.printf(({ level, message, context, correlationId, timestamp, ...meta }) => {
+                  const contextStr = context ? `[${context}]` : '';
+                  const corrId = correlationId ? `[${correlationId}]` : '';
+                  const metaStr = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
+                  return `${timestamp} ${level} ${corrId}${contextStr} ${message}${metaStr}`;
+                }),
+              )
+            : winston.format.json(),
         }),
       ],
     });
@@ -45,5 +53,10 @@ export class WinstonLogger implements LoggerService {
 
   verbose(message: string, context?: string) {
     this.logger.verbose(message, { context });
+  }
+
+  // Helper method for logging with correlation ID
+  logWithCorrelation(level: string, message: string, correlationId: string, context?: string, meta?: any) {
+    this.logger.log(level, message, { context, correlationId, ...meta });
   }
 }

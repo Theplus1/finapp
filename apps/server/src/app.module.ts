@@ -25,6 +25,8 @@ import { ExportsModule } from './domain/exports/exports.module';
 import { BalanceAlertsModule } from './domain/balance-alerts/balance-alerts.module';
 import { CardSpendingAlertsModule } from './domain/card-spending-alerts/card-spending-alerts.module';
 
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+
 @Module({
   imports: [
     // OpenTelemetry - uses tracing.ts SDK configuration
@@ -157,4 +159,10 @@ import { CardSpendingAlertsModule } from './domain/card-spending-alerts/card-spe
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(CorrelationIdMiddleware)
+      .forRoutes('*');
+  }
+}
