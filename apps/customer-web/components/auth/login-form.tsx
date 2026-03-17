@@ -33,7 +33,7 @@ export function LoginForm({
         <CardHeader>
           <CardTitle>Login to your account</CardTitle>
           <CardDescription>
-            Enter your username below to login to your account
+            Enter your email below to login to your account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -45,12 +45,12 @@ export function LoginForm({
                 </div>
               )}
               <Field>
-                <FieldLabel htmlFor="username">Username</FieldLabel>
+                <FieldLabel htmlFor="username">Email</FieldLabel>
                 <Input
                   id="username"
                   name="username"
-                  type="text"
-                  placeholder="Username"
+                  type="email"
+                  placeholder="Email"
                   required
                 />
               </Field>

@@ -128,4 +128,12 @@ export const virtualAccountsApi = {
       { params },
     );
   },
+  deleteDailyDeposit: async (
+    virtualAccountId: string,
+    historyId: string,
+  ): Promise<ApiResponse<VirtualAccount>> => {
+    return await apiClient.delete(
+      `/virtual-account/${virtualAccountId}/deposits/${historyId}`,
+    );
+  },
 };

@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 import { RoleUserEnum } from "@/lib/api/endpoints/users";
+import { isEmail } from "@repo/ui/lib/utils";
 
 type Props = {
   openDrawer: boolean;
@@ -86,6 +87,7 @@ const FormSetEmployee = ({
     isLoading ||
     !username ||
     !email ||
+    !isEmail(email) ||
     !password ||
     !confirmPassword ||
     password !== confirmPassword;
@@ -137,14 +139,20 @@ const FormSetEmployee = ({
           <label className="block text-sm font-medium text-muted-foreground">
             Email
           </label>
-          <Input
-            placeholder="Enter email"
-            value={email}
-            onChange={(e) => {
-              const value = e.target.value;
-              setEmail(value);
-            }}
-          />
+
+          <Field data-invalid={!isEmail(email)}>
+            <InputGroup className="pr-1">
+              <InputGroupInput
+                type="email"
+                placeholder="Enter email"
+                value={email}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEmail(value);
+                }}
+              />
+            </InputGroup>
+          </Field>
         </div>
         <div className="flex flex-col gap-2">
           <label className="block text-sm font-medium text-muted-foreground">

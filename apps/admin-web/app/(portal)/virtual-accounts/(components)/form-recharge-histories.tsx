@@ -2,11 +2,10 @@ import {
   DataRechargeHistory,
   VirtualAccount,
 } from "@/lib/api/endpoints/virtual-account";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import DepositHistoryItem from "./deposit-history-item";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { DrawerFooter } from "@repo/ui/components/drawer";
 import { Button } from "@repo/ui/components/button";
 
@@ -16,7 +15,7 @@ type Props = {
   handleDrawerClose: () => void;
 };
 
-const limitQuery = 5;
+const limitQuery = 10;
 
 const FormRechargeHistories = ({
   virtualAccount,
@@ -24,10 +23,11 @@ const FormRechargeHistories = ({
   handleDrawerClose,
 }: Props) => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [countGetListState, setCountGetListState] = useState(countGetList);
 
   const { data, fetchNextPage, hasNextPage, isFetching } = useInfiniteQuery({
     initialPageParam: 1 as number,
-    queryKey: ["daily-deposit", virtualAccount?.slashId, countGetList],
+    queryKey: ["daily-deposit", virtualAccount?.slashId, countGetListState],
     queryFn: async ({ pageParam = 1 }) => {
       const response = await api.virtualAccounts.getDailyDeposit(
         virtualAccount!.slashId,
@@ -71,9 +71,11 @@ const FormRechargeHistories = ({
             (item) => (
               <DepositHistoryItem
                 key={item.id}
-                label={item.date}
-                value={item.amountCents}
-                createdAt={item.createdAt}
+                virtualAccountId={virtualAccount!.slashId}
+                item={item}
+                onDeleteSuccess={() => {
+                  setCountGetListState((prev) => prev + 1);
+                }}
               />
             ),
           )}

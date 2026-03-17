@@ -10,6 +10,7 @@ import { Spinner } from "@repo/ui/components/spinner";
 import { cn } from "@/lib/utils";
 import { Field } from "@repo/ui/components/field";
 import { InputGroup, InputGroupInput } from "@repo/ui/components/input-group";
+import { isEmail } from "@repo/ui/lib/utils";
 
 type Props = {
   virtualAccount: VirtualAccount | null;
@@ -69,6 +70,7 @@ const FormSetAccount = ({
     isLoading ||
     !username ||
     !email ||
+    !isEmail(email) ||
     !password ||
     !confirmPassword ||
     password !== confirmPassword;
@@ -93,14 +95,19 @@ const FormSetAccount = ({
           <label className="block text-sm font-medium text-muted-foreground">
             Email
           </label>
-          <Input
-            placeholder="Enter email"
-            value={email}
-            onChange={(e) => {
-              const value = e.target.value;
-              setEmail(value);
-            }}
-          />
+          <Field data-invalid={!isEmail(email)}>
+            <InputGroup className="pr-1">
+              <InputGroupInput
+                type="email"
+                placeholder="Enter email"
+                value={email}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEmail(value);
+                }}
+              />
+            </InputGroup>
+          </Field>
         </div>
         <div className="flex flex-col gap-2">
           <label className="block text-sm font-medium text-muted-foreground">
