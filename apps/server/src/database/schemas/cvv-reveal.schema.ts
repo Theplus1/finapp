@@ -21,6 +21,12 @@ export class CvvReveal {
   revealedAt: Date;
 
   @Prop()
+  lastRevealedAt?: Date;
+
+  @Prop({ default: 1 })
+  revealCount: number;
+
+  @Prop()
   createdAt: Date;
 
   @Prop()
@@ -33,5 +39,11 @@ export const CvvRevealSchema = SchemaFactory.createForClass(CvvReveal);
 CvvRevealSchema.index(
   { cardSlashId: 1, revealedAt: -1 },
   { name: 'card_revealedAt_desc_idx' },
+);
+
+// Đảm bảo mỗi (cardSlashId, revealedByUserId) chỉ có 1 bản ghi
+CvvRevealSchema.index(
+  { cardSlashId: 1, revealedByUserId: 1 },
+  { unique: true, name: 'card_user_unique_reveal_idx' },
 );
 

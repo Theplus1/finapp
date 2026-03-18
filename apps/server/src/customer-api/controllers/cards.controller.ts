@@ -105,7 +105,7 @@ export class CustomerCardsController {
       );
     }
 
-    await this.cvvRevealRepository.create({
+    await this.cvvRevealRepository.recordReveal({
       cardSlashId,
       virtualAccountId,
       revealedByUserId: revealedByUserId || 'unknown',
@@ -140,6 +140,8 @@ export class CustomerCardsController {
     cardId: string;
     data: Array<{
       revealedAt: Date;
+      lastRevealedAt?: Date;
+      revealCount: number;
       revealedByUserId: string;
       revealedByUsername: string;
     }>;
@@ -170,6 +172,8 @@ export class CustomerCardsController {
 
     const data = items.map((doc) => ({
       revealedAt: doc.revealedAt,
+      lastRevealedAt: doc.lastRevealedAt ?? doc.revealedAt,
+      revealCount: doc.revealCount ?? 1,
       revealedByUserId: doc.revealedByUserId,
       revealedByUsername: doc.revealedByUsername,
     }));
