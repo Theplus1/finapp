@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, LogOut, KeyRound } from "lucide-react";
 import { upperCaseFirstCharacter } from "@repo/ui/lib/func";
 
 import {
@@ -47,6 +47,10 @@ export function SidebarAction() {
     window.location.href = "/login";
   };
 
+  const handleChangePassword = () => {
+    window.location.href = "/change-password";
+  };
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -54,7 +58,7 @@ export function SidebarAction() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground cursor-pointer"
             >
               <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                 <AudioWaveform className="size-4" />
@@ -76,6 +80,17 @@ export function SidebarAction() {
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
+            <DropdownMenuItem
+              className="gap-2 p-2 cursor-pointer"
+              onClick={handleChangePassword}
+            >
+              <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                <KeyRound className="size-4" />
+              </div>
+              <div className="text-muted-foreground font-medium cursor-pointer">
+                Change password
+              </div>
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 p-2 cursor-pointer"
               onClick={handleLogout}

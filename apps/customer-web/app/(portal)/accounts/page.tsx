@@ -121,7 +121,11 @@ export default function Accounts() {
     {
       header: "Role",
       cell: ({ row }: CellContext<Employee, string>) => {
-        return isLoading ? <Skeleton /> : upperCaseFirstCharacter(row.original.role);
+        return isLoading ? (
+          <Skeleton />
+        ) : (
+          upperCaseFirstCharacter(row.original.role)
+        );
       },
     },
     {
@@ -143,12 +147,11 @@ export default function Accounts() {
         ) : (
           <div className="flex justify-center">
             <Popover>
-              <PopoverTrigger className="cursor-pointer"><Ellipsis /></PopoverTrigger>
+              <PopoverTrigger className="cursor-pointer">
+                <Ellipsis />
+              </PopoverTrigger>
               <PopoverContent>
-                <ActionsTable
-                  employee={row.original}
-                  onClickAction={() => {}}
-                />
+                <ActionsTable employee={row.original} onDeactivateSuccess={() => setCountGetList((prev) => prev + 1)} />
               </PopoverContent>
             </Popover>
           </div>

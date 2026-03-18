@@ -40,7 +40,7 @@ export default function Dashboard() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const [pagination, setPagination] = useState({
     page: 1,
-    pageSize: 20,
+    pageSize: 50,
     total: 0,
   });
   const [currentFilter, setCurrentFilter] = useState(initFilter);
@@ -83,7 +83,7 @@ export default function Dashboard() {
           ) : (
             renderNoTable(
               { page: pagination.page, pageSize: pagination.pageSize },
-              row.index
+              row.index,
             )
           );
         },
@@ -124,7 +124,7 @@ export default function Dashboard() {
                 row.original.amountCents >= 0
                   ? "text-green-700"
                   : "text-red-500",
-                "text-end"
+                "text-end",
               )}
             >
               {formatDollarByCent(row.original.amountCents)}
@@ -175,7 +175,7 @@ export default function Dashboard() {
         },
       },
     ],
-    [isLoading, pagination]
+    [isLoading, pagination],
   ) as ColumnDef<Transaction>[];
 
   const handleChangeFilter = (field: string, value: string | undefined) => {

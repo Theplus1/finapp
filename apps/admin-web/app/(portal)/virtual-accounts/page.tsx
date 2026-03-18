@@ -9,7 +9,7 @@ import {
   formatNumberAsPercentage,
   renderNoTable,
 } from "@/app/utils/func";
-
+import { Ellipsis } from "lucide-react";
 import { PageLayout } from "@/components/layouts/page-layout";
 import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { SectionContent } from "@/components/layouts/section";
@@ -302,7 +302,9 @@ export default function VirtualAccount() {
         return (
           <div className="flex justify-center">
             <Popover>
-              <PopoverTrigger className="cursor-pointer">...</PopoverTrigger>
+              <PopoverTrigger className="cursor-pointer">
+                <Ellipsis />
+              </PopoverTrigger>
               <PopoverContent>
                 <ActionsTable
                   virtualAccount={row.original}

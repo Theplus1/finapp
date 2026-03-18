@@ -4,6 +4,7 @@ import type { ApiResponse } from "../client";
 export enum DrawerTypeVirtualAccountEnum {
   LINK_TELEGRAM = "link-telegram",
   SET_ACCOUNT = "set-account",
+  RESET_PASSWORD = "reset-password",
   RECHARGE = "recharge",
   RECHARGE_HISTORY = "recharge-history",
 }
@@ -40,6 +41,18 @@ export interface VirtualAccount {
   routingNumber: string;
   bossEmail?: string;
   bossUsername?: string;
+}
+
+export interface ResetPasswordResponse {
+  success: true;
+  message: string;
+  data: {
+    username: string;
+    newPassword: string;
+  };
+  meta: {
+    timestamp: string;
+  };
 }
 
 type Params = {
@@ -109,6 +122,11 @@ export const virtualAccountsApi = {
       `/virtual-account/${virtualAccountId}/set-account`,
       body,
     );
+  },
+  resetPassword: async (
+    username: string,
+  ): Promise<ApiResponse<ResetPasswordResponse>> => {
+    return await apiClient.post(`/auth/users/${username}/reset-password`);
   },
   dailyDeposit: async (
     virtualAccountId: string,

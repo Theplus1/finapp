@@ -7,7 +7,9 @@ import { SidebarAction } from "@/components/navigation/sidebar-action";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
+  SidebarMenuButton,
   SidebarRail,
 } from "@repo/ui/components/sidebar";
 import { navMain as navMainConfig } from "@/config/navigation";
@@ -37,9 +39,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain items={navMainItems} />
       </SidebarContent>
-      {/* <SidebarFooter>
-        <NavUser user={userData} />
-      </SidebarFooter> */}
+      <SidebarFooter>
+        <SidebarMenuButton isActive={true}>
+          Timezone: <span>GMT+0</span>
+        </SidebarMenuButton>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

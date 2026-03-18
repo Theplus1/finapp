@@ -21,6 +21,7 @@ import {
 import { useDebounce } from "@repo/ui/hooks/use-debounce";
 
 const now = new Date();
+const AMOUNT_WARNING = 1000 * 100; // 1000 USD in cents
 
 const initFilter = {
   from: new Date(now.getFullYear(), now.getMonth(), 2)
@@ -131,18 +132,18 @@ export default function Cards() {
         return {
           accessorKey: dateKey,
           header: (
-            <div style={{ textAlign: "center", width: "100px" }}>
+            <div className="text-center w-[100px]">
               {`${dayStr}/${monthStr}`}
             </div>
           ) as unknown as string,
           cell: ({ row }) => {
-            return isLoading ? (
-              <Skeleton />
-            ) : (
-              <div style={{ textAlign: "end" }}>
-                {(row.original as RowData).data[dateKey] > 0
-                  ? formatDollarByCent((row.original as RowData).data[dateKey])
-                  : EMPTY_LABEL}
+            if (isLoading) return <Skeleton />;
+            const data = (row.original as RowData).data[dateKey];
+            return (
+              <div
+                className={`text-end p-1 ${data > AMOUNT_WARNING ? "bg-red-500 text-white" : ""}`}
+              >
+                {data > 0 ? formatDollarByCent(data) : EMPTY_LABEL}
               </div>
             );
           },
@@ -157,6 +158,9 @@ export default function Cards() {
           row,
         }: CellContext<CardSpendRow & { label: string }, number>) => {
           return isLoading ? <Skeleton /> : row.original.label;
+        },
+        meta: {
+          fixed: 0,
         },
       },
       ...generateDateColumns(

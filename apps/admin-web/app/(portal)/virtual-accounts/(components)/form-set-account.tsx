@@ -93,7 +93,7 @@ const FormSetAccount = ({
         </div>
         <div className="flex flex-col gap-2">
           <label className="block text-sm font-medium text-muted-foreground">
-            Email
+            Email (Use for login)
           </label>
           <Field data-invalid={!isEmail(email)}>
             <InputGroup className="pr-1">

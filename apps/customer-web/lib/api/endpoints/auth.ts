@@ -92,4 +92,12 @@ export const authApi = {
   ): Promise<ApiResponse<void>> => {
     return apiClient.post<void>("/auth/reset-password", { token, password });
   },
+  changePassword: async (
+    username: string,
+    newPassword: string,
+  ): Promise<ApiResponse<void>> => {
+    return apiClient.patch<void>(`/auth/users/${username}/password`, {
+      newPassword,
+    });
+  },
 };

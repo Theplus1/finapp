@@ -57,7 +57,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<Employee>(initEmployee);
   const [pagination, setPagination] = useState({
     page: 1,
-    pageSize: 20,
+    pageSize: 50,
     total: 0,
   });
   const [currentFilter, setCurrentFilter] = useState(initFilter);

@@ -1,9 +1,10 @@
 import { Button } from "@repo/ui/components/button";
-import { History, Plus, Settings } from "lucide-react";
+import { History, KeyRound, Plus, Settings } from "lucide-react";
 import {
   DrawerTypeVirtualAccountEnum,
   VirtualAccount,
 } from "@/lib/api/endpoints/virtual-account";
+import ActionResetPassword from "./action-reset-password";
 
 type Props = {
   onClickAction: (type: DrawerTypeVirtualAccountEnum) => void;
@@ -29,8 +30,9 @@ const ActionsTable = ({ onClickAction, virtualAccount }: Props) => {
           }
         >
           <Settings data-icon="inline-start" />
-          Connect boss account
+          Set boss account
         </Button>
+        <ActionResetPassword virtualAccount={virtualAccount} />
         <Button
           variant={"outline"}
           size={"default"}

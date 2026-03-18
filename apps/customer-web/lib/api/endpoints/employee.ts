@@ -2,7 +2,7 @@
  * Users API endpoints
  */
 
-import { RoleUserEnum } from "@/config/navigation";
+import { RoleUserEnum } from "./users";
 import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
 
@@ -68,6 +68,16 @@ export const employeeApi = {
   },
 
   deleteEmployee: async (id: string): Promise<ApiResponse<void>> => {
+    return apiClient.delete<void>(`/employees/${id}`);
+  },
+  resetPassword: async (
+    id: string,
+  ): Promise<ApiResponse<{ newPassword: string }>> => {
+    return apiClient.post<{ newPassword: string }>(
+      `/employees/${id}/reset-password`,
+    );
+  },
+  deactivateEmployee: async (id: string): Promise<ApiResponse<void>> => {
     return apiClient.delete<void>(`/employees/${id}`);
   },
 };

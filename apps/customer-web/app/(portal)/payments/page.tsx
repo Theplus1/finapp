@@ -103,7 +103,7 @@ export default function Cards() {
     () => paymentInfors?.data ?? initDataPayment,
     [paymentInfors],
   );
-  
+
   const overallDataPayment: PaymentResponse = useMemo(
     () => overallPaymentInfors?.data ?? initDataPayment,
     [overallPaymentInfors],
@@ -200,6 +200,9 @@ export default function Cards() {
         header: "Date",
         cell: ({ row }: CellContext<Payment, number>) => {
           return dateColumnLabel[row.index];
+        },
+        meta: {
+          fixed: 0,
         },
       },
       ...generateDateColumns(
