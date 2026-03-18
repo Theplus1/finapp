@@ -7,18 +7,26 @@ import {
   Post,
   UnauthorizedException,
   ForbiddenException,
+  Patch,
+  Param,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import {
   ApiBody,
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiBearerAuth,
+  ApiParam,
 } from '@nestjs/swagger';
 import { AdminAuthService } from '../../admin-api/services/admin-auth.service';
 import {
   AdminLoginDto,
   AdminLoginResponseDto,
 } from '../../admin-api/dto/admin-auth.dto';
+import { UpdatePasswordDto } from '../../admin-api/dto/create-admin.dto';
+import { JwtAuthGuard } from '../../admin-api/guards/jwt-auth.guard';
 import { isAdminApiRole } from '../../common/constants/auth.constants';
 
 @ApiTags('Customer API - Authentication')
@@ -66,6 +74,38 @@ export class CustomerAuthController {
 
     this.logger.log(`Customer login successful for user: ${body.username}`);
     return this.adminAuthService.login(user);
+  }
+
+  @Patch('users/:username/password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Update customer password',
+    description: 'Update password for a user (super-admin or self). Logic is shared with admin-api.',
+  })
+  @ApiParam({ name: 'username', description: 'Username of the user' })
+  @ApiBody({ type: UpdatePasswordDto })
+  @ApiResponse({ status: 200, description: 'Password updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async updatePassword(
+    @Request() req: any,
+    @Param('username') username: string,
+    @Body() updatePasswordDto: UpdatePasswordDto,
+  ) {
+    // Allow super-admin or the user themselves
+    if (req.user.role !== 'super-admin' && req.user.username !== username) {
+      throw new ForbiddenException('You can only update your own password');
+    }
+
+    await this.adminAuthService.updatePassword(
+      username,
+      updatePasswordDto.newPassword,
+    );
+
+    this.logger.log(`Password updated (customer-api) for user: ${username}`);
+
+    return { username, updated: true };
   }
 }
 

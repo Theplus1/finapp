@@ -27,6 +27,18 @@ export class AdminUsersService {
     private readonly adminUserRepository: AdminUserRepository,
   ) {}
 
+  private generateRandomPassword(length: number = 12): string {
+    const chars =
+      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+    const charsLength = chars.length;
+    let password = '';
+    for (let i = 0; i < length; i += 1) {
+      const randomIndex = Math.floor(Math.random() * charsLength);
+      password += chars.charAt(randomIndex);
+    }
+    return password;
+  }
+
   /**
    * Validate user credentials.
    *
@@ -190,6 +202,21 @@ export class AdminUsersService {
     this.logger.log(`Password updated for user: ${username}`);
   }
 
+  async resetBossPasswordRandom(username: string): Promise<{
+    username: string;
+    newPassword: string;
+  }> {
+    const boss = await this.adminUserRepository.findByUsername(username);
+    if (!boss || boss.role !== 'boss') {
+      throw new NotFoundException('Boss user not found');
+    }
+    const newPassword = this.generateRandomPassword();
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.adminUserRepository.update(username, { passwordHash });
+    this.logger.log(`Random password reset for boss user: ${username}`);
+    return { username, newPassword };
+  }
+
   /**
    * Deactivate admin user
    */
@@ -250,6 +277,42 @@ export class AdminUsersService {
    */
   async findEmployeesByBossId(bossId: string): Promise<AdminUserDocument[]> {
     return this.adminUserRepository.findEmployeesByBossId(bossId);
+  }
+
+  async resetEmployeePasswordRandom(
+    employeeId: string,
+    bossId: string,
+  ): Promise<{
+    id: string;
+    username: string;
+    newPassword: string;
+  }> {
+    const employee = await this.adminUserRepository.findById(employeeId);
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+    if (employee.bossId !== bossId) {
+      throw new ForbiddenException('Not allowed to reset this employee password');
+    }
+    if (!EMPLOYEE_ROLES.includes(employee.role)) {
+      throw new BadRequestException('Target user is not an employee');
+    }
+    const newPassword = this.generateRandomPassword();
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const updated = await this.adminUserRepository.updateById(employeeId, {
+      passwordHash,
+    });
+    if (!updated) {
+      throw new NotFoundException('Employee not found');
+    }
+    this.logger.log(
+      `Random password reset for employee ${employeeId} by boss ${bossId}`,
+    );
+    return {
+      id: (updated._id as unknown as { toString(): string }).toString(),
+      username: updated.username,
+      newPassword,
+    };
   }
 
   /**

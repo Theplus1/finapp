@@ -29,13 +29,17 @@ import { AdminLoginDto, AdminLoginResponseDto, AdminProfileDto } from '../dto/ad
 import { CreateAdminDto, AdminUserResponseDto, UpdatePasswordDto } from '../dto/create-admin.dto';
 import type { AuthenticatedUser } from '../services/admin-auth.service';
 import { isAdminApiRole } from '../../common/constants/auth.constants';
+import { AdminUsersService } from '../../domain/admin-users/admin-users.service';
 
 @ApiTags('Admin API - Authentication')
 @Controller('admin-api/auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly adminAuthService: AdminAuthService) {}
+  constructor(
+    private readonly adminAuthService: AdminAuthService,
+    private readonly adminUsersService: AdminUsersService,
+  ) {}
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
@@ -200,6 +204,38 @@ export class AuthController {
     this.logger.log(`Password updated for user: ${username}`);
 
     return { username, updated: true };
+  }
+
+  @Post('users/:username/reset-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Reset boss password to random value',
+    description:
+      'Admin/super-admin resets and returns a new random password for a boss user who forgot their password.',
+  })
+  @ApiParam({ name: 'username', description: 'Username of the boss user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successfully. New password is returned once.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async resetBossPassword(
+    @Request() req: any,
+    @Param('username') username: string,
+  ): Promise<{ username: string; newPassword: string }> {
+    if (!isAdminApiRole(req.user.role)) {
+      throw new ForbiddenException('Only admin users can reset boss passwords');
+    }
+
+    const result = await this.adminUsersService.resetBossPasswordRandom(
+      username,
+    );
+
+    this.logger.log(`Random password reset (admin-api) for boss: ${username}`);
+
+    return result;
   }
 
   @Delete('users/:username')

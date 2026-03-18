@@ -160,4 +160,32 @@ export class EmployeesController {
     await this.adminUsersService.deleteEmployee(id, bossId);
     return { success: true };
   }
+
+  @Post(':id/reset-password')
+  @ApiOperation({
+    summary: 'Reset employee password to a random value (boss only)',
+  })
+  @ApiParam({ name: 'id', description: 'Employee user ID' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Employee password reset successfully. New password is returned once.',
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden - not your employee' })
+  @ApiResponse({ status: 404, description: 'Employee not found' })
+  async resetPassword(
+    @Param('id') id: string,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{ id: string; username: string; newPassword: string }> {
+    const bossId = req.user?.userId;
+    if (!bossId) {
+      throw new Error('User context missing');
+    }
+    this.logger.log(
+      `Boss ${req.user?.username} resetting password for employee ${id}`,
+    );
+    const result =
+      await this.adminUsersService.resetEmployeePasswordRandom(id, bossId);
+    return result;
+  }
 }
