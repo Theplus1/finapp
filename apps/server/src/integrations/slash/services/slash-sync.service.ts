@@ -74,20 +74,6 @@ export class SlashSyncService {
       const entityData = mapTransactionDtoToEntity(transactionData, SYNC_CONSTANTS.SYNC_SOURCE.WEBHOOK);
       await this.transactionRepository.upsert(transactionData.id, entityData);
       this.logger.log(`Synced transaction ${transactionData.id} from webhook`);
-
-      // Trigger daily summary calculation for the transaction date
-      if (entityData.virtualAccountId && entityData.date) {
-        const virtualAccount = await this.virtualAccountRepository.findBySlashId(entityData.virtualAccountId);
-        if (virtualAccount) {
-          await this.dailyPaymentSummariesService.calculateAndSaveDailySummary(
-            entityData.virtualAccountId,
-            entityData.date,
-            virtualAccount.currency,
-          ).catch(err => {
-            this.logger.warn(`Failed to update daily summary for transaction ${transactionData.id}:`, err);
-          });
-        }
-      }
     } catch (error) {
       this.logger.error(`Error syncing transaction ${transactionData.id} from webhook:`, error);
       throw error;

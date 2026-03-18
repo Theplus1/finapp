@@ -1,5 +1,6 @@
-import { Controller, Post, Get, Query, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Query, HttpCode, HttpStatus, Logger, Param } from '@nestjs/common';
 import { SlashSyncService } from '../services/slash-sync.service';
+import { SlashLongSyncService } from '../services/slash-long-sync.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +16,7 @@ export class SlashSyncController {
 
   constructor(
     private readonly slashSyncService: SlashSyncService,
+    private readonly slashLongSyncService: SlashLongSyncService,
     private readonly schedulerRegistry: SchedulerRegistry,
     private readonly configService: ConfigService,
   ) {}
@@ -111,6 +113,67 @@ export class SlashSyncController {
   @ApiResponse({ status: 200, description: 'Sync statistics' })
   async getSyncStats(@Query('entityType') entityType?: string) {
     return this.slashSyncService.getSyncStats(entityType);
+  }
+
+  @Post('transactions/long')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Start long-running transaction sync (months back) with checkpoint recovery' })
+  @ApiResponse({ status: 202, description: 'Long sync started with syncId for tracking' })
+  async startLongSync(
+    @Query('monthsBack') monthsBack?: number,
+    @Query('delayBetweenBatches') delayBetweenBatches?: number,
+  ) {
+    const months = monthsBack ? parseInt(monthsBack.toString(), 10) : 6;
+    const delay = delayBetweenBatches ? parseInt(delayBetweenBatches.toString(), 10) : 10000;
+    
+    return this.slashLongSyncService.startLongSync({
+      monthsBack: months,
+      delayBetweenBatches: delay,
+      heartbeatInterval: 30000,
+    });
+  }
+
+  @Get('transactions/long/:syncId')
+  @ApiOperation({ summary: 'Get progress of a long-running sync' })
+  @ApiResponse({ status: 200, description: 'Sync progress details' })
+  async getLongSyncProgress(@Param('syncId') syncId: string) {
+    const progress = await this.slashLongSyncService.getSyncProgress(syncId);
+    
+    if (!progress) {
+      return { error: 'Sync not found', syncId };
+    }
+    
+    return progress;
+  }
+
+  @Get('transactions/long')
+  @ApiOperation({ summary: 'List all active long-running syncs' })
+  @ApiResponse({ status: 200, description: 'List of active syncs' })
+  async listActiveLongSyncs() {
+    return this.slashLongSyncService.listActiveSyncs();
+  }
+
+  @Post('transactions/long/:syncId/resume')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Resume a paused or failed long-running sync' })
+  @ApiResponse({ status: 202, description: 'Sync resumed from checkpoint' })
+  async resumeLongSync(
+    @Param('syncId') syncId: string,
+    @Query('delayBetweenBatches') delayBetweenBatches?: number,
+  ) {
+    const delay = delayBetweenBatches ? parseInt(delayBetweenBatches.toString(), 10) : 10000;
+    
+    return this.slashLongSyncService.resumeSync(syncId, {
+      delayBetweenBatches: delay,
+    });
+  }
+
+  @Post('transactions/long/:syncId/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cancel a running long-running sync' })
+  @ApiResponse({ status: 200, description: 'Sync cancelled' })
+  async cancelLongSync(@Param('syncId') syncId: string) {
+    return this.slashLongSyncService.cancelSync(syncId);
   }
 
   @Get('jobs/status')
