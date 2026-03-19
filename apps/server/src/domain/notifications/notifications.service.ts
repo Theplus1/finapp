@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationRepository } from 'src/database/repositories/notification.repository';
-import { NotificationStatus, NotificationType } from 'src/database/schemas/notification.schema';
+import { NotificationChannel, NotificationStatus, NotificationType } from 'src/database/schemas/notification.schema';
 
 @Injectable()
 export class NotificationsService {
@@ -15,6 +15,7 @@ export class NotificationsService {
   async createNotification(createNotificationDto: CreateNotificationDto & { userId: string }): Promise<string> {
     const notification = await this.notificationRepository.create({
       ...createNotificationDto,
+      channel: NotificationChannel.TELEGRAM,
     });
 
     return notification.id.toString();
@@ -23,6 +24,7 @@ export class NotificationsService {
   async isTransactionNotificationSent(userId: string, id: string) {
     const notifications = await this.notificationRepository.find({
       filter: {
+        channel: NotificationChannel.TELEGRAM,
         type: NotificationType.TRANSACTION,
         status: NotificationStatus.SENT,
         data: {
@@ -46,6 +48,7 @@ export class NotificationsService {
 
     const notifications = await this.notificationRepository.find({
       filter: {
+        channel: NotificationChannel.TELEGRAM,
         type: NotificationType.BALANCE_ALERT,
         status: NotificationStatus.SENT,
         'data.virtualAccountId': virtualAccountId, // Use dot notation for nested field
@@ -73,6 +76,7 @@ export class NotificationsService {
 
     const notifications = await this.notificationRepository.find({
       filter: {
+        channel: NotificationChannel.TELEGRAM,
         type: NotificationType.CARD_SPENDING_ALERT,
         status: NotificationStatus.SENT,
         'data.virtualAccountId': virtualAccountId,

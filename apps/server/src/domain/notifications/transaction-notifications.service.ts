@@ -9,6 +9,8 @@ import { StatusNotifyUserAboutTransactions } from 'src/integrations/slash/consta
 import { SlashApiService } from 'src/integrations/slash/services/slash-api.service';
 import { CardDto } from 'src/integrations/slash/types';
 import { Keyboards } from 'src/bot/constants/keyboards.constant';
+import { WebTransactionNotifier, TransactionNotificationDto } from './web-transaction-notifier.service';
+import type { TransactionDataDTO } from 'src/integrations/slash/dto/webhook.dto';
 
 @Injectable()
 export class TransactionNotificationsService {
@@ -22,6 +24,7 @@ export class TransactionNotificationsService {
     private readonly notificationsService: NotificationsService,
     @Inject(forwardRef(() => SlashApiService))
     private readonly slashApiService: SlashApiService,
+    private readonly webTransactionNotifier: WebTransactionNotifier,
   ) { }
 
   async checkAndNotifyNewTransactions(): Promise<void> {
@@ -47,7 +50,74 @@ export class TransactionNotificationsService {
   private async notifyUserAboutTransaction(transaction: any): Promise<void> {
     this.logger.log(`Processing notification for transaction: ${transaction.slashId}`);
 
-    const user = await this.usersService.findByVirtualAccountId(transaction.virtualAccountId || '');
+    const virtualAccountId = transaction.virtualAccountId || '';
+    const user = await this.usersService.findByVirtualAccountId(virtualAccountId);
+
+    let card: CardDto | undefined;
+    if (transaction.cardId) {
+      try {
+        const cardData = await this.slashApiService.getCard(transaction.cardId, false, false);
+        card = cardData;
+      } catch (error) {
+        this.logger.warn(`Failed to fetch card data for ${transaction.cardId}:`, error);
+      }
+    }
+
+    const transactionDto: TransactionNotificationDto = {
+      id: transaction.slashId,
+      virtualAccountId: transaction.virtualAccountId,
+      cardId: transaction.cardId,
+      amountCents: transaction.amountCents,
+      currency: transaction.currency,
+      originalCurrency: transaction.originalCurrency,
+      description: transaction.description,
+      status: transaction.status,
+      detailedStatus: transaction.detailedStatus,
+      type: transaction.type,
+      date:
+        transaction.date instanceof Date
+          ? transaction.date.toISOString()
+          : String(transaction.date ?? ''),
+      merchantData: transaction.merchantData,
+      declineReason: transaction.metadata?.declineReason,
+    };
+
+    // Nếu không có tên thẻ hoặc description (null) thì không gửi thông báo
+    const hasCardName = !!card?.name;
+    const description = transactionDto.merchantData?.description;
+    if (!hasCardName || !description) {
+      this.logger.log(
+        `Skip sending notification for transaction ${transaction.slashId} because card name or description is missing`,
+      );
+      return;
+    }
+
+    const telegramTransactionDto: TransactionDataDTO = {
+      id: transactionDto.id,
+      date: transactionDto.date,
+      amountCents: transactionDto.amountCents,
+      status: transactionDto.status,
+      detailedStatus: transactionDto.detailedStatus,
+      description: transactionDto.description,
+      cardId: transactionDto.cardId,
+      originalCurrency: transactionDto.originalCurrency,
+      virtualAccountId: transactionDto.virtualAccountId,
+      declineReason: transactionDto.declineReason,
+      merchantData: (transactionDto.merchantData as unknown as TransactionDataDTO['merchantData']) ?? {
+        name: '',
+        categoryCode: '',
+        description: description ?? '',
+        location: { city: '', country: '', state: '', zip: '' },
+      },
+    };
+
+    const notification = Messages.transactionCreated(telegramTransactionDto, card);
+
+    // --- WEB notification (independent of Telegram) ---
+    // Web chỉ cần bắn event cho NV ads; không phụ thuộc destinations/telegram setting
+    await this.webTransactionNotifier.notifyFacebookVerify(transactionDto, card);
+
+    // --- TELEGRAM notification ---
     const hasTelegram = user?.telegramId != null || (user?.telegramIds?.length ?? 0) > 0;
     if (!user || !hasTelegram) {
       this.logger.warn(
@@ -72,44 +142,6 @@ export class TransactionNotificationsService {
       this.logger.debug(`No notification destinations configured for user: ${user.id}`);
       return;
     }
-
-    let card: CardDto | undefined;
-    if (transaction.cardId) {
-      try {
-        const cardData = await this.slashApiService.getCard(transaction.cardId, false, false);
-        card = cardData;
-      } catch (error) {
-        this.logger.warn(`Failed to fetch card data for ${transaction.cardId}:`, error);
-      }
-    }
-
-    const transactionDto = {
-      id: transaction.slashId,
-      virtualAccountId: transaction.virtualAccountId,
-      cardId: transaction.cardId,
-      amountCents: transaction.amountCents,
-      currency: transaction.currency,
-      originalCurrency: transaction.originalCurrency,
-      description: transaction.description,
-      status: transaction.status,
-      detailedStatus: transaction.detailedStatus,
-      type: transaction.type,
-      date: transaction.date,
-      merchantData: transaction.merchantData,
-      declineReason: transaction.metadata?.declineReason,
-    };
-
-    // Nếu không có tên thẻ hoặc description (null) thì không gửi thông báo
-    const hasCardName = !!card?.name;
-    const description = transactionDto.merchantData?.description;
-    if (!hasCardName || !description) {
-      this.logger.log(
-        `Skip sending notification for transaction ${transaction.slashId} because card name or description is missing`,
-      );
-      return;
-    }
-
-    const notification = Messages.transactionCreated(transactionDto, card);
     await this.botService.sendMessageToMultiple(
       destinations,
       notification.text,

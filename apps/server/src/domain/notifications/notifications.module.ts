@@ -1,4 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NotificationsService } from './notifications.service';
 import { TransactionNotificationsService } from './transaction-notifications.service';
 import { TransactionNotificationsJob } from './transaction-notifications.job';
@@ -6,9 +8,20 @@ import { DatabaseModule } from 'src/database/database.module';
 import { UsersModule } from 'src/users/users.module';
 import { BotModule } from 'src/bot/bot.module';
 import { SlashIntegrationModule } from 'src/integrations/slash/slash-integration.module';
+import { AdsTransactionsGateway } from './ads-transactions.gateway';
+import { WebTransactionNotifier } from './web-transaction-notifier.service';
+import { WebNotificationsService } from './web-notifications.service';
 
 @Module({
   imports: [
+    ConfigModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET', 'default-secret'),
+      }),
+      inject: [ConfigService],
+    }),
     DatabaseModule,
     UsersModule,
     forwardRef(() => BotModule),
@@ -18,6 +31,9 @@ import { SlashIntegrationModule } from 'src/integrations/slash/slash-integration
     NotificationsService,
     TransactionNotificationsService,
     TransactionNotificationsJob,
+    AdsTransactionsGateway,
+    WebTransactionNotifier,
+    WebNotificationsService,
   ],
   exports: [
     NotificationsService,

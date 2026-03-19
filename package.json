@@ -30,10 +30,13 @@
     "packages/*"
   ],
   "dependencies": {
+    "@nestjs/platform-socket.io": "^10.4.22",
+    "@nestjs/websockets": "^10.4.22",
     "@opentelemetry/context-async-hooks": "^2.2.0",
     "@opentelemetry/core": "^2.2.0",
     "@opentelemetry/sdk-trace-base": "^2.2.0",
-    "next": "^15.5.7"
+    "next": "^15.5.7",
+    "socket.io": "^4.8.3"
   },
   "overrides": {
     "@types/react": "^19.2.0",

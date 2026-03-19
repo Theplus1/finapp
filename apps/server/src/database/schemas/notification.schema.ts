@@ -19,10 +19,18 @@ export enum NotificationType {
   CARD_SPENDING_ALERT = 'card_spending_alert',
 }
 
+export enum NotificationChannel {
+  TELEGRAM = 'telegram',
+  WEB = 'web',
+}
+
 @Schema({ timestamps: true, collection: 'notifications' })
 export class Notification {
   @Prop({ required: true, index: true })
   userId: string;
+
+  @Prop({ required: true, index: true, default: NotificationChannel.TELEGRAM })
+  channel: NotificationChannel;
 
   @Prop({ required: true, index: true })
   status: NotificationStatus;
