@@ -22,16 +22,20 @@ export type NotificationItem = {
   title: string;
   description?: string;
   createdAt: string;
-  unread: boolean;
   payload: FacebookVerifyNotificationPayload;
 };
 
+export type FacebookVerifyAction = "confirm" | "cancel";
+
 type RealtimeNotificationsContextValue = {
-  items: NotificationItem[];
-  unreadCount: number;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
-  clearAll: () => void;
+  latest: NotificationItem | null;
+  open: boolean;
+  close: () => void;
+  clear: () => void;
+  actFacebookVerify: (payload: {
+    transactionId: string;
+    action: FacebookVerifyAction;
+  }) => void;
 };
 
 const RealtimeNotificationsContext =
@@ -63,20 +67,25 @@ export function RealtimeNotificationsProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [items, setItems] = useState<NotificationItem[]>([]);
+  const [latest, setLatest] = useState<NotificationItem | null>(null);
+  const [open, setOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
-  const markAsRead = useCallback((id: string) => {
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, unread: false } : n)));
+  const close = useCallback(() => {
+    setOpen(false);
   }, []);
 
-  const markAllAsRead = useCallback(() => {
-    setItems((prev) => prev.map((n) => ({ ...n, unread: false })));
+  const clear = useCallback(() => {
+    setOpen(false);
+    setLatest(null);
   }, []);
 
-  const clearAll = useCallback(() => {
-    setItems([]);
-  }, []);
+  const actFacebookVerify = useCallback(
+    (payload: { transactionId: string; action: FacebookVerifyAction }) => {
+      socketRef.current?.emit("transactions:facebookVerify:action", payload);
+    },
+    [],
+  );
 
   useEffect(() => {
     // Chỉ bật realtime cho NV ads
@@ -84,56 +93,45 @@ export function RealtimeNotificationsProvider({
     const token = localStorage.getItem("auth_token");
     const isAds = user?.role === RoleUserEnum.ADS || user?.role === "ads";
 
-    if (!isAds || !token) return;
+    if (!isAds || !token) {
+      return;
+    }
 
     const wsBase = getWsBaseUrl();
-    if (!wsBase) return;
+    if (!wsBase) {
+      return;
+    }
 
-    const socket = io(`${wsBase}/ws/customer`, {
+    const namespaceUrl = `${wsBase}/ws/customer`;
+
+    const socket = io(namespaceUrl, {
       transports: ["websocket"],
       auth: { token },
     });
 
     socket.on("transactions:facebookVerify:new", (payload: FacebookVerifyNotificationPayload) => {
-      // Dedup theo transactionId
-      setItems((prev) => {
-        const title = `New transaction`;
-        const descriptionCore =
-          payload.cardName
-            ? `${payload.cardName}${payload.merchantName ? ` • ${payload.merchantName}` : ""}`
-            : payload.merchantName ?? payload.description;
-        let description = `Transaction: ${payload.transactionId}`;
-        if (descriptionCore) {
-          description += ` • ${descriptionCore}`;
-        }
+      const title = `New transaction`;
+      const descriptionCore =
+        payload.cardName
+          ? `${payload.cardName}${payload.merchantName ? ` • ${payload.merchantName}` : ""}`
+          : payload.merchantName ?? payload.description;
+      let description = `Transaction: ${payload.transactionId}`;
+      if (descriptionCore) {
+        description += ` • ${descriptionCore}`;
+      }
 
-        if (prev.some((n) => n.id === payload.transactionId)) {
-          return prev.map((n) =>
-            n.id === payload.transactionId
-              ? {
-                  ...n,
-                  title,
-                  description,
-                  createdAt: payload.createdAt,
-                  payload,
-                  unread: true,
-                }
-              : n,
-          );
-        }
+      const next: NotificationItem = {
+        id: payload.transactionId,
+        type: "facebookVerify",
+        title,
+        description,
+        createdAt: payload.createdAt,
+        payload,
+      };
 
-        const next: NotificationItem = {
-          id: payload.transactionId,
-          type: "facebookVerify",
-          title,
-          description,
-          createdAt: payload.createdAt,
-          unread: true,
-          payload,
-        };
-
-        return [next, ...prev].slice(0, 50);
-      });
+      // Luôn thay nội dung bằng transaction mới nhất
+      setLatest(next);
+      setOpen(true);
     });
 
     socketRef.current = socket;
@@ -145,20 +143,15 @@ export function RealtimeNotificationsProvider({
     };
   }, []);
 
-  const unreadCount = useMemo(
-    () => items.reduce((acc, n) => acc + (n.unread ? 1 : 0), 0),
-    [items],
-  );
-
   const value: RealtimeNotificationsContextValue = useMemo(
     () => ({
-      items,
-      unreadCount,
-      markAsRead,
-      markAllAsRead,
-      clearAll,
+      latest,
+      open,
+      close,
+      clear,
+      actFacebookVerify,
     }),
-    [items, unreadCount, markAsRead, markAllAsRead, clearAll],
+    [latest, open, close, clear, actFacebookVerify],
   );
 
   return (
