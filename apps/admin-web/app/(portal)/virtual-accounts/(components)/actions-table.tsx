@@ -18,11 +18,7 @@ const ActionsTable = ({ onClickAction, virtualAccount }: Props) => {
         <Button
           variant={"outline"}
           size={"default"}
-          className={
-            !!virtualAccount.bossUsername
-              ? "cursor-not-allowed"
-              : "cursor-pointer"
-          }
+          className={!!virtualAccount.bossUsername ? "cursor-not-allowed" : ""}
           onClick={() =>
             !!virtualAccount.bossUsername
               ? undefined
@@ -36,7 +32,6 @@ const ActionsTable = ({ onClickAction, virtualAccount }: Props) => {
         <Button
           variant={"outline"}
           size={"default"}
-          className="cursor-pointer"
           onClick={() => onClickAction(DrawerTypeVirtualAccountEnum.RECHARGE)}
         >
           <Plus data-icon="inline-start" />
@@ -45,7 +40,6 @@ const ActionsTable = ({ onClickAction, virtualAccount }: Props) => {
         <Button
           variant={"outline"}
           size={"default"}
-          className="cursor-pointer"
           onClick={() =>
             onClickAction(DrawerTypeVirtualAccountEnum.RECHARGE_HISTORY)
           }

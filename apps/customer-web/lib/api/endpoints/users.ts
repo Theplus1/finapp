@@ -26,6 +26,18 @@ export interface User {
   virtualAccountId: string;
 }
 
+export interface UserBoss {
+  id: string;
+  username: string;
+  role: RoleUserEnum.BOSS;
+  email: string;
+  isActive: boolean;
+  bossId: string;
+  virtualAccountId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface UpdateUserData {
   name?: string;
   email?: string;

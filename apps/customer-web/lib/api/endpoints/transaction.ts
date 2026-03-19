@@ -40,6 +40,10 @@ export interface Transaction {
     slashId: string;
     name: string;
   };
+  confirmCodeTaken?: {
+    name: string;
+    gettedAt: string;
+  }[];
 }
 
 type Params = {
@@ -49,12 +53,12 @@ type Params = {
 
 export const transactionsApi = {
   getTransactions: async (
-    params?: Params
+    params?: Params,
   ): Promise<ApiResponse<Transaction[]>> => {
     return apiClient.get("/transaction", { params });
   },
   getFacebookVerifyConfirmCode: async (
-    id: string
+    id: string,
   ): Promise<ApiResponse<{ confirmCode: string }>> => {
     return apiClient.post(`/transaction/${id}/get-confirm-code`);
   },

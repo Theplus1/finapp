@@ -23,9 +23,10 @@ import CardNameCol from "@repo/ui/components/card-name-col";
 import { cn } from "@/lib/utils";
 import { Employee } from "@/lib/api/endpoints/employee";
 import GetConfirmCode from "./components/get-confirm-code";
-import { RoleUserEnum } from "@/lib/api/endpoints/users";
+import { RoleUserEnum, UserBoss } from "@/lib/api/endpoints/users";
 import { Spinner } from "@repo/ui/components/spinner";
 import { useSearchParams } from "next/navigation";
+import ConfirmCodeTaken from "./components/confirm-code-taken";
 const initFilter = {
   cardId: "",
   startDate: "",
@@ -37,7 +38,7 @@ const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as Transaction[];
 
-const initEmployee: Employee = {
+const initEmployee: Employee | UserBoss = {
   id: "",
   username: "",
   role: RoleUserEnum.ADS,
@@ -56,7 +57,7 @@ export default function Dashboard() {
   const [transGettedCode, setTransGettedCode] = useState<
     Record<string, string>
   >({});
-  const [user, setUser] = useState<Employee>(initEmployee);
+  const [user, setUser] = useState<Employee | UserBoss>(initEmployee);
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 50,
@@ -108,6 +109,7 @@ export default function Dashboard() {
     return dataTransaction;
   }, [dataTransaction, isLoading]);
 
+  const isBoss = user.role === RoleUserEnum.BOSS;
   const columns = useMemo(
     () => [
       {
@@ -197,6 +199,22 @@ export default function Dashboard() {
           );
         },
       },
+      ...(isBoss
+        ? [
+            {
+              header: "Confirm code taken",
+              cell: ({ row }: CellContext<Transaction, string>) => {
+                return isLoading ? (
+                  <Skeleton />
+                ) : (
+                  <ConfirmCodeTaken
+                    data={row.original.confirmCodeTaken ?? []}
+                  />
+                );
+              },
+            },
+          ]
+        : []),
       {
         header: "Country",
         cell: ({ row }: CellContext<Transaction, string>) => {
@@ -218,7 +236,7 @@ export default function Dashboard() {
         },
       },
     ],
-    [isLoading, pagination, transGettedCode, user.role],
+    [isLoading, pagination, transGettedCode, user.role, isBoss],
   ) as ColumnDef<Transaction>[];
 
   const handleChangeFilter = (field: string, value: string | undefined) => {

@@ -1,6 +1,6 @@
 import { DrawerFooter } from "@repo/ui/components/drawer";
 import { Button } from "@repo/ui/components/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import {
   Card,
   DrawerCardTypeEnum,
-  LimitPreset,
+  LimitPresetEnum,
 } from "@/lib/api/endpoints/card";
 import {
   Select,
@@ -22,7 +22,6 @@ import { Input } from "@repo/ui/components/input";
 
 type Props = {
   card: Card;
-  openDrawer: boolean;
   onCancelDrawer: () => void;
   onSubmitCardSuccess: () => void;
   drawerType: DrawerCardTypeEnum;
@@ -30,92 +29,15 @@ type Props = {
 
 const FormActionCard = ({
   card,
-  openDrawer,
   onCancelDrawer,
   onSubmitCardSuccess,
   drawerType,
 }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [presetLimit, setPresetLimit] = useState<LimitPreset>(
-    LimitPreset.DAILY,
+  const [presetLimit, setPresetLimit] = useState<LimitPresetEnum>(
+    LimitPresetEnum.DAILY,
   );
   const [amountLimit, setAmountLimit] = useState<number>(0);
-
-  const { mutateAsync: lockCard } = useMutation({
-    mutationFn: async () => {
-      setIsLoading(true);
-      api.cards
-        .lockCard(card.slashId)
-        .then(() => {
-          toast.success("Card locked successfully");
-          onSubmitCardSuccess();
-          onCancelDrawer();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    },
-  });
-
-  const { mutateAsync: unlockCard } = useMutation({
-    mutationFn: async () => {
-      setIsLoading(true);
-      api.cards
-        .unlockCard(card.slashId)
-        .then(() => {
-          toast.success("Card unlocked successfully");
-          onSubmitCardSuccess();
-          onCancelDrawer();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    },
-  });
-
-  const { mutateAsync: setPreRecharge } = useMutation({
-    mutationFn: async () => {
-      setIsLoading(true);
-      api.cards
-        .setRecurringOnly(card.slashId)
-        .then(() => {
-          toast.success("Card pre-recharge set successfully");
-          onSubmitCardSuccess();
-          onCancelDrawer();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    },
-  });
-
-  const { mutateAsync: unsetPreRecharge } = useMutation({
-    mutationFn: async () => {
-      setIsLoading(true);
-      api.cards
-        .unsetRecurringOnly(card.slashId)
-        .then(() => {
-          toast.success("Card recurring only unset successfully");
-          onSubmitCardSuccess();
-          onCancelDrawer();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    },
-  });
 
   const { mutateAsync: setSpendingLimit } = useMutation({
     mutationFn: async () => {
@@ -155,6 +77,11 @@ const FormActionCard = ({
     },
   });
 
+  useEffect(() => {
+    setPresetLimit(card.spendingLimit?.preset ?? LimitPresetEnum.DAILY);
+    setAmountLimit(card.spendingLimit?.amount ?? 0);
+  }, [card]);
+
   return (
     <>
       {drawerType === "set-spending-limit" && (
@@ -165,17 +92,19 @@ const FormActionCard = ({
             </label>
             <Select
               value={presetLimit}
-              onValueChange={(value) => setPresetLimit(value as LimitPreset)}
+              onValueChange={(value) =>
+                setPresetLimit(value as LimitPresetEnum)
+              }
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a preset" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={LimitPreset.DAILY}>Daily</SelectItem>
-                <SelectItem value={LimitPreset.WEEKLY}>Weekly</SelectItem>
-                <SelectItem value={LimitPreset.MONTHLY}>Monthly</SelectItem>
-                <SelectItem value={LimitPreset.YEARLY}>Yearly</SelectItem>
-                <SelectItem value={LimitPreset.COLLECTIVE}>
+                <SelectItem value={LimitPresetEnum.DAILY}>Daily</SelectItem>
+                <SelectItem value={LimitPresetEnum.WEEKLY}>Weekly</SelectItem>
+                <SelectItem value={LimitPresetEnum.MONTHLY}>Monthly</SelectItem>
+                <SelectItem value={LimitPresetEnum.YEARLY}>Yearly</SelectItem>
+                <SelectItem value={LimitPresetEnum.COLLECTIVE}>
                   Collective
                 </SelectItem>
               </SelectContent>
@@ -195,36 +124,15 @@ const FormActionCard = ({
       )}
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">
-          <Button
-            variant="outline"
-            onClick={onCancelDrawer}
-            className="cursor-pointer"
-          >
+          <Button variant="outline" onClick={onCancelDrawer}>
             Cancel
           </Button>
           <Button
-            className={cn(
-              "cursor-pointer",
-              isLoading && "cursor-not-allowed opacity-50",
-            )}
+            className={cn(isLoading && "cursor-not-allowed opacity-50")}
             onClick={
               !isLoading
                 ? () => {
-                    if (drawerType === DrawerCardTypeEnum.LOCK) {
-                      lockCard();
-                    } else if (drawerType === DrawerCardTypeEnum.UNLOCK) {
-                      unlockCard();
-                    } else if (
-                      drawerType === DrawerCardTypeEnum.SET_PRE_RECHARGE
-                    ) {
-                      setPreRecharge();
-                    } else if (
-                      drawerType === DrawerCardTypeEnum.UNSET_PRE_RECHARGE
-                    ) {
-                      unsetPreRecharge();
-                    } else if (
-                      drawerType === DrawerCardTypeEnum.SET_SPENDING_LIMIT
-                    ) {
+                    if (drawerType === DrawerCardTypeEnum.SET_SPENDING_LIMIT) {
                       setSpendingLimit();
                     } else if (
                       drawerType === DrawerCardTypeEnum.UNSET_SPENDING_LIMIT

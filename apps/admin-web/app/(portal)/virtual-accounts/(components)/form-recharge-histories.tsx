@@ -91,9 +91,7 @@ const FormRechargeHistories = ({
 
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">
-          <Button onClick={handleDrawerClose} className="cursor-pointer">
-            Close
-          </Button>
+          <Button onClick={handleDrawerClose}>Close</Button>
         </div>
       </DrawerFooter>
     </>

@@ -34,7 +34,6 @@ const CardCVVCol = ({ card, onGetCodeSuccess }: GetConfirmCodeProps) => {
     <Button
       size={"sm"}
       variant={"outline"}
-      className="cursor-pointer"
       onClick={() => {
         onGetCode();
       }}

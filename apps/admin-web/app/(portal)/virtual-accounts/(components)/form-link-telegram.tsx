@@ -182,18 +182,11 @@ const FormLinkTelegram = ({
       </div>
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">
-          <Button
-            variant="outline"
-            onClick={handleDrawerClose}
-            className="cursor-pointer"
-          >
+          <Button variant="outline" onClick={handleDrawerClose}>
             Cancel
           </Button>
           <Button
-            className={cn(
-              "cursor-pointer",
-              isLoading && "cursor-not-allowed opacity-50",
-            )}
+            className={cn(isLoading && "cursor-not-allowed opacity-50")}
             onClick={!isLoading ? onSubmit : undefined}
           >
             {isLoading ? <Spinner /> : ""}

@@ -213,11 +213,7 @@ export default function Accounts() {
       <PageHeader>
         <PageTitle>Accounts</PageTitle>
         <PageActions>
-          <Button
-            variant="outline"
-            className="cursor-pointer"
-            onClick={() => setOpenDrawer(true)}
-          >
+          <Button variant="outline" onClick={() => setOpenDrawer(true)}>
             Create Employee
           </Button>
         </PageActions>

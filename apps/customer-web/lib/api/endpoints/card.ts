@@ -7,10 +7,6 @@ export enum CardStatus {
 }
 
 export enum DrawerCardTypeEnum {
-  LOCK = "lock",
-  UNLOCK = "unlock",
-  SET_PRE_RECHARGE = "set-pre-recharge",
-  UNSET_PRE_RECHARGE = "unset-pre-recharge",
   SET_SPENDING_LIMIT = "set-spending-limit",
   UNSET_SPENDING_LIMIT = "unset-spending-limit",
 }
@@ -35,6 +31,15 @@ export interface Card {
   lastSyncedAt: string;
   name: string;
   status: CardStatus;
+  preRecharge: boolean;
+  spendingLimit: {
+    preset: LimitPresetEnum;
+    amount: number;
+  };
+  cvvHistories: {
+    name: string;
+    gettedAt: string;
+  }[];
   syncSource: string;
   updatedAt: string;
   virtualAccountId: string;
@@ -59,7 +64,7 @@ export interface CardsDetailResponse {
   };
 }
 
-export enum LimitPreset {
+export enum LimitPresetEnum {
   DAILY = "daily",
   WEEKLY = "weekly",
   MONTHLY = "monthly",
@@ -91,7 +96,7 @@ export const cardsApi = {
   },
   setLimit: async (
     id: string,
-    preset: LimitPreset,
+    preset: LimitPresetEnum,
     amount: number,
   ): Promise<ApiResponse<Card>> => {
     return await apiClient.post(`/card/${id}/set-limit`, {

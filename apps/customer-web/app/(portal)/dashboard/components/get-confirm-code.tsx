@@ -33,7 +33,6 @@ const GetConfirmCode = ({ tranId, onGetCodeSuccess }: GetConfirmCodeProps) => {
     <Button
       size={"sm"}
       variant={"outline"}
-      className="cursor-pointer"
       onClick={() => {
         onGetCode();
       }}

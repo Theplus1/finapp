@@ -33,7 +33,7 @@ const ActionResetPassword = ({ employee }: Props) => {
     <Button
       variant={"outline"}
       size={"default"}
-      className={!employee.username ? "cursor-not-allowed" : "cursor-pointer"}
+      className={!employee.username ? "cursor-not-allowed" : ""}
       onClick={() => (employee.username ? onClickResetPassword() : undefined)}
     >
       {loading ? <Spinner /> : <KeyRound data-icon="inline-start" />}

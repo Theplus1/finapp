@@ -144,18 +144,11 @@ const FormSetAccount = ({
       </div>
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">
-          <Button
-            variant="outline"
-            onClick={handleDrawerClose}
-            className="cursor-pointer"
-          >
+          <Button variant="outline" onClick={handleDrawerClose}>
             Cancel
           </Button>
           <Button
-            className={cn(
-              "cursor-pointer",
-              disableSubmit && "cursor-not-allowed opacity-50",
-            )}
+            className={cn(disableSubmit && "cursor-not-allowed opacity-50")}
             onClick={!disableSubmit ? (setAccount as () => void) : undefined}
           >
             {isLoading ? <Spinner /> : ""}

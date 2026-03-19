@@ -33,9 +33,7 @@ const ActionResetPassword = ({ virtualAccount }: Props) => {
     <Button
       variant={"outline"}
       size={"default"}
-      className={
-        !virtualAccount.bossUsername ? "cursor-not-allowed" : "cursor-pointer"
-      }
+      className={!virtualAccount.bossUsername ? "cursor-not-allowed" : ""}
       onClick={() =>
         virtualAccount.bossUsername ? onClickResetPassword() : undefined
       }
