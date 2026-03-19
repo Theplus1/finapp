@@ -25,6 +25,7 @@ import { Employee } from "@/lib/api/endpoints/employee";
 import GetConfirmCode from "./components/get-confirm-code";
 import { RoleUserEnum } from "@/lib/api/endpoints/users";
 import { Spinner } from "@repo/ui/components/spinner";
+import { useSearchParams } from "next/navigation";
 const initFilter = {
   cardId: "",
   startDate: "",
@@ -50,6 +51,7 @@ const initEmployee: Employee = {
 
 export default function Dashboard() {
   const { setBreadcrumbs } = useBreadcrumbs();
+  const searchParams = useSearchParams();
 
   const [transGettedCode, setTransGettedCode] = useState<
     Record<string, string>
@@ -73,8 +75,9 @@ export default function Dashboard() {
     }
   }, []);
 
+  const realtimeKey = searchParams.get("t") ?? "";
   const { data, isLoading } = useQuery({
-    queryKey: ["transactions", pagination.page, currentFilter],
+    queryKey: ["transactions", pagination.page, currentFilter, realtimeKey],
     queryFn: async () => {
       try {
         const res = await api.transactions.getTransactions({
@@ -215,7 +218,7 @@ export default function Dashboard() {
         },
       },
     ],
-    [isLoading, pagination, transGettedCode],
+    [isLoading, pagination, transGettedCode, user.role],
   ) as ColumnDef<Transaction>[];
 
   const handleChangeFilter = (field: string, value: string | undefined) => {

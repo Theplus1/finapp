@@ -1,4 +1,5 @@
 import { BreadcrumbProvider } from "@/contexts/breadcrumb-context"
+import { RealtimeNotificationsProvider } from "@/contexts/realtime-notifications-context"
 import { MainLayout } from "@/components/layouts/main-layout"
 
 export default function Layout({
@@ -8,7 +9,9 @@ export default function Layout({
 }) {
   return (
     <BreadcrumbProvider>
-      <MainLayout>{children}</MainLayout>
+      <RealtimeNotificationsProvider>
+        <MainLayout>{children}</MainLayout>
+      </RealtimeNotificationsProvider>
     </BreadcrumbProvider>
   )
 }
