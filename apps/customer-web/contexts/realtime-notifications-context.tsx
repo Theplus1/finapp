@@ -97,14 +97,15 @@ export function RealtimeNotificationsProvider({
     socket.on("transactions:facebookVerify:new", (payload: FacebookVerifyNotificationPayload) => {
       // Dedup theo transactionId
       setItems((prev) => {
-        const title = `Mã xác minh Facebook mới • ${payload.transactionId}`;
+        const title = `New transaction`;
         const descriptionCore =
           payload.cardName
             ? `${payload.cardName}${payload.merchantName ? ` • ${payload.merchantName}` : ""}`
             : payload.merchantName ?? payload.description;
-        const description = descriptionCore
-          ? `Transaction: ${payload.transactionId} • ${descriptionCore}`
-          : `Transaction: ${payload.transactionId}`;
+        let description = `Transaction: ${payload.transactionId}`;
+        if (descriptionCore) {
+          description += ` • ${descriptionCore}`;
+        }
 
         if (prev.some((n) => n.id === payload.transactionId)) {
           return prev.map((n) =>

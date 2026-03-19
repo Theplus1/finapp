@@ -30,6 +30,7 @@
     "packages/*"
   ],
   "dependencies": {
+    "@base-ui/react": "^1.3.0",
     "@nestjs/platform-socket.io": "^10.4.22",
     "@nestjs/websockets": "^10.4.22",
     "@opentelemetry/context-async-hooks": "^2.2.0",

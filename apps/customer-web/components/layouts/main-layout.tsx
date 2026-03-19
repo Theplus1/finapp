@@ -33,8 +33,8 @@ export function MainLayout({ children }: MainLayoutProps) {
     const user = localStorage.getItem("user");
     if (!user) return;
     try {
-      const parsed = JSON.parse(user) as { role?: RoleUserEnum | string };
-      setIsAds(parsed.role === RoleUserEnum.ADS || parsed.role === "ads");
+      const parsed = JSON.parse(user) as { role?: RoleUserEnum };
+      setIsAds(parsed.role === RoleUserEnum.ADS);
     } catch {
       // ignore
     }

@@ -19,6 +19,7 @@ import { EMPTY_LABEL } from "@/app/utils/constants";
 import { ClientPagination } from "@repo/ui/components/client-pagination";
 import { Employee } from "@/lib/api/endpoints/employee";
 import { Button } from "@repo/ui/components/button";
+import { Switch } from "@repo/ui/components/switch";
 import { Ellipsis } from "lucide-react";
 import {
   Drawer,
@@ -34,6 +35,8 @@ import {
 } from "@repo/ui/components/popover";
 import ActionsTable from "./components/actions-table";
 import { upperCaseFirstCharacter } from "@repo/ui/lib/func";
+import { toast } from "sonner";
+import { Spinner } from "@repo/ui/components/spinner";
 
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
@@ -47,6 +50,9 @@ export default function Accounts() {
   });
   const [openDrawer, setOpenDrawer] = useState(false);
   const [countGetList, setCountGetList] = useState(0);
+  const [employeeLoadingStatus, setEmployeeLoadingStatus] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     setBreadcrumbs([
@@ -89,6 +95,26 @@ export default function Accounts() {
     });
   }, [dataAccounts, isLoading]);
 
+  const handleChangeStatus = (employee: Employee) => {
+    const isActivating = employee.isActive;
+    setEmployeeLoadingStatus(employee.id);
+    api.employees
+      .deactivateEmployee(employee.id!)
+      .then(() => {
+        toast.success(
+          isActivating
+            ? "Employee activated successfully"
+            : "Employee deactivated successfully",
+        );
+      })
+      .catch(() => {
+        toast.error("Failed to change employee status");
+      })
+      .finally(() => {
+        setEmployeeLoadingStatus(null);
+      });
+  };
+
   const columns = [
     {
       header: "No",
@@ -129,6 +155,22 @@ export default function Accounts() {
       },
     },
     {
+      header: "Status",
+      cell: ({ row }: CellContext<Employee, string>) => {
+        return isLoading ? (
+          <Skeleton />
+        ) : employeeLoadingStatus === row.original.id ? (
+          <Spinner />
+        ) : (
+          <Switch
+            onCheckedChange={() => handleChangeStatus(row.original)}
+            checked={row.original.isActive}
+            className={"cursor-pointer"}
+          />
+        );
+      },
+    },
+    {
       header: "Created",
       cell: ({ row }: CellContext<Employee, string>) => {
         return isLoading ? (
@@ -151,7 +193,7 @@ export default function Accounts() {
                 <Ellipsis />
               </PopoverTrigger>
               <PopoverContent>
-                <ActionsTable employee={row.original} onDeactivateSuccess={() => setCountGetList((prev) => prev + 1)} />
+                <ActionsTable employee={row.original} />
               </PopoverContent>
             </Popover>
           </div>

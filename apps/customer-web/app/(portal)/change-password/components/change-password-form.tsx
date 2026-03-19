@@ -4,7 +4,6 @@ import { Button } from "@repo/ui/components/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
@@ -39,10 +38,10 @@ export function ChangePasswordForm() {
         });
     },
     onError: (error) => {
-      console.log("Login failed:", error);
+      console.log("Change password failed:", error);
     },
-    onSuccess: (response: any) => {
-      console.log("Login successful:", response);
+    onSuccess: (response: unknown) => {
+      console.log("Change password successful:", response);
     },
   });
 
@@ -55,7 +54,7 @@ export function ChangePasswordForm() {
     isLoading || !newPassword || newPassword !== confirmPassword;
   return (
     <div className={cn("flex flex-col gap-6")}>
-      <Card>
+      <Card className="w-[550px] m-auto">
         <CardHeader>
           <CardTitle>Change Password</CardTitle>
         </CardHeader>

@@ -52,6 +52,7 @@ const detectMonthYear = (month: string) => {
 };
 
 type RowData = Payment & {
+  cardName: string;
   data: Record<string, number>;
 };
 
@@ -139,9 +140,10 @@ export default function Cards() {
           cell: ({ row }) => {
             if (isLoading) return <Skeleton />;
             const data = (row.original as RowData).data[dateKey];
+            const isTotal = (row.original as RowData).cardName === "Total";
             return (
               <div
-                className={`text-end p-1 ${data > AMOUNT_WARNING ? "bg-red-500 text-white" : ""}`}
+                className={`text-end p-1 ${data > AMOUNT_WARNING && !isTotal ? "bg-red-500 text-white" : ""}`}
               >
                 {data > 0 ? formatDollarByCent(data) : EMPTY_LABEL}
               </div>
@@ -187,8 +189,10 @@ export default function Cards() {
 
   const dataCardSpendRender = useMemo(() => {
     if (isLoading) return maskDataTable;
-    return dataCardSpendGrouped.filter((item: any) =>
-      item.label?.toLowerCase().includes(keywordCardDebounce),
+    return dataCardSpendGrouped.filter((item: unknown) =>
+      (item as { label?: string })?.label
+        ?.toLowerCase()
+        .includes(keywordCardDebounce),
     );
   }, [dataCardSpendGrouped, keywordCardDebounce]);
 
