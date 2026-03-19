@@ -1,5 +1,3 @@
-import { format } from 'date-fns';
-
 export const DATE_FORMAT = 'M/d/yyyy';
 export const DATE_FORMAT_ISO = 'yyyy-MM-dd';
 
@@ -16,23 +14,21 @@ export function normalizeDateToUTC(date: Date): Date {
 }
 
 /**
- * Normalize date to local midnight (keep original timezone, set time to 00:00:00)
+ * Normalize date to UTC+0 midnight (00:00:00.000Z)
  */
 export function normalizeDateToLocalMidnight(date: Date): Date {
-  const normalized = new Date(date);
-  normalized.setHours(0, 0, 0, 0);
-  return normalized;
+  return normalizeDateToUTC(date);
 }
 
 /**
  * Generate array of dates for a month
  */
 export function generateMonthDates(startDate: Date, daysInMonth: number): Date[] {
-  const year = startDate.getFullYear();
-  const month = startDate.getMonth();
+  const year = startDate.getUTCFullYear();
+  const month = startDate.getUTCMonth();
   
   return Array.from({ length: daysInMonth }, (_, i) => 
-    new Date(year, month, i + 1)
+    new Date(Date.UTC(year, month, i + 1))
   );
 }
 
@@ -40,14 +36,17 @@ export function generateMonthDates(startDate: Date, daysInMonth: number): Date[]
  * Format date string for sheet display
  */
 export function formatSheetDate(date: Date): string {
-  return format(date, DATE_FORMAT);
+  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}/${date.getUTCFullYear()}`;
 }
 
 /**
  * Format date string in ISO format (yyyy-MM-dd)
  */
 export function formatSheetDateISO(date: Date): string {
-  return format(date, DATE_FORMAT_ISO);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -55,7 +54,7 @@ export function formatSheetDateISO(date: Date): string {
  */
 export function createSummaryMap<T extends { date: Date }>(summaries: T[]): Map<string, T> {
   return new Map(
-    summaries.map((summary) => [format(summary.date, DATE_FORMAT), summary])
+    summaries.map((summary) => [formatSheetDate(summary.date), summary])
   );
 }
 

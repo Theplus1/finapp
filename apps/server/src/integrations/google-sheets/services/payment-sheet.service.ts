@@ -70,7 +70,7 @@ export class PaymentSheetService {
         transactions.forEach((transaction) => {
             if (!transaction.date) return;
             
-            // Normalize to local midnight (preserve timezone from DB)
+            // Normalize to UTC midnight (UTC+0)
             const normalizedDate = normalizeDateToLocalMidnight(new Date(transaction.date));
             
             const dateStr = formatSheetDateISO(normalizedDate);

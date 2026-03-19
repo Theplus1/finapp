@@ -1,24 +1,30 @@
-import { format } from 'date-fns';
 import { ExcelColumn } from 'src/shared/utils/excel.util';
 import { centsToDollars } from 'src/shared/utils/formatCurrency.util';
 
-const DATE_TIME_FORMAT = 'yyyy-MM-dd HH:mm:ss';
-const MONTH_FORMAT = 'yyyy-MM';
-const DAY_FORMAT = 'yyyy-MM-dd';
-
 function formatDate(date: Date | undefined): string {
   if (!date) return '';
-  return format(date, DATE_TIME_FORMAT);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 function formatGroupMonth(date: Date | undefined): string {
   if (!date) return '';
-  return format(date, MONTH_FORMAT);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
 }
 
 function formatGroupDay(date: Date | undefined): string {
   if (!date) return '';
-  return format(date, DAY_FORMAT);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function formatAmount(amountCents: number): string {

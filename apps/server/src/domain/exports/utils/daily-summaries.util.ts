@@ -21,7 +21,9 @@ export function calculatePaymentDailySummaries(
   const dailySummariesMap = new Map<string, DailySummary>();
 
   for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(startDate.getFullYear(), startDate.getMonth(), day);
+    const date = new Date(
+      Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), day),
+    );
     const dateStr = formatSheetDate(date);
 
     dailySummariesMap.set(dateStr, {
@@ -60,7 +62,9 @@ export function calculateLocationDailySummaries(
   const dailySummariesMap = new Map<string, LocationDailySummary>();
 
   for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(startDate.getFullYear(), startDate.getMonth(), day);
+    const date = new Date(
+      Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), day),
+    );
     const dateStr = formatSheetDate(date);
 
     dailySummariesMap.set(dateStr, {
@@ -102,7 +106,7 @@ export function calculateLocationDailySummariesRange(
 ): LocationDailySummary[] {
   const dailySummariesMap = new Map<string, LocationDailySummary>();
 
-  // Normalize start and end dates to local midnight (preserve timezone from DB)
+  // Normalize start and end dates to UTC midnight (UTC+0)
   const normalizedStartDate = normalizeDateToLocalMidnight(startDate);
   const normalizedEndDate = normalizeDateToLocalMidnight(endDate);
 
@@ -116,16 +120,15 @@ export function calculateLocationDailySummariesRange(
       totalSpendUSCents: 0,
     });
     
-    // Move to next day (local time)
-    current.setDate(current.getDate() + 1);
-    current.setHours(0, 0, 0, 0);
+    // Move to next UTC day
+    current.setUTCDate(current.getUTCDate() + 1);
   }
 
   // Process transactions
   transactions.forEach((transaction) => {
     if (!transaction.date) return;
 
-    // Normalize transaction date to local midnight (preserve timezone from DB)
+    // Normalize transaction date to UTC midnight (UTC+0)
     const normalizedDate = normalizeDateToLocalMidnight(new Date(transaction.date));
     
     // Only process transactions within the date range
