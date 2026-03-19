@@ -7,9 +7,15 @@ import {
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
+} from '@nestjs/websockets';
+import {
+  ConnectedSocket,
+  MessageBody,
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
+import { WebNotificationsService } from './web-notifications.service';
 
 export interface FacebookVerifyNotificationPayload {
   transactionId: string;
@@ -32,6 +38,13 @@ interface JwtUserPayload {
   bossId?: string;
 }
 
+type FacebookVerifyAction = 'confirm' | 'cancel';
+
+interface FacebookVerifyActionPayload {
+  transactionId: string;
+  action: FacebookVerifyAction;
+}
+
 @WebSocketGateway({
   namespace: '/ws/customer',
   cors: {
@@ -50,6 +63,7 @@ export class AdsTransactionsGateway
   constructor(
     @Inject(JwtService)
     private readonly jwtService: JwtService,
+    private readonly webNotificationsService: WebNotificationsService,
   ) {}
 
   async handleConnection(client: Socket): Promise<void> {
@@ -86,6 +100,9 @@ export class AdsTransactionsGateway
       }
 
       const roomName = this.getVirtualAccountRoom(payload.virtualAccountId);
+      // Lưu dữ liệu để dùng trong các handler subscribeMessage
+      client.data.virtualAccountId = payload.virtualAccountId;
+      client.data.username = payload.username;
       await client.join(roomName);
       this.logger.log(
         `Client ${client.id} joined room ${roomName} (user=${payload.username})`,
@@ -100,6 +117,47 @@ export class AdsTransactionsGateway
 
   async handleDisconnect(client: Socket): Promise<void> {
     this.logger.log(`Client disconnected: ${client.id}`);
+  }
+
+  @SubscribeMessage('transactions:facebookVerify:action')
+  async handleFacebookVerifyAction(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: FacebookVerifyActionPayload,
+  ): Promise<void> {
+    const virtualAccountId =
+      client.data.virtualAccountId ??
+      (client.data as { virtualAccountId?: string }).virtualAccountId;
+    const username =
+      client.data.username ??
+      (client.data as { username?: string }).username;
+
+    if (!virtualAccountId) {
+      this.logger.warn(
+        `facebook verify action rejected: missing virtualAccountId (client=${client.id}, user=${username})`,
+      );
+      return;
+    }
+
+    if (
+      !body ||
+      typeof body.transactionId !== 'string' ||
+      (body.action !== 'confirm' && body.action !== 'cancel')
+    ) {
+      this.logger.warn(
+        `facebook verify action rejected: invalid payload (client=${client.id}, user=${username})`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `facebook verify action received: action=${body.action} tx=${body.transactionId} va=${virtualAccountId} (client=${client.id})`,
+    );
+
+    await this.webNotificationsService.markFacebookVerifyActionSent({
+      virtualAccountId,
+      transactionId: body.transactionId,
+      action: body.action,
+    });
   }
 
   async notifyFacebookVerify(

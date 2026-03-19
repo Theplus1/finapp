@@ -48,11 +48,29 @@ export class WebTransactionNotifier {
       return;
     }
 
-    const alreadyNotified = await this.webNotificationsService.isFacebookVerifyNotified(
+    const alreadySent = await this.webNotificationsService.isFacebookVerifyNotified(
       transaction.virtualAccountId,
       transaction.id,
     );
-    if (alreadyNotified) {
+    if (alreadySent) {
+      this.logger.log(
+        `Skip facebook verify websocket: already SENT (action exists) tx=${transaction.id} va=${transaction.virtualAccountId}`,
+      );
+      return;
+    }
+
+    // Nếu đã emit gần đây nhưng user chưa act (PENDING),
+    // thì không emit lại để tránh spam alert.
+    const pendingCooldownMs = 120_000; // 2 phút
+    const hasPendingRecent = await this.webNotificationsService.isFacebookVerifyPendingRecent(
+      transaction.virtualAccountId,
+      transaction.id,
+      pendingCooldownMs,
+    );
+    if (hasPendingRecent) {
+      this.logger.log(
+        `Skip facebook verify websocket: pending recent tx=${transaction.id} va=${transaction.virtualAccountId}`,
+      );
       return;
     }
 
@@ -72,7 +90,7 @@ export class WebTransactionNotifier {
       `Sending facebook verify notification for tx=${payload.transactionId} va=${payload.virtualAccountId}`,
     );
     await this.adsTransactionsGateway.notifyFacebookVerify(payload);
-    await this.webNotificationsService.markFacebookVerifyNotified({
+    await this.webNotificationsService.upsertFacebookVerifyNotifiedPending({
       virtualAccountId: transaction.virtualAccountId,
       transactionId: transaction.id,
     });

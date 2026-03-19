@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { type FilterQuery, type Model, type UpdateQuery } from 'mongoose';
 import { Notification, NotificationDocument } from '../schemas/notification.schema';
 import { RepositoryQuery } from '../../common/types/repository-query.types';
 
@@ -47,5 +47,21 @@ export class NotificationRepository {
       { _id: id },
       { isDeleted: true },
     ).exec();
+  }
+
+  async upsertByFilter(
+    filter: FilterQuery<NotificationDocument>,
+    update: UpdateQuery<NotificationDocument>,
+  ): Promise<NotificationDocument> {
+    return this.notificationModel
+      .findOneAndUpdate(filter, update, { upsert: true, new: true })
+      .exec();
+  }
+
+  async updateOneByFilter(
+    filter: FilterQuery<NotificationDocument>,
+    update: UpdateQuery<NotificationDocument>,
+  ): Promise<void> {
+    await this.notificationModel.updateOne(filter, update).exec();
   }
 }
