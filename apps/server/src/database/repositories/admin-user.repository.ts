@@ -39,6 +39,13 @@ export class AdminUserRepository {
   }
 
   /**
+   * Find admin user by ID (including inactive)
+   */
+  async findByIdAny(id: string): Promise<AdminUserDocument | null> {
+    return this.adminUserModel.findOne({ _id: id }).exec();
+  }
+
+  /**
    * Update admin user
    */
   async update(username: string, updateData: Partial<AdminUser>): Promise<AdminUserDocument | null> {
@@ -129,13 +136,12 @@ export class AdminUserRepository {
   }
 
   /**
-   * Find all active employees (ads/accountant) by boss id
+   * Find all employees (ads/accountant) by boss id (active + inactive)
    */
   async findEmployeesByBossId(bossId: string): Promise<AdminUserDocument[]> {
     return this.adminUserModel
       .find({
         bossId,
-        isActive: true,
         role: { $in: ['ads', 'accountant'] },
       })
       .select('-passwordHash')
