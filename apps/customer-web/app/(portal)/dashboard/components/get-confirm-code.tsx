@@ -30,17 +30,19 @@ const GetConfirmCode = ({ tranId, onGetCodeSuccess }: GetConfirmCodeProps) => {
       });
   };
   return (
-    <Button
-      size={"sm"}
-      variant={"outline"}
-      onClick={() => {
-        onGetCode();
-      }}
-      disabled={loading}
-    >
-      {loading ? <Spinner /> : <Download />}
-      Get confirm code
-    </Button>
+    <div className="text-center">
+      <Button
+        size={"sm"}
+        variant={"outline"}
+        onClick={() => {
+          onGetCode();
+        }}
+        disabled={loading}
+      >
+        {loading ? <Spinner /> : <Download />}
+        Get confirm code
+      </Button>
+    </div>
   );
 };
 

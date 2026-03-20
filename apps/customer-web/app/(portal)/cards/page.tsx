@@ -258,7 +258,7 @@ export default function Cards() {
         return isLoading ? (
           <Skeleton />
         ) : transGettedCVV[row.original._id] ? (
-          transGettedCVV[row.original._id]
+          <div className="text-center">{transGettedCVV[row.original._id]}</div>
         ) : (
           <CardCVVCol
             card={row.original}
