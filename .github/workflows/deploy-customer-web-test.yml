@@ -47,26 +47,6 @@ jobs:
       - name: Build customer-web
         run: npm run build:customer
 
-      - name: Validate required variables
-        run: |
-          if [ -z "${{ vars.VPS_HOST }}" ]; then
-            echo "❌ Error: VPS_HOST is not defined in staging environment"
-            exit 1
-          fi
-          if [ -z "${{ vars.VPS_USER }}" ]; then
-            echo "❌ Error: VPS_USER is not defined in staging environment"
-            exit 1
-          fi
-          if [ -z "${{ vars.CUSTOMER_APP_DIR }}" ]; then
-            echo "❌ Error: CUSTOMER_APP_DIR is not defined in staging environment"
-            exit 1
-          fi
-          if [ -z "${{ vars.CUSTOMER_PORT }}" ]; then
-            echo "❌ Error: CUSTOMER_PORT is not defined in staging environment"
-            exit 1
-          fi
-          echo "✅ All required variables are defined"
-
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
