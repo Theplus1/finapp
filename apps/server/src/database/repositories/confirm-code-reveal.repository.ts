@@ -27,4 +27,15 @@ export class ConfirmCodeRevealRepository {
     });
     return doc.save();
   }
+
+  async findAllByTransactionSlashIds(
+    transactionSlashIds: string[],
+  ): Promise<ConfirmCodeRevealDocument[]> {
+    if (transactionSlashIds.length === 0) {
+      return [];
+    }
+    return this.model
+      .find({ transactionSlashId: { $in: transactionSlashIds } })
+      .exec();
+  }
 }

@@ -31,6 +31,7 @@ import { CardStatus } from '../../integrations/slash/dto/card.dto';
 import type { CardWithRelations } from '../../domain/cards/types/card.types';
 import { CARDS_API_ROLES } from '../../common/constants/auth.constants';
 import { CvvRevealRepository } from '../../database/repositories/cvv-reveal.repository';
+import { SYNC_CONSTANTS } from '../../integrations/slash/constants/sync.constants';
 
 interface RequestUser {
   userId: string;
@@ -252,7 +253,13 @@ export class CustomerCardsController {
       throw new BadRequestException('Card is already locked');
     }
 
-    await this.slashApiService.updateCard(cardSlashId, { status: CardStatus.PAUSED });
+    const updated = await this.slashApiService.updateCard(cardSlashId, {
+      status: CardStatus.PAUSED,
+    });
+    await this.cardsService.syncCardDocumentFromSlashDto(
+      updated,
+      SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
+    );
     this.logger.log(`Card ${cardSlashId} locked by ${req.user?.username}`);
     return { success: true, message: 'Card locked successfully' };
   }
@@ -281,7 +288,13 @@ export class CustomerCardsController {
       throw new BadRequestException('Cannot unlock a closed card');
     }
 
-    await this.slashApiService.updateCard(cardSlashId, { status: CardStatus.ACTIVE });
+    const updated = await this.slashApiService.updateCard(cardSlashId, {
+      status: CardStatus.ACTIVE,
+    });
+    await this.cardsService.syncCardDocumentFromSlashDto(
+      updated,
+      SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
+    );
     this.logger.log(`Card ${cardSlashId} unlocked by ${req.user?.username}`);
     return { success: true, message: 'Card unlocked successfully' };
   }
@@ -320,6 +333,12 @@ export class CustomerCardsController {
       name: 'only_allow_recurring_payments',
       value: true,
     });
+    const refreshed = await this.slashApiService.getCard(cardSlashId, false, false);
+    await this.cardsService.syncCardDocumentFromSlashDto(
+      refreshed,
+      SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
+      { isRecurringOnly: true },
+    );
     this.logger.log(`Card ${cardSlashId} set recurring-only by ${req.user?.username}`);
     return { success: true, message: 'Recurring-only (nạp trước) set successfully' };
   }
@@ -358,6 +377,12 @@ export class CustomerCardsController {
       name: 'only_allow_recurring_payments',
       value: false,
     });
+    const refreshed = await this.slashApiService.getCard(cardSlashId, false, false);
+    await this.cardsService.syncCardDocumentFromSlashDto(
+      refreshed,
+      SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
+      { isRecurringOnly: false },
+    );
     this.logger.log(`Card ${cardSlashId} unset recurring-only by ${req.user?.username}`);
     return { success: true, message: 'Recurring-only (nạp trước) unset successfully' };
   }
@@ -398,9 +423,13 @@ export class CustomerCardsController {
       },
     };
 
-    await this.slashApiService.updateCardSpendingConstraint(
+    const updated = await this.slashApiService.updateCardSpendingConstraint(
       cardSlashId,
       spendingConstraint,
+    );
+    await this.cardsService.syncCardDocumentFromSlashDto(
+      updated,
+      SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
     );
     this.logger.log(
       `Card ${cardSlashId} set limit ${dto.amount} USD (${dto.preset}) by ${req.user?.username}`,
@@ -426,7 +455,14 @@ export class CustomerCardsController {
       throw new ForbiddenException('Card not found or not in your virtual account');
     }
 
-    await this.slashApiService.updateCardSpendingConstraint(cardSlashId, null);
+    const updated = await this.slashApiService.updateCardSpendingConstraint(
+      cardSlashId,
+      null,
+    );
+    await this.cardsService.syncCardDocumentFromSlashDto(
+      updated,
+      SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
+    );
     this.logger.log(`Card ${cardSlashId} limit unset by ${req.user?.username}`);
     return { success: true, message: 'Spending limit removed successfully' };
   }

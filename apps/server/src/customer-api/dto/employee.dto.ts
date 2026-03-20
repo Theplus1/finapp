@@ -51,6 +51,11 @@ export class UpdateEmployeeDto {
   email?: string;
 }
 
+export class SetEmployeeActiveDto {
+  @ApiProperty({ description: 'Active status', example: true })
+  isActive: boolean;
+}
+
 export class EmployeeResponseDto {
   @ApiProperty({ description: 'User ID' })
   id: string;

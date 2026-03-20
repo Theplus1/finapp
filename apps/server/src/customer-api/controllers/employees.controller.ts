@@ -27,6 +27,7 @@ import {
   CreateEmployeeDto,
   UpdateEmployeeDto,
   EmployeeResponseDto,
+  SetEmployeeActiveDto,
 } from '../dto/employee.dto';
 import type { AdminUserDocument } from '../../database/schemas/admin-user.schema';
 
@@ -142,23 +143,35 @@ export class EmployeesController {
     return toEmployeeResponse(updated as AdminUserDocument);
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete (deactivate) employee' })
+  @Patch(':id/active')
+  @ApiOperation({
+    summary: 'Set employee active status (deactivate/reactivate)',
+    description:
+      'Set employee isActive to true/false. This does not remove the record; list will show both active and inactive employees.',
+  })
   @ApiParam({ name: 'id', description: 'Employee user ID' })
-  @ApiResponse({ status: 200, description: 'Employee deleted successfully' })
+  @ApiBody({ type: SetEmployeeActiveDto })
+  @ApiResponse({ status: 200, description: 'Employee status updated successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - not your employee' })
   @ApiResponse({ status: 404, description: 'Employee not found' })
-  async delete(
+  async setActive(
     @Param('id') id: string,
+    @Body() dto: SetEmployeeActiveDto,
     @Request() req: { user?: RequestUser },
-  ): Promise<{ success: true }> {
+  ): Promise<EmployeeResponseDto> {
     const bossId = req.user?.userId;
     if (!bossId) {
       throw new Error('User context missing');
     }
-    this.logger.log(`Boss ${req.user?.username} deleting employee ${id}`);
-    await this.adminUsersService.deleteEmployee(id, bossId);
-    return { success: true };
+    this.logger.log(
+      `Boss ${req.user?.username} setting employee ${id} isActive=${dto.isActive}`,
+    );
+    const updated = await this.adminUsersService.setEmployeeActive(
+      id,
+      bossId,
+      dto.isActive,
+    );
+    return toEmployeeResponse(updated as AdminUserDocument);
   }
 
   @Post(':id/reset-password')

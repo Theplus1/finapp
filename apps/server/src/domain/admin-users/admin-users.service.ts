@@ -375,17 +375,55 @@ export class AdminUsersService {
   }
 
   /**
-   * Soft-delete employee. Caller must be the boss of this employee.
+   * Toggle active state for an employee. Caller must be the boss of this employee.
+   *
+   * NOTE: Prefer `setEmployeeActive()` for RESTful APIs.
    */
-  async deleteEmployee(employeeId: string, bossId: string): Promise<void> {
-    const employee = await this.adminUserRepository.findById(employeeId);
+  async toggleEmployeeActive(employeeId: string, bossId: string): Promise<void> {
+    const employee = await this.adminUserRepository.findByIdAny(employeeId);
     if (!employee) {
       throw new NotFoundException('Employee not found');
     }
     if (employee.bossId !== bossId) {
       throw new ForbiddenException('Not allowed to delete this employee');
     }
-    await this.adminUserRepository.softDeleteById(employeeId);
-    this.logger.log(`Employee ${employeeId} deleted by boss ${bossId}`);
+    if (!EMPLOYEE_ROLES.includes(employee.role)) {
+      throw new BadRequestException('Target user is not an employee');
+    }
+
+    const nextActive = !employee.isActive;
+    await this.adminUserRepository.updateById(employeeId, { isActive: nextActive });
+    this.logger.log(
+      `Employee ${employeeId} ${nextActive ? 'reactivated' : 'deactivated'} by boss ${bossId}`,
+    );
+  }
+
+  async setEmployeeActive(
+    employeeId: string,
+    bossId: string,
+    isActive: boolean,
+  ): Promise<AdminUserDocument> {
+    const employee = await this.adminUserRepository.findByIdAny(employeeId);
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+    if (employee.bossId !== bossId) {
+      throw new ForbiddenException('Not allowed to update this employee');
+    }
+    if (!EMPLOYEE_ROLES.includes(employee.role)) {
+      throw new BadRequestException('Target user is not an employee');
+    }
+
+    const updated = await this.adminUserRepository.updateById(employeeId, {
+      isActive,
+    });
+    if (!updated) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    this.logger.log(
+      `Employee ${employeeId} set isActive=${isActive} by boss ${bossId}`,
+    );
+    return updated;
   }
 }

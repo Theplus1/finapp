@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { CardStatus } from 'src/integrations/slash/types';
+import type { SpendingLimitSnapshot } from 'src/domain/cards/utils/card-spending-limit-snapshot.util';
 
 export type CardDocument = Card & Document;
 
@@ -49,7 +50,13 @@ export class Card {
   cardGroupName?: string;
 
   @Prop({ type: Object })
-  spendingConstraint?: any;
+  spendingConstraint?: unknown;
+
+  @Prop({ type: Object })
+  spendingLimit?: SpendingLimitSnapshot;
+
+  @Prop({ default: false })
+  isRecurringOnly: boolean;
 
   @Prop()
   createdAt: Date;

@@ -77,5 +77,14 @@ export class CvvRevealRepository {
 
     return [items, total];
   }
+
+  async findAllByCardSlashIds(
+    cardSlashIds: string[],
+  ): Promise<CvvRevealDocument[]> {
+    if (cardSlashIds.length === 0) {
+      return [];
+    }
+    return this.model.find({ cardSlashId: { $in: cardSlashIds } }).exec();
+  }
 }
 

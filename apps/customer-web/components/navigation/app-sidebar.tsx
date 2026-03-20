@@ -18,9 +18,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
 
   // Dynamically set isActive based on current pathname
+  // Hydration mismatch fix:
+  // SSR không có localStorage => navMainItems = [] trên server,
+  // nhưng client có localStorage => navMainItems có item -> HTML khác -> mismatch.
+  // Chỉ build items sau khi mounted để đảm bảo server/client lần render đầu giống nhau.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const navMainItems = React.useMemo(() => {
-    if (typeof localStorage === "undefined" || !localStorage) return [];
+    if (!mounted) return [];
     const { role } = JSON.parse(localStorage.getItem("user") ?? "{}");
+
     return navMainConfig
       .map((section) => ({
         ...section,
@@ -29,7 +39,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           pathname.startsWith(section.url),
       }))
       .filter((item) => item.roleAccept.includes(role));
-  }, [pathname]);
+  }, [mounted, pathname]);
 
   return (
     <Sidebar collapsible="icon" {...props}>

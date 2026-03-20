@@ -71,7 +71,7 @@ const FilterCard = ({ onCardChange }: Props) => {
               All
             </SelectItem>
             {cardInfosSelect?.map((card) => (
-              <SelectItem key={card._id} value={card.slashId}>
+              <SelectItem key={card.slashId} value={card.slashId}>
                 {card.name}
               </SelectItem>
             ))}

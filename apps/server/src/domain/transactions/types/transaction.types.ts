@@ -17,12 +17,18 @@ export interface VirtualAccountInfo {
   name: string;
 }
 
+export interface TransactionConfirmCodeTakenItem {
+  name: string;
+  gettedAt: string;
+}
+
 /**
  * Transaction with populated relations (card and virtual account)
  */
 export interface TransactionWithRelations extends Omit<Transaction, 'toObject'> {
   card?: CardInfo | null;
   virtualAccount?: VirtualAccountInfo | null;
+  confirmCodeTaken: TransactionConfirmCodeTakenItem[];
 }
 
 /**

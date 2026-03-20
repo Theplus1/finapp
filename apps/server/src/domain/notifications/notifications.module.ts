@@ -15,6 +15,8 @@ import { WebNotificationsService } from './web-notifications.service';
 @Module({
   imports: [
     ConfigModule,
+    DatabaseModule,
+    UsersModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -22,8 +24,6 @@ import { WebNotificationsService } from './web-notifications.service';
       }),
       inject: [ConfigService],
     }),
-    DatabaseModule,
-    UsersModule,
     forwardRef(() => BotModule),
     forwardRef(() => SlashIntegrationModule),
   ],
