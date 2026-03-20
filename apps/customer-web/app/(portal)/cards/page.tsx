@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { formatUtcMMDDYYYY, renderNoTable } from "@/app/utils/func";
+import {
+  formatCurrency,
+  formatUtcMMDDYYYY,
+  renderNoTable,
+} from "@/app/utils/func";
 import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { Section, SectionContent } from "@/components/layouts/section";
 import { PageLayout } from "@/components/layouts/page-layout";
@@ -49,7 +53,7 @@ const maskDataTable = Array.from({ length: 20 }, () => {
 const initCard: Card = {
   _id: "",
   slashId: "",
-  preRecharge: false,
+  isRecurringOnly: false,
   spendingLimit: {
     preset: LimitPresetEnum.DAILY,
     amount: 0,
@@ -203,7 +207,7 @@ export default function Cards() {
       });
   };
   const handleChangePreRecharge = (card: Card) => {
-    const isSettedRecurring = card.preRecharge;
+    const isSettedRecurring = card.isRecurringOnly;
     setCardLoadingPreRecharge(card.slashId);
     api.cards[isSettedRecurring ? "unsetRecurringOnly" : "setRecurringOnly"](
       card.slashId,
@@ -248,7 +252,8 @@ export default function Cards() {
       },
     },
     {
-      header: "CVV",
+      id: "cvv",
+      header: <div className="text-center">CVV</div>,
       cell: ({ row }: CellContext<Card, string>) => {
         return isLoading ? (
           <Skeleton />
@@ -270,7 +275,7 @@ export default function Cards() {
     ...(isBoss
       ? [
           {
-            header: "CVV histories taken",
+            header: "CVV History",
             cell: ({ row }: CellContext<Card, string>) => {
               return isLoading ? (
                 <Skeleton />
@@ -282,43 +287,57 @@ export default function Cards() {
         ]
       : []),
     {
-      header: "Status",
+      header: "Card Status",
       cell: ({ row }: CellContext<Card, string>) => {
-        return isLoading ? (
-          <Skeleton />
-        ) : cardLoadingStatus === row.original.slashId ? (
-          <Spinner />
-        ) : (
-          <Switch
-            onCheckedChange={() => handleChangeStatus(row.original)}
-            checked={row.original.status === "active"}
-            className={"cursor-pointer"}
-          />
+        if (isLoading) return <Skeleton />;
+        const isActive = row.original.status === "active";
+        return (
+          <div className="flex items-center gap-2">
+            <span className="w-[60px]">{isActive ? "Active" : "Inactive"}</span>
+            {cardLoadingStatus === row.original.slashId ? (
+              <Spinner />
+            ) : (
+              <Switch
+                onCheckedChange={() => handleChangeStatus(row.original)}
+                checked={isActive}
+                className={"cursor-pointer"}
+              />
+            )}
+          </div>
         );
       },
     },
     {
-      header: "Pre recharge",
+      header: "Recurring Payment Only",
       cell: ({ row }: CellContext<Card, string>) => {
-        return isLoading ? (
-          <Skeleton />
-        ) : cardLoadingPreRecharge === row.original.slashId ? (
+
+        if(isLoading) {
+          return <Skeleton />;
+        }
+        const isRecurringOnly = row.original.isRecurringOnly;
+        return ( <div className="flex items-center gap-2">
+            <span className="w-[80px]">{isRecurringOnly ? "Allow" : "Not allow"}</span>
+            { cardLoadingPreRecharge === row.original.slashId ? (
           <Spinner />
         ) : (
           <Switch
             onCheckedChange={() => handleChangePreRecharge(row.original)}
-            checked={row.original.preRecharge}
+            checked={row.original.isRecurringOnly}
             className={"cursor-pointer"}
           />
+            )}
+          </div>
         );
       },
     },
     {
-      header: "Spending limit",
+      header: "Spending Limit",
       cell: ({ row }: CellContext<Card, string>) => {
-        return isLoading ? (
-          <Skeleton />
-        ) : (
+        if (isLoading) {
+          return <Skeleton />;
+        }
+        const isUnlimited = row.original.spendingLimit?.preset === "unlimited";
+        return (
           <Button
             variant={"link"}
             onClick={() =>
@@ -328,7 +347,11 @@ export default function Cards() {
               )
             }
           >
-            {`${upperCaseFirstCharacter(row.original.spendingLimit?.preset || "Unkown")}: ${row.original.spendingLimit?.amount ?? "Unlimited"}`}
+            {isUnlimited
+              ? "Unlimited"
+              : `${upperCaseFirstCharacter(
+                  row.original.spendingLimit?.preset ?? "",
+                )}: ${formatCurrency(row.original.spendingLimit?.amount ?? 0)}`}
           </Button>
         );
       },
@@ -433,7 +456,6 @@ export default function Cards() {
                 card={cardEdit}
                 onCancelDrawer={handleCancelDrawer}
                 onSubmitCardSuccess={handleSuccessDrawer}
-                drawerType={drawerType}
               />
             </DrawerContent>
           </Drawer>

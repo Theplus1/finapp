@@ -31,17 +31,19 @@ const CardCVVCol = ({ card, onGetCodeSuccess }: GetConfirmCodeProps) => {
       });
   };
   return (
-    <Button
-      size={"sm"}
-      variant={"outline"}
-      onClick={() => {
-        onGetCode();
-      }}
-      disabled={loading}
-    >
-      {loading ? <Spinner /> : <Download />}
-      Get CVV
-    </Button>
+    <div className="text-center">
+      <Button
+        size={"sm"}
+        variant={"outline"}
+        onClick={() => {
+          onGetCode();
+        }}
+        disabled={loading}
+      >
+        {loading ? <Spinner /> : <Download />}
+        Get CVV
+      </Button>
+    </div>
   );
 };
 
