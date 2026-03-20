@@ -293,7 +293,7 @@ export default function Cards() {
         const isActive = row.original.status === "active";
         return (
           <div className="flex items-center gap-2">
-            <span className="w-[60px]">{isActive ? "Active" : "Inactive"}</span>
+            <span className="w-[60px]">{isActive ? "Active" : "Paused"}</span>
             {cardLoadingStatus === row.original.slashId ? (
               <Spinner />
             ) : (
