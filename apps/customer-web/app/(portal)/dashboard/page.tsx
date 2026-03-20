@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -266,44 +266,46 @@ export default function Dashboard() {
   };
 
   return (
-    <PageLayout>
-      <PageHeader>
-        <PageTitle>
-          <div className="flex items-center gap-2">
-            Transactions {pageTitle()}
-          </div>
-        </PageTitle>
-      </PageHeader>
+    <Suspense fallback={<Spinner />}>
+      <PageLayout>
+        <PageHeader>
+          <PageTitle>
+            <div className="flex items-center gap-2">
+              Transactions {pageTitle()}
+            </div>
+          </PageTitle>
+        </PageHeader>
 
-      <Section>
-        <SectionContent>
-          <FilterTransaction
-            onCardChange={(cardId) => handleChangeFilter("cardId", cardId)}
-            onStatusChange={(status) =>
-              handleChangeFilter("detailedStatus", status)
-            }
-            onDateFromChange={(date) => handleChangeFilter("startDate", date)}
-            onDateToChange={(date) => handleChangeFilter("endDate", date)}
-            onSearch={(search) => handleChangeFilter("transactionId", search)}
-          />
-          <DataTable
-            columns={columns}
-            data={dataTransactionTable}
-            maxHeight={"65vh"}
-          />
-          <ClientPagination
-            page={pagination.page}
-            pageSize={pagination.pageSize}
-            total={pagination.total}
-            onChange={(newPage) => {
-              setPagination((prev) => ({
-                ...prev,
-                page: newPage,
-              }));
-            }}
-          />
-        </SectionContent>
-      </Section>
-    </PageLayout>
+        <Section>
+          <SectionContent>
+            <FilterTransaction
+              onCardChange={(cardId) => handleChangeFilter("cardId", cardId)}
+              onStatusChange={(status) =>
+                handleChangeFilter("detailedStatus", status)
+              }
+              onDateFromChange={(date) => handleChangeFilter("startDate", date)}
+              onDateToChange={(date) => handleChangeFilter("endDate", date)}
+              onSearch={(search) => handleChangeFilter("transactionId", search)}
+            />
+            <DataTable
+              columns={columns}
+              data={dataTransactionTable}
+              maxHeight={"65vh"}
+            />
+            <ClientPagination
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              total={pagination.total}
+              onChange={(newPage) => {
+                setPagination((prev) => ({
+                  ...prev,
+                  page: newPage,
+                }));
+              }}
+            />
+          </SectionContent>
+        </Section>
+      </PageLayout>
+    </Suspense>
   );
 }
