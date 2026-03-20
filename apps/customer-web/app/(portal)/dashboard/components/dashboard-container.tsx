@@ -50,13 +50,10 @@ const initEmployee: Employee | UserBoss = {
   updatedAt: "",
 };
 
-type Props = {
-  realtimeKey: string;
-};
-
-export default function DashboardContainer({ realtimeKey }: Props) {
+export default function DashboardContainer() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const searchParams = useSearchParams();
+  const realtimeKey = searchParams.get("t") ?? "";
 
   const [transGettedCode, setTransGettedCode] = useState<
     Record<string, string>
