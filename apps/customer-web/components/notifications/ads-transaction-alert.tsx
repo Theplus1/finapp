@@ -25,6 +25,11 @@ export function AdsTransactionAlert() {
 
   if (!content) return null;
 
+  const isOnTransactionsPage = pathname === "/dashboard";
+  const displayDescription = isOnTransactionsPage
+    ? content.description?.replace(/\nYes\s*\/\s*No\s*$/i, "\nYes")
+    : content.description;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 pt-24"
@@ -37,43 +42,47 @@ export function AdsTransactionAlert() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-sm font-medium">{content.title}</div>
-            {content.description ? (
-              <div className="mt-1 text-xs text-muted-foreground">
-                {content.description}
+            {displayDescription ? (
+              <div className="mt-1 whitespace-pre-line text-xs text-muted-foreground">
+                {displayDescription}
               </div>
             ) : null}
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              actFacebookVerify({
-                transactionId: content.id,
-                action: "cancel",
-              });
-              close();
-            }}
-            aria-label="Close"
-          >
-            <X />
-          </Button>
+          {!isOnTransactionsPage ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                actFacebookVerify({
+                  transactionId: content.id,
+                  action: "cancel",
+                });
+                close();
+              }}
+              aria-label="Close"
+            >
+              <X />
+            </Button>
+          ) : null}
         </div>
 
         <div className="mt-4 flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              actFacebookVerify({
-                transactionId: content.id,
-                action: "cancel",
-              });
-              close();
-            }}
-          >
-            Huỷ
-          </Button>
+          {!isOnTransactionsPage ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                actFacebookVerify({
+                  transactionId: content.id,
+                  action: "cancel",
+                });
+                close();
+              }}
+            >
+              No
+            </Button>
+          ) : null}
           <Button
             type="button"
             onClick={() => {
@@ -83,7 +92,7 @@ export function AdsTransactionAlert() {
               });
               const url = getReloadUrl(content.id);
               clear();
-              if (pathname !== "/dashboard") {
+              if (!isOnTransactionsPage) {
                 router.push(url);
               } else {
                 // Đang ở dashboard => chỉ cập nhật query để dashboard refetch,
@@ -92,7 +101,7 @@ export function AdsTransactionAlert() {
               }
             }}
           >
-            Xác nhận
+            Yes
           </Button>
         </div>
       </div>
