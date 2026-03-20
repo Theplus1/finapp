@@ -1,12 +1,18 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { TransactionRepository, TransactionFilters } from '../../database/repositories/transaction.repository';
 import { CardRepository } from '../../database/repositories/card.repository';
+import { ConfirmCodeRevealRepository } from '../../database/repositories/confirm-code-reveal.repository';
 import { VirtualAccountRepository } from '../../database/repositories/virtual-account.repository';
 import { TransactionDocument } from '../../database/schemas/transaction.schema';
 import { CardDocument } from '../../database/schemas/card.schema';
 import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
+import { ConfirmCodeRevealDocument } from '../../database/schemas/confirm-code-reveal.schema';
 import { PaginationOptions } from '../../common/types/repository-query.types';
-import { TransactionWithRelations, TransactionStats } from './types/transaction.types';
+import {
+  TransactionConfirmCodeTakenItem,
+  TransactionWithRelations,
+  TransactionStats,
+} from './types/transaction.types';
 import { SortOrder } from '../../common/constants/pagination.constants';
 
 @Injectable()
@@ -17,6 +23,7 @@ export class TransactionsService {
     private readonly transactionRepository: TransactionRepository,
     private readonly cardRepository: CardRepository,
     private readonly virtualAccountRepository: VirtualAccountRepository,
+    private readonly confirmCodeRevealRepository: ConfirmCodeRevealRepository,
   ) {}
 
   /**
@@ -190,8 +197,11 @@ export class TransactionsService {
 
     const cardIds = [...new Set(transactions.map(t => t.cardId).filter(Boolean))];
     const virtualAccountIds = [...new Set(transactions.map(t => t.virtualAccountId).filter(Boolean))];
+    const txnSlashIds = [
+      ...new Set(transactions.map((t) => t.slashId).filter(Boolean)),
+    ];
 
-    const [cards, virtualAccounts] = await Promise.all([
+    const [cards, virtualAccounts, confirmReveals] = await Promise.all([
       cardIds.length > 0
         ? this.cardRepository.find({
             filter: { slashId: { $in: cardIds }, isDeleted: false },
@@ -206,6 +216,11 @@ export class TransactionsService {
             limit: virtualAccountIds.length,
           })
         : Promise.resolve([]),
+      txnSlashIds.length > 0
+        ? this.confirmCodeRevealRepository.findAllByTransactionSlashIds(
+            txnSlashIds,
+          )
+        : Promise.resolve([]),
     ]);
 
     const cardMap = new Map<string, CardDocument>();
@@ -213,6 +228,11 @@ export class TransactionsService {
 
     const virtualAccountMap = new Map<string, VirtualAccountDocument>();
     virtualAccounts.forEach(va => virtualAccountMap.set(va.slashId, va));
+
+    const confirmRevealByTxnId = new Map<string, ConfirmCodeRevealDocument>();
+    confirmReveals.forEach((r) =>
+      confirmRevealByTxnId.set(r.transactionSlashId, r),
+    );
 
     return transactions.map(transaction => {
       const txnData = transaction.toObject();
@@ -232,6 +252,17 @@ export class TransactionsService {
         slashId: virtualAccount.slashId,
         name: virtualAccount.name,
       } : null;
+
+      const reveal = confirmRevealByTxnId.get(transaction.slashId);
+      const confirmCodeTaken: TransactionConfirmCodeTakenItem[] = reveal
+        ? [
+            {
+              name: reveal.revealedByUsername,
+              gettedAt: reveal.revealedAt.toISOString(),
+            },
+          ]
+        : [];
+      enriched.confirmCodeTaken = confirmCodeTaken;
 
       return enriched;
     });
