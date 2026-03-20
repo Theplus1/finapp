@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsEmail,
   IsOptional,
+  IsBoolean,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -53,6 +54,7 @@ export class UpdateEmployeeDto {
 
 export class SetEmployeeActiveDto {
   @ApiProperty({ description: 'Active status', example: true })
+  @IsBoolean()
   isActive: boolean;
 }
 
