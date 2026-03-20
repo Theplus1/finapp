@@ -31,7 +31,7 @@ export interface Card {
   lastSyncedAt: string;
   name: string;
   status: CardStatus;
-  preRecharge: boolean;
+  isRecurringOnly: boolean;
   spendingLimit: {
     preset: LimitPresetEnum;
     amount: number;
@@ -70,6 +70,7 @@ export enum LimitPresetEnum {
   MONTHLY = "monthly",
   YEARLY = "yearly",
   COLLECTIVE = "collective",
+  UNLIMITED = "unlimited",
 }
 
 export const cardsApi = {

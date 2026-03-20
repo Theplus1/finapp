@@ -99,13 +99,14 @@ export default function Accounts() {
     const isActivating = employee.isActive;
     setEmployeeLoadingStatus(employee.id);
     api.employees
-      .deactivateEmployee(employee.id!)
+      .activateEmployee(employee.id, !isActivating)
       .then(() => {
         toast.success(
           isActivating
-            ? "Employee activated successfully"
-            : "Employee deactivated successfully",
+            ? "Employee deactivated successfully"
+            : "Employee activated successfully",
         );
+        setCountGetList((prev) => prev + 1);
       })
       .catch(() => {
         toast.error("Failed to change employee status");

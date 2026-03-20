@@ -24,14 +24,12 @@ type Props = {
   card: Card;
   onCancelDrawer: () => void;
   onSubmitCardSuccess: () => void;
-  drawerType: DrawerCardTypeEnum;
 };
 
 const FormActionCard = ({
   card,
   onCancelDrawer,
   onSubmitCardSuccess,
-  drawerType,
 }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
   const [presetLimit, setPresetLimit] = useState<LimitPresetEnum>(
@@ -78,50 +76,49 @@ const FormActionCard = ({
   });
 
   useEffect(() => {
-    setPresetLimit(card.spendingLimit?.preset ?? LimitPresetEnum.DAILY);
+    setPresetLimit(card.spendingLimit?.preset ?? LimitPresetEnum.UNLIMITED);
     setAmountLimit(card.spendingLimit?.amount ?? 0);
   }, [card]);
 
+  const isUnSet = presetLimit === LimitPresetEnum.UNLIMITED;
+
   return (
     <>
-      {drawerType === "set-spending-limit" && (
-        <>
-          <div className="px-4 flex flex-col gap-2">
-            <label className="block text-sm font-medium text-muted-foreground">
-              Select a preset
-            </label>
-            <Select
-              value={presetLimit}
-              onValueChange={(value) =>
-                setPresetLimit(value as LimitPresetEnum)
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a preset" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={LimitPresetEnum.DAILY}>Daily</SelectItem>
-                <SelectItem value={LimitPresetEnum.WEEKLY}>Weekly</SelectItem>
-                <SelectItem value={LimitPresetEnum.MONTHLY}>Monthly</SelectItem>
-                <SelectItem value={LimitPresetEnum.YEARLY}>Yearly</SelectItem>
-                <SelectItem value={LimitPresetEnum.COLLECTIVE}>
-                  Collective
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="px-4 flex flex-col gap-2 mt-4">
-            <label className="block text-sm font-medium text-muted-foreground">
-              Amount ($)
-            </label>
-            <Input
-              type="number"
-              value={amountLimit}
-              onChange={(e) => setAmountLimit(Number(e.target.value))}
-            />
-          </div>
-        </>
-      )}
+      <div className="px-4 flex flex-col gap-2">
+        <label className="block text-sm font-medium text-muted-foreground">
+          Select a preset
+        </label>
+        <Select
+          value={presetLimit}
+          onValueChange={(value) => setPresetLimit(value as LimitPresetEnum)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a preset" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={LimitPresetEnum.DAILY}>Daily</SelectItem>
+            <SelectItem value={LimitPresetEnum.WEEKLY}>Weekly</SelectItem>
+            <SelectItem value={LimitPresetEnum.MONTHLY}>Monthly</SelectItem>
+            <SelectItem value={LimitPresetEnum.YEARLY}>Yearly</SelectItem>
+            <SelectItem value={LimitPresetEnum.COLLECTIVE}>
+              Collective
+            </SelectItem>
+            <SelectItem value={LimitPresetEnum.UNLIMITED}>Unlimited</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div
+        className={`${isUnSet ? "hidden" : ""} px-4 flex flex-col gap-2 mt-4`}
+      >
+        <label className="block text-sm font-medium text-muted-foreground">
+          Amount ($)
+        </label>
+        <Input
+          type="number"
+          value={amountLimit}
+          onChange={(e) => setAmountLimit(Number(e.target.value))}
+        />
+      </div>
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={onCancelDrawer}>
@@ -132,11 +129,9 @@ const FormActionCard = ({
             onClick={
               !isLoading
                 ? () => {
-                    if (drawerType === DrawerCardTypeEnum.SET_SPENDING_LIMIT) {
+                    if (!isUnSet) {
                       setSpendingLimit();
-                    } else if (
-                      drawerType === DrawerCardTypeEnum.UNSET_SPENDING_LIMIT
-                    ) {
+                    } else {
                       unsetSpendingLimit();
                     }
                   }

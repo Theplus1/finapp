@@ -77,7 +77,12 @@ export const employeeApi = {
       `/employees/${id}/reset-password`,
     );
   },
-  deactivateEmployee: async (id: string): Promise<ApiResponse<void>> => {
-    return apiClient.delete<void>(`/employees/${id}`);
+  activateEmployee: async (
+    id: string,
+    isActive: boolean,
+  ): Promise<ApiResponse<void>> => {
+    return apiClient.patch<void>(`/employees/${id}/active`, {
+      isActive,
+    });
   },
 };
