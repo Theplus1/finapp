@@ -14,6 +14,7 @@ import { CardGroupEntity } from '../entities/card-group.entity';
 import { TransactionEntity } from '../entities/transaction.entity';
 import { VirtualAccountEntity, VirtualAccountWithDetailsEntity } from '../entities/virtual-account.entity';
 import { Card } from '../../../database/schemas/card.schema';
+import { buildSpendingLimitSnapshotFromConstraint } from '../../../domain/cards/utils/card-spending-limit-snapshot.util';
 import { CardGroup } from '../../../database/schemas/card-group.schema';
 import { Transaction } from '../../../database/schemas/transaction.schema';
 import { VirtualAccount } from '../../../database/schemas/virtual-account.schema';
@@ -31,8 +32,12 @@ export function mapCardDtoToEntity(
   });
   
   entity.syncSource = syncSource;
-  
-  return entity as Partial<Card>;
+
+  const partial = entity as Partial<Card>;
+  partial.spendingLimit = buildSpendingLimitSnapshotFromConstraint(
+    cardDto.spendingConstraint,
+  );
+  return partial;
 }
 
 /**

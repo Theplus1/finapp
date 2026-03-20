@@ -16,10 +16,18 @@ export interface CardGroupInfo {
   name: string;
 }
 
+export interface CardCvvHistoryItem {
+  name: string;
+  gettedAt: string;
+}
+
 /**
  * Card with populated virtual account relation
  */
 export interface CardWithRelations extends Omit<Card, 'toObject'> {
   virtualAccount?: VirtualAccountInfo | null;
   cardGroup?: CardGroupInfo | null;
+  // true when status === paused (card locked).
+  isLocked: boolean;
+  cvvHistories: CardCvvHistoryItem[];
 }

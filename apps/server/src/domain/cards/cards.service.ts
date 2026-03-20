@@ -1,16 +1,32 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CardRepository } from '../../database/repositories/card.repository';
+import { CvvRevealRepository } from '../../database/repositories/cvv-reveal.repository';
 import { VirtualAccountRepository } from '../../database/repositories/virtual-account.repository';
-import { CardDocument } from '../../database/schemas/card.schema';
+import { Card, CardDocument } from '../../database/schemas/card.schema';
 import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
 import {
   PaginationOptions,
   RepositoryQuery,
 } from '../../common/types/repository-query.types';
-import { CardWithRelations } from './types/card.types';
+import {
+  CardCvvHistoryItem,
+  CardWithRelations,
+} from './types/card.types';
 import { SortOrder } from '../../common/constants/pagination.constants';
 import { CardGroupDocument } from 'src/database/schemas/card-group.schema';
 import { CardGroupRepository } from 'src/database/repositories/card-group.repository';
+import { CvvRevealDocument } from 'src/database/schemas/cvv-reveal.schema';
+import {
+  CardDto,
+  CardStatus,
+  SpendingConstraintDto,
+} from '../../integrations/slash/dto/card.dto';
+import { mapCardDtoToEntity } from '../../integrations/slash/utils/sync-mappers.util';
+import {
+  SYNC_CONSTANTS,
+  SyncSource,
+} from '../../integrations/slash/constants/sync.constants';
+import { normalizeSpendingLimitForListResponse } from './utils/card-spending-limit-snapshot.util';
 
 export interface CardStats {
   total: number;
@@ -37,6 +53,7 @@ export class CardsService {
     private readonly cardRepository: CardRepository,
     private readonly virtualAccountRepository: VirtualAccountRepository,
     private readonly cardGroupRepository: CardGroupRepository,
+    private readonly cvvRevealRepository: CvvRevealRepository,
   ) {}
 
   /**
@@ -150,9 +167,6 @@ export class CardsService {
       this.cardRepository.find(query),
       this.cardRepository.count(mongoFilter),
     ]);
-    if (total === 0) {
-      return [cards, total];
-    }
     const enrichedCards = await this.enrichCards(cards);
     return [enrichedCards, total];
   }
@@ -195,6 +209,33 @@ export class CardsService {
    */
   async findBySlashIdWithDetails(slashId: string): Promise<CardDocument> {
     return await this.findBySlashId(slashId);
+  }
+
+  private buildCvvHistoriesByCardSlashId(
+    reveals: CvvRevealDocument[],
+  ): Map<string, CardCvvHistoryItem[]> {
+    const buckets = new Map<string, CvvRevealDocument[]>();
+    for (const r of reveals) {
+      const list = buckets.get(r.cardSlashId) ?? [];
+      list.push(r);
+      buckets.set(r.cardSlashId, list);
+    }
+    const out = new Map<string, CardCvvHistoryItem[]>();
+    for (const [cardSlashId, docs] of buckets) {
+      const sorted = [...docs].sort((a, b) => {
+        const tb = (b.lastRevealedAt ?? b.revealedAt).getTime();
+        const ta = (a.lastRevealedAt ?? a.revealedAt).getTime();
+        return tb - ta;
+      });
+      out.set(
+        cardSlashId,
+        sorted.map((d) => ({
+          name: d.revealedByUsername,
+          gettedAt: (d.lastRevealedAt ?? d.revealedAt).toISOString(),
+        })),
+      );
+    }
+    return out;
   }
 
   /**
@@ -240,9 +281,27 @@ export class CardsService {
     const cardGroupMap = new Map<string, CardGroupDocument>();
     cardGroups.forEach((cg) => cardGroupMap.set(cg.slashId, cg));
 
+    const cardSlashIds = [
+      ...new Set(cards.map((c) => c.slashId).filter(Boolean)),
+    ];
+    const cvvReveals =
+      cardSlashIds.length > 0
+        ? await this.cvvRevealRepository.findAllByCardSlashIds(cardSlashIds)
+        : [];
+    const cvvHistoriesMap = this.buildCvvHistoriesByCardSlashId(cvvReveals);
+
     return cards.map((card) => {
       const cardData = card.toObject();
-      const enriched: CardWithRelations = { ...cardData };
+      const enriched: CardWithRelations = {
+        ...cardData,
+        isRecurringOnly: cardData.isRecurringOnly ?? false,
+        spendingLimit: normalizeSpendingLimitForListResponse(
+          cardData.spendingLimit,
+          cardData.spendingConstraint as SpendingConstraintDto | null | undefined,
+        ),
+        isLocked: cardData.status === CardStatus.PAUSED,
+        cvvHistories: cvvHistoriesMap.get(card.slashId) ?? [],
+      };
 
       const virtualAccount = virtualAccountMap.get(card.virtualAccountId);
       const cardGroup = cardGroupMap.get(card.cardGroupId || '');
@@ -261,5 +320,17 @@ export class CardsService {
 
       return enriched;
     });
+  }
+
+  /**
+   * Overwrite card document from Slash (webhook/sync/manual) and merge additional fields (e.g. isRecurringOnly).
+   */
+  async syncCardDocumentFromSlashDto(
+    cardDto: CardDto,
+    syncSource: SyncSource = SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
+    extra?: Partial<Pick<Card, 'isRecurringOnly'>>,
+  ): Promise<void> {
+    const entityData = mapCardDtoToEntity(cardDto, syncSource);
+    await this.cardRepository.upsert(cardDto.id, { ...entityData, ...extra });
   }
 }
