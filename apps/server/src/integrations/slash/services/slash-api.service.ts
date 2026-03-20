@@ -88,6 +88,11 @@ export class SlashApiService {
         return response;
       },
       (error: AxiosError) => {
+        const status = error.response?.status;
+        // Don't throw HttpException for retryable errors — let request() handle retry logic
+        if (status === 429 || (status && status >= 500)) {
+          return Promise.reject(error);
+        }
         this.handleApiError(error);
         return Promise.reject(error);
       },
@@ -153,7 +158,8 @@ export class SlashApiService {
       const shouldRetry = (status === 429 || (status && status >= 500)) && retryCount < maxRetries;
 
       if (shouldRetry) {
-        const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
+        const retryBase = status === 429 ? baseDelay * 2 : baseDelay; // Longer backoff for rate limits
+        const delay = retryBase * Math.pow(2, retryCount); // Exponential backoff
         const jitter = Math.random() * 1000; // Add jitter to prevent thundering herd
         const totalDelay = delay + jitter;
 
@@ -165,6 +171,10 @@ export class SlashApiService {
         return this.request<T>(config, retryCount + 1);
       }
 
+      // After retries exhausted (or non-retryable), convert to HttpException
+      if (axiosError.response) {
+        this.handleApiError(axiosError);
+      }
       throw error;
     }
   }

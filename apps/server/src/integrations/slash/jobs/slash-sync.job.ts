@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 export class SlashSyncJob {
   private readonly logger = new Logger(SlashSyncJob.name);
   private readonly enableScheduledSync: boolean;
+  private isSyncingTransactions = false;
 
   constructor(
     private readonly slashSyncService: SlashSyncService,
@@ -53,6 +54,12 @@ export class SlashSyncJob {
       return;
     }
 
+    if (this.isSyncingTransactions) {
+      this.logger.debug('Skipping transaction sync — previous run still in progress');
+      return;
+    }
+
+    this.isSyncingTransactions = true;
     const startTime = Date.now();
     this.logger.log('Starting scheduled recent transaction sync...');
     try {
@@ -63,6 +70,8 @@ export class SlashSyncJob {
     } catch (error) {
       const duration = Date.now() - startTime;
       this.logger.error(`Scheduled recent transaction sync failed after ${duration}ms:`, error);
+    } finally {
+      this.isSyncingTransactions = false;
     }
   }
 
@@ -71,25 +80,25 @@ export class SlashSyncJob {
    * Reduced to 2 hours since we already sync every 10 seconds
    * This is a safety net for any missed transactions
    */
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async syncRecentTransactionsDaily() {
-    if (!this.enableScheduledSync) {
-      return;
-    }
+  // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  // async syncRecentTransactionsDaily() {
+  //   if (!this.enableScheduledSync) {
+  //     return;
+  //   }
 
-    const startTime = Date.now();
-    this.logger.log('Starting scheduled daily transaction sync...');
-    try {
-      // Only sync last 2 hours as safety net (we already sync every 10s)
-      // This reduces API calls from ~50-100 to ~5-10
-      await this.slashSyncService.syncRecentTransactions(2);
-      const duration = Date.now() - startTime;
-      this.logger.log(`Scheduled daily transaction sync completed successfully in ${duration}ms`);
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.logger.error(`Scheduled daily transaction sync failed after ${duration}ms:`, error);
-    }
-  }
+  //   const startTime = Date.now();
+  //   this.logger.log('Starting scheduled daily transaction sync...');
+  //   try {
+  //     // Only sync last 2 hours as safety net (we already sync every 10s)
+  //     // This reduces API calls from ~50-100 to ~5-10
+  //     await this.slashSyncService.syncRecentTransactions(2);
+  //     const duration = Date.now() - startTime;
+  //     this.logger.log(`Scheduled daily transaction sync completed successfully in ${duration}ms`);
+  //   } catch (error) {
+  //     const duration = Date.now() - startTime;
+  //     this.logger.error(`Scheduled daily transaction sync failed after ${duration}ms:`, error);
+  //   }
+  // }
 
   /**
    * Full transaction sync daily at 2 AM

@@ -74,20 +74,6 @@ export class SlashSyncService {
       const entityData = mapTransactionDtoToEntity(transactionData, SYNC_CONSTANTS.SYNC_SOURCE.WEBHOOK);
       await this.transactionRepository.upsert(transactionData.id, entityData);
       this.logger.log(`Synced transaction ${transactionData.id} from webhook`);
-
-      // Trigger daily summary calculation for the transaction date
-      if (entityData.virtualAccountId && entityData.date) {
-        const virtualAccount = await this.virtualAccountRepository.findBySlashId(entityData.virtualAccountId);
-        if (virtualAccount) {
-          await this.dailyPaymentSummariesService.calculateAndSaveDailySummary(
-            entityData.virtualAccountId,
-            entityData.date,
-            virtualAccount.currency,
-          ).catch(err => {
-            this.logger.warn(`Failed to update daily summary for transaction ${transactionData.id}:`, err);
-          });
-        }
-      }
     } catch (error) {
       this.logger.error(`Error syncing transaction ${transactionData.id} from webhook:`, error);
       throw error;
@@ -345,18 +331,14 @@ export class SlashSyncService {
       totalFailed: 0,
     };
 
-    const virtualAccounts = await this.virtualAccountRepository.findAll();
+    const accountResult = await this.syncTransactions(filter);
+    result.totalProcessed += accountResult.totalProcessed;
+    result.totalCreated += accountResult.totalCreated;
+    result.totalUpdated += accountResult.totalUpdated;
+    result.totalFailed += accountResult.totalFailed;
 
-    for (const virtualAccount of virtualAccounts) {
-      const accountResult = await this.syncTransactionsForAccount(virtualAccount.slashId, filter);
-      result.totalProcessed += accountResult.totalProcessed;
-      result.totalCreated += accountResult.totalCreated;
-      result.totalUpdated += accountResult.totalUpdated;
-      result.totalFailed += accountResult.totalFailed;
-
-      // Add delay between accounts to prevent overwhelming rate limiter
-      await delay(15000);
-    }
+    // Add delay between accounts to prevent overwhelming rate limiter
+    await delay(5000);
 
     return result;
   }
@@ -404,6 +386,55 @@ export class SlashSyncService {
         }
       } catch (error) {
         this.logger.error(`Error fetching transactions for account ${virtualAccountId}:`, error);
+        cursor = undefined; // Stop pagination on error
+      }
+    } while (cursor);
+
+    return result;
+  }
+
+  /**
+   * Sync transactions for a specific account with pagination
+   */
+  private async syncTransactions(
+    filter: DateRangeFilter,
+  ): Promise<SyncResult> {
+    const result: SyncResult = {
+      totalProcessed: 0,
+      totalCreated: 0,
+      totalUpdated: 0,
+      totalFailed: 0,
+    };
+
+    let cursor: string | undefined;
+
+    do {
+      try {
+        const response = await this.slashApiService.listTransactions({
+          'filter:from_date': filter.startDate?.getTime(), // Convert to Unix timestamp in milliseconds
+          'filter:to_date': filter.endDate?.getTime(), // Convert to Unix timestamp in milliseconds
+          cursor,
+        });
+
+        if (response.items && response.items.length > 0) {
+          for (const transaction of response.items) {
+            const itemResult = await this.syncSingleTransaction(transaction);
+            result.totalProcessed++;
+            if (itemResult.created) result.totalCreated++;
+            if (itemResult.updated) result.totalUpdated++;
+            if (itemResult.failed) result.totalFailed++;
+          }
+        }
+
+        cursor = response.metadata?.nextCursor;
+        
+        this.logger.log(`Fetched ${response.metadata?.count || 0} transactions, next cursor: ${cursor}`);
+        // Add delay between pagination requests for additional rate limit protection
+        if (cursor) {
+          await delay(10000); // 10s delay between pages
+        }
+      } catch (error) {
+        this.logger.error(`Error fetching transactions:`, error);
         cursor = undefined; // Stop pagination on error
       }
     } while (cursor);

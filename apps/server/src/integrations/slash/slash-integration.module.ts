@@ -8,10 +8,12 @@ import { DailyPaymentSummariesModule } from '../../domain/daily-payment-summarie
 
 // Schemas
 import { SyncLog, SyncLogSchema } from '../../database/schemas/sync-log.schema';
+import { SyncCheckpoint, SyncCheckpointSchema } from '../../database/schemas/sync-checkpoint.schema';
 
 // Services
 import { SlashApiService } from './services/slash-api.service';
 import { SlashSyncService } from './services/slash-sync.service';
+import { SlashLongSyncService } from './services/slash-long-sync.service';
 
 // Jobs
 import { SlashSyncJob } from './jobs/slash-sync.job';
@@ -38,6 +40,7 @@ import { NotificationsModule } from 'src/domain/notifications/notifications.modu
     DailyPaymentSummariesModule,
     MongooseModule.forFeature([
       { name: SyncLog.name, schema: SyncLogSchema },
+      { name: SyncCheckpoint.name, schema: SyncCheckpointSchema },
     ]),
   ],
   controllers: [
@@ -47,12 +50,14 @@ import { NotificationsModule } from 'src/domain/notifications/notifications.modu
   providers: [
     SlashApiService,
     SlashSyncService,
+    SlashLongSyncService,
     SlashSyncJob,
     BotService,
   ],
   exports: [
     SlashApiService,
     SlashSyncService,
+    SlashLongSyncService,
     BotService,
   ],
 })
