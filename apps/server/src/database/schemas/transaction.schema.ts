@@ -83,6 +83,13 @@ export const TransactionSchema = SchemaFactory.createForClass(Transaction);
 
 // Indexes for efficient querying
 TransactionSchema.index({ virtualAccountId: 1, date: -1 });
+TransactionSchema.index({
+  virtualAccountId: 1,
+  detailedStatus: 1,
+  date: -1,
+  cardId: 1,
+  isDeleted: 1,
+});
 TransactionSchema.index({ virtualAccountId: 1, status: 1 });
 TransactionSchema.index({ virtualAccountId: 1, type: 1 });
 TransactionSchema.index({ cardId: 1, date: -1 });
