@@ -14,7 +14,6 @@ jobs:
   deploy-customer-web:
     name: Deploy Customer Web Application
     runs-on: ubuntu-latest
-    environment: production
     
     steps:
       - name: Checkout code

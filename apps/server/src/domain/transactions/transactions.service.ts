@@ -1,5 +1,9 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { TransactionRepository, TransactionFilters } from '../../database/repositories/transaction.repository';
+import {
+  CardSpendAggregateResult,
+  TransactionFilters,
+  TransactionRepository,
+} from '../../database/repositories/transaction.repository';
 import { CardRepository } from '../../database/repositories/card.repository';
 import { ConfirmCodeRevealRepository } from '../../database/repositories/confirm-code-reveal.repository';
 import { VirtualAccountRepository } from '../../database/repositories/virtual-account.repository';
@@ -313,5 +317,14 @@ export class TransactionsService {
     year: number,
   ): Promise<Array<{ month: number; totalCents: number; count: number }>> {
     return this.transactionRepository.getMonthlySpending(virtualAccountId, year);
+  }
+
+  async aggregateCardSpendByCardAndDay(filters: {
+    virtualAccountId: string;
+    detailedStatuses: string[];
+    startDate: Date;
+    endDate: Date;
+  }): Promise<CardSpendAggregateResult> {
+    return this.transactionRepository.aggregateCardSpendByCardAndDay(filters);
   }
 }
