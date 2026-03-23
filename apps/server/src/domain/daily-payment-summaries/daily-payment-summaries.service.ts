@@ -20,6 +20,89 @@ export class DailyPaymentSummariesService {
   ) {}
 
   /**
+   * Aggregated overall summary by virtual account IDs.
+   * Used for batch jobs (e.g. balance alerts) to avoid loading all rows in memory.
+   */
+  async getOverallSummariesByVirtualAccountIds(
+    virtualAccountIds: string[],
+  ): Promise<
+    Map<
+      string,
+      {
+        virtualAccountId: string;
+        totalDepositCents: number;
+        totalSpendUsCents: number;
+        totalSpendNonUsCents: number;
+        totalRefundCents: number;
+        endingAccountBalanceCents: number;
+      }
+    >
+  > {
+    const result = new Map<
+      string,
+      {
+        virtualAccountId: string;
+        totalDepositCents: number;
+        totalSpendUsCents: number;
+        totalSpendNonUsCents: number;
+        totalRefundCents: number;
+        endingAccountBalanceCents: number;
+      }
+    >();
+
+    if (virtualAccountIds.length === 0) {
+      return result;
+    }
+
+    const aggregateRows = await this.dailyPaymentSummaryModel
+      .aggregate<{
+        _id: string;
+        totalDepositCents: number;
+        totalSpendUsCents: number;
+        totalSpendNonUsCents: number;
+        totalRefundCents: number;
+      }>([
+        {
+          $match: {
+            virtualAccountId: { $in: virtualAccountIds },
+          },
+        },
+        {
+          $group: {
+            _id: '$virtualAccountId',
+            totalDepositCents: { $sum: '$totalDepositCents' },
+            totalSpendUsCents: { $sum: '$totalSpendUSCents' },
+            totalSpendNonUsCents: { $sum: '$totalSpendNonUSCents' },
+            totalRefundCents: { $sum: '$totalRefundCents' },
+          },
+        },
+      ])
+      .exec();
+
+    for (const row of aggregateRows) {
+      const totalDepositCents = Number(row.totalDepositCents ?? 0);
+      const totalSpendUsCents = Number(row.totalSpendUsCents ?? 0);
+      const totalSpendNonUsCents = Number(row.totalSpendNonUsCents ?? 0);
+      const totalRefundCents = Number(row.totalRefundCents ?? 0);
+      const endingAccountBalanceCents =
+        totalDepositCents -
+        (totalSpendUsCents + totalSpendNonUsCents) +
+        totalRefundCents;
+
+      result.set(row._id, {
+        virtualAccountId: row._id,
+        totalDepositCents,
+        totalSpendUsCents,
+        totalSpendNonUsCents,
+        totalRefundCents,
+        endingAccountBalanceCents,
+      });
+    }
+
+    return result;
+  }
+
+  /**
    * Calculate and save daily payment summary for a specific date
    */
   async calculateAndSaveDailySummary(
