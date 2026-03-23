@@ -3,7 +3,7 @@ import { AccountsModule } from '../accounts/accounts.module';
 import { UsersModule } from '../../users/users.module';
 import { BotModule } from '../../bot/bot.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { SlashIntegrationModule } from '../../integrations/slash/slash-integration.module';
+import { DailyPaymentSummariesModule } from '../daily-payment-summaries/daily-payment-summaries.module';
 import { BalanceAlertsService } from './balance-alerts.service';
 import { BalanceAlertsJob } from './balance-alerts.job';
 
@@ -13,7 +13,7 @@ import { BalanceAlertsJob } from './balance-alerts.job';
     UsersModule,
     BotModule,
     NotificationsModule,
-    SlashIntegrationModule,
+    DailyPaymentSummariesModule,
   ],
   providers: [BalanceAlertsService, BalanceAlertsJob],
   exports: [BalanceAlertsService],

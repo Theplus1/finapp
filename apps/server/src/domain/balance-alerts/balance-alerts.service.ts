@@ -4,15 +4,15 @@ import { AccountsService } from '../accounts/accounts.service';
 import { UsersService } from '../../users/users.service';
 import { BotService } from '../../bot/bot.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { SlashApiService } from '../../integrations/slash/services/slash-api.service';
 import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
 import { NotificationStatus, NotificationType } from '../../database/schemas/notification.schema';
 import { Messages } from '../../bot/constants/messages.constant';
+import { DailyPaymentSummariesService } from '../daily-payment-summaries/daily-payment-summaries.service';
 
 /**
  * Balance Alert Service
- * Checks virtual account balances via Slash API and sends alerts when balance is low.
- * No longer depends on Google Sheets.
+ * Checks virtual account balances via daily_payment_summaries aggregate
+ * and sends alerts when calculated balance is low.
  */
 @Injectable()
 export class BalanceAlertsService {
@@ -26,7 +26,7 @@ export class BalanceAlertsService {
     private readonly botService: BotService,
     private readonly notificationsService: NotificationsService,
     private readonly configService: ConfigService,
-    private readonly slashApiService: SlashApiService,
+    private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
   ) {
     const thresholdUsd = this.configService.get<number>('balanceAlert.thresholdUsd', 5000);
     this.thresholdCents = thresholdUsd * 100;
@@ -35,17 +35,18 @@ export class BalanceAlertsService {
 
   /**
    * Check all virtual accounts and send alerts for low balances.
-   * Reads balance from Slash API (real-time).
+   * Reads balance from aggregated daily_payment_summaries data.
    */
   async checkAndSendAlerts(): Promise<void> {
-    this.logger.log('Starting balance alert check (Slash API)...');
+    this.logger.log('Starting balance alert check (daily payment summaries aggregate)...');
 
     try {
       const virtualAccounts = await this.accountsService.findAll();
-      const vaMap = new Map<string, VirtualAccountDocument>();
-      virtualAccounts.forEach((va) => {
-        vaMap.set(va.slashId, va);
-      });
+      const virtualAccountIds = virtualAccounts.map((va) => va.slashId);
+      const summariesByVirtualAccountId =
+        await this.dailyPaymentSummariesService.getOverallSummariesByVirtualAccountIds(
+          virtualAccountIds,
+        );
 
       this.logger.log(`Loaded ${virtualAccounts.length} virtual accounts`);
 
@@ -55,7 +56,9 @@ export class BalanceAlertsService {
 
       for (const va of virtualAccounts) {
         try {
-          const result = await this.processVirtualAccount(va, vaMap);
+          const balanceCents =
+            summariesByVirtualAccountId.get(va.slashId)?.endingAccountBalanceCents ?? 0;
+          const result = await this.processVirtualAccount(va, balanceCents);
           if (result === 'sent') {
             sentCount++;
           } else if (result === 'skipped') {
@@ -82,29 +85,15 @@ export class BalanceAlertsService {
   }
 
   /**
-   * Process a single virtual account: fetch balance from Slash, send alert if low.
+   * Process a single virtual account: use aggregated balance, send alert if low.
    */
   private async processVirtualAccount(
     va: VirtualAccountDocument,
-    _vaMap: Map<string, VirtualAccountDocument>,
+    balanceCents: number,
   ): Promise<'sent' | 'skipped' | 'error'> {
     try {
-      let balanceCents: number;
-      try {
-        const details = await this.slashApiService.getVirtualAccount(va.slashId);
-        if (details?.balance?.amountCents == null) {
-          this.logger.warn(`No balance in Slash response for VA ${va.slashId}. Skipping.`);
-          return 'skipped';
-        }
-        balanceCents = Math.round(Number(details.balance.amountCents));
-      } catch (apiError) {
-        this.logger.warn(
-          `Failed to get balance from Slash for VA ${va.slashId}: ${apiError instanceof Error ? apiError.message : String(apiError)}`,
-        );
-        return 'error';
-      }
-
-      if (balanceCents >= this.thresholdCents) {
+      // Explicit business rule: balance = 0 should still trigger alert (if destination exists).
+      if (balanceCents !== 0 && balanceCents >= this.thresholdCents) {
         this.logger.log(
           `Balance ${balanceCents / 100} USD for VA ${va.slashId} is above threshold. Skipping.`,
         );
