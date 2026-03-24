@@ -448,7 +448,7 @@ export const Messages = {
 
   // Balance Alert
   balanceAlert: (vaName: string, balanceUsd: number) => ({
-    text: `⚠️ Balance của tài khoản "${HtmlUtil.escape(vaName)}" đang có số dư ${balanceUsd}USD, cần topup thêm để tránh lỗi thanh toán`,
+    text: `${HtmlUtil.escape(vaName)}: ${Math.round(balanceUsd).toLocaleString('en-US')}$`,
     parse_mode: 'HTML' as const,
   }),
 

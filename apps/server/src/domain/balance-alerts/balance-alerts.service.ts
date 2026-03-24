@@ -17,7 +17,6 @@ import { DailyPaymentSummariesService } from '../daily-payment-summaries/daily-p
 @Injectable()
 export class BalanceAlertsService {
   private readonly logger = new Logger(BalanceAlertsService.name);
-  private readonly thresholdCents: number;
   private readonly cooldownHours: number;
 
   constructor(
@@ -28,13 +27,11 @@ export class BalanceAlertsService {
     private readonly configService: ConfigService,
     private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
   ) {
-    const thresholdUsd = this.configService.get<number>('balanceAlert.thresholdUsd', 5000);
-    this.thresholdCents = thresholdUsd * 100;
     this.cooldownHours = this.configService.get<number>('balanceAlert.cooldownHours', 24);
   }
 
   /**
-   * Check all virtual accounts and send alerts for low balances.
+   * Check all virtual accounts and send balance update notifications.
    * Reads balance from aggregated daily_payment_summaries data.
    */
   async checkAndSendAlerts(): Promise<void> {
@@ -85,21 +82,13 @@ export class BalanceAlertsService {
   }
 
   /**
-   * Process a single virtual account: use aggregated balance, send alert if low.
+   * Process a single virtual account: use aggregated balance, send balance update.
    */
   private async processVirtualAccount(
     va: VirtualAccountDocument,
     balanceCents: number,
   ): Promise<'sent' | 'skipped' | 'error'> {
     try {
-      // Explicit business rule: balance = 0 should still trigger alert (if destination exists).
-      if (balanceCents !== 0 && balanceCents >= this.thresholdCents) {
-        this.logger.log(
-          `Balance ${balanceCents / 100} USD for VA ${va.slashId} is above threshold. Skipping.`,
-        );
-        return 'skipped';
-      }
-
       const user = await this.usersService.findByVirtualAccountId(va.slashId);
       if (!user) {
         this.logger.log(`No user found for VA ${va.slashId} (${va.name}). Skipping.`);
@@ -153,7 +142,6 @@ export class BalanceAlertsService {
             virtualAccountId: va.slashId,
             virtualAccountName: va.name,
             balanceCents,
-            thresholdCents: this.thresholdCents,
             error: `All ${failedCount} message destinations failed`,
           },
         });
@@ -174,7 +162,6 @@ export class BalanceAlertsService {
           virtualAccountId: va.slashId,
           virtualAccountName: va.name,
           balanceCents,
-          thresholdCents: this.thresholdCents,
         },
       });
 
