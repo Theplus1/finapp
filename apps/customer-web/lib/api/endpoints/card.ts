@@ -77,6 +77,9 @@ export const cardsApi = {
   getCards: async (params?: Params): Promise<ApiResponse<Card[]>> => {
     return apiClient.get("/card", { params });
   },
+  getCardBySlashId: async (slashId: string): Promise<ApiResponse<Card[]>> => {
+    return apiClient.get(`/card/by-slash-id/${slashId}`);
+  },
   getCardsLookup: async (): Promise<ApiResponse<Card[]>> => {
     return await apiClient.get("/card-lookup");
   },

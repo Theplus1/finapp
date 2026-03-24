@@ -2,9 +2,6 @@
  * Users API endpoints
  */
 
-import { apiClient } from "../client";
-import type { ApiResponse } from "../client";
-
 export enum RoleUserEnum {
   ADMIN = "admin",
   BOSS = "boss",
@@ -29,7 +26,7 @@ export interface User {
 export interface UserBoss {
   id: string;
   username: string;
-  role: RoleUserEnum.BOSS;
+  role: RoleUserEnum;
   email: string;
   isActive: boolean;
   bossId: string;

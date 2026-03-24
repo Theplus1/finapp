@@ -19,7 +19,13 @@ export const navMain: NavSection[] = [
     title: "Card list",
     url: "/cards",
     icon: IdCard,
-    roleAccept: [RoleUserEnum.BOSS, RoleUserEnum.ADS],
+    roleAccept: [RoleUserEnum.BOSS],
+  },
+  {
+    title: "Card",
+    url: "/card",
+    icon: IdCard,
+    roleAccept: [RoleUserEnum.ADS],
   },
   {
     title: "Payments",
@@ -38,5 +44,12 @@ export const navMain: NavSection[] = [
     url: "/accounts",
     icon: User,
     roleAccept: [RoleUserEnum.BOSS],
+  },
+  {
+    title: "Change password",
+    url: "/change-password",
+    icon: User,
+    roleAccept: [RoleUserEnum.BOSS, RoleUserEnum.ADS, RoleUserEnum.ACCOUNTANT],
+    visible: false,
   },
 ];

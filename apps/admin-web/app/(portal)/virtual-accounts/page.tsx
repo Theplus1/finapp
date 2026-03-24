@@ -286,12 +286,26 @@ export default function VirtualAccount() {
       },
     },
     {
-      header: "Boss",
+      header: <p className="text-center">Boss</p>,
+      id: "boss",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        if (isLoading) {
+          return <Skeleton />;
+        }
+        const isConnectedBoss = !!row.original.bossUsername;
         return isLoading ? (
           <Skeleton />
         ) : (
-          row.original.bossUsername || EMPTY_LABEL
+          <div className="text-center">
+            {isConnectedBoss ? (
+              <>
+                <p>{row.original.bossUsername}</p>
+                <p>{row.original.bossEmail}</p>
+              </>
+            ) : (
+              EMPTY_LABEL
+            )}
+          </div>
         );
       },
     },

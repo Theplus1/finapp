@@ -38,7 +38,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           section.items?.some((item) => pathname.startsWith(item.url)) ||
           pathname.startsWith(section.url),
       }))
-      .filter((item) => item.roleAccept.includes(role));
+      .filter(
+        (item) => item.roleAccept.includes(role) && item.visible !== false,
+      );
   }, [mounted, pathname]);
 
   return (
