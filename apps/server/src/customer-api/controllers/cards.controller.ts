@@ -232,6 +232,45 @@ export class CustomerCardsController {
     };
   }
 
+  @Get('by-slash-id/:slashId')
+  @ApiOperation({
+    summary: 'Get one card by slashId with same shape as list',
+  })
+  @ApiParam({ name: 'slashId', description: 'Card Slash ID' })
+  @ApiResponse({ status: 200, description: 'Card retrieved successfully' })
+  async getOneBySlashId(
+    @Param('slashId') slashId: string,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{
+    data: CardWithRelations[];
+    pagination: { page: number; limit: number; total: number };
+  }> {
+    const virtualAccountId = this.getVirtualAccountId(req);
+    this.logger.log(
+      `Getting one card by slashId ${slashId} for VA ${virtualAccountId}`,
+    );
+
+    const [data, total] = await this.cardsService.findAllWithFilters(
+      {
+        virtualAccountId,
+        slashId,
+      },
+      {
+        page: 1,
+        limit: 1,
+      },
+    );
+
+    return {
+      data,
+      pagination: {
+        page: 1,
+        limit: 1,
+        total,
+      },
+    };
+  }
+
   @Post(':id/lock')
   @ApiOperation({ summary: 'Lock card (pause)' })
   @ApiParam({ name: 'id', description: 'Card Slash ID' })
