@@ -28,8 +28,10 @@ import { CustomerTransactionQueryDto } from '../dto/transaction-query.dto';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 import type { TransactionWithRelations } from '../../domain/transactions/types/transaction.types';
 import type { TransactionDto } from '../../integrations/slash/dto/transaction.dto';
-import { CUSTOMER_API_ROLES } from '../../common/constants/auth.constants';
+import { BOSS_AND_ACCOUNTANT_ROLES, CUSTOMER_API_ROLES } from '../../common/constants/auth.constants';
 import { TransactionDetailedStatus } from '../../integrations/slash/dto/transaction.dto';
+import { ExportsService } from '../../domain/exports/exports.service';
+import { ExportType } from '../../database/schemas/export-job.schema';
 
 const FACEBOOK_VERIFY_AMOUNT_CENTS = -100;
 
@@ -53,6 +55,7 @@ export class CustomerTransactionsController {
     private readonly transactionsService: TransactionsService,
     private readonly slashApiService: SlashApiService,
     private readonly confirmCodeRevealRepository: ConfirmCodeRevealRepository,
+    private readonly exportsService: ExportsService,
   ) {}
 
   private getVirtualAccountId(req: { user?: RequestUser }): string {
@@ -63,22 +66,11 @@ export class CustomerTransactionsController {
     return vaId;
   }
 
-  @Get()
-  @ApiOperation({ summary: 'List transactions for the current VA' })
-  @ApiResponse({ status: 200, description: 'Transactions retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - no VA linked' })
-  async list(
-    @Query() query: CustomerTransactionQueryDto,
-    @Request() req: { user?: RequestUser },
-  ): Promise<{
-    data: TransactionWithRelations[];
-    pagination: { page: number; limit: number; total: number };
-  }> {
-    const virtualAccountId = this.getVirtualAccountId(req);
-    const role = req.user?.role;
-    this.logger.log(`Listing transactions for VA ${virtualAccountId}, role=${role}`);
-
+  private buildTransactionFilters(
+    virtualAccountId: string,
+    role: string | undefined,
+    query: CustomerTransactionQueryDto,
+  ) {
     const allowedDetailedStatusesSet = new Set<TransactionDetailedStatus>([
       TransactionDetailedStatus.REFUND,
       TransactionDetailedStatus.REVERSED,
@@ -87,7 +79,6 @@ export class CustomerTransactionsController {
       TransactionDetailedStatus.DECLINED,
     ]);
 
-    // Boss and accountant: default to pending + settled only (no refund/reversed in list)
     const defaultDetailedStatus =
       role === 'boss' || role === 'accountant'
         ? {
@@ -106,7 +97,7 @@ export class CustomerTransactionsController {
     const baseAmountFilter =
       role === 'ads' ? undefined : { $lt: 0 };
 
-    const filters = {
+    return {
       virtualAccountId,
       slashId: query.transactionId,
       cardId: query.cardId ?? { $ne: null },
@@ -122,6 +113,25 @@ export class CustomerTransactionsController {
       ...(baseAmountFilter ? { amountCents: baseAmountFilter } : {}),
       ...(role === 'ads' ? { amountCents: FACEBOOK_VERIFY_AMOUNT_CENTS } : {}),
     };
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'List transactions for the current VA' })
+  @ApiResponse({ status: 200, description: 'Transactions retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no VA linked' })
+  async list(
+    @Query() query: CustomerTransactionQueryDto,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{
+    data: TransactionWithRelations[];
+    pagination: { page: number; limit: number; total: number };
+  }> {
+    const virtualAccountId = this.getVirtualAccountId(req);
+    const role = req.user?.role;
+    this.logger.log(`Listing transactions for VA ${virtualAccountId}, role=${role}`);
+
+    const filters = this.buildTransactionFilters(virtualAccountId, role, query);
 
     const [data, total] = await this.transactionsService.findAllWithFiltersAndPagination(
       filters,
@@ -139,6 +149,38 @@ export class CustomerTransactionsController {
         total,
       },
     };
+  }
+
+  @Post('export')
+  @Roles(...BOSS_AND_ACCOUNTANT_ROLES)
+  @ApiOperation({
+    summary: 'Export transactions and return download URL (boss/accountant)',
+  })
+  @ApiResponse({ status: 200, description: 'Export generated successfully' })
+  async exportTransactions(
+    @Query() query: CustomerTransactionQueryDto,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{
+    downloadUrl: string;
+    fileName: string;
+    expiresAt: Date;
+  }> {
+    const virtualAccountId = this.getVirtualAccountId(req);
+    const role = req.user?.role;
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new BadRequestException('Missing user ID for export');
+    }
+
+    const filters = this.buildTransactionFilters(virtualAccountId, role, query);
+    const result = await this.exportsService.generateTransactionExportDownloadUrlForWeb({
+      userId,
+      virtualAccountId,
+      filters,
+      type: ExportType.TRANSACTIONS,
+    });
+
+    return result;
   }
 
   @Get(':id')
