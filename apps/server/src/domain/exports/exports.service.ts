@@ -5,6 +5,8 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs-extra';
+import XlsxPopulate = require('xlsx-populate');
 import {
   ExportJob,
   ExportJobDoc,
@@ -13,6 +15,15 @@ import {
 } from 'src/database/schemas/export-job.schema';
 import { CreateExportDto } from './dto/create-export.dto';
 import { ExportJobResponseDto } from './dto/export-job-response.dto';
+import { TransactionsService } from '../transactions/transactions.service';
+import { saveExportFile } from './helpers/export-file.helper';
+
+interface WebTransactionExportParams {
+  userId: string;
+  virtualAccountId: string;
+  type: ExportType.TRANSACTIONS;
+  filters: Record<string, unknown>;
+}
 
 @Injectable()
 export class ExportsService {
@@ -25,6 +36,7 @@ export class ExportsService {
     private readonly exportQueue: Queue,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly transactionsService: TransactionsService,
   ) {}
 
   async createExport(
@@ -192,6 +204,164 @@ export class ExportsService {
     }
 
     return deletedCount;
+  }
+
+  async generateTransactionExportDownloadUrlForWeb(
+    params: WebTransactionExportParams,
+  ): Promise<{
+    downloadUrl: string;
+    fileName: string;
+    expiresAt: Date;
+  }> {
+    const ownerId = this.toNumericOwnerId(params.userId);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const exportJob = await this.exportJobModel.create({
+      userId: ownerId,
+      chatId: ownerId,
+      type: ExportType.TRANSACTIONS,
+      status: ExportStatus.PROCESSING,
+      filters: params.filters,
+      expiresAt,
+    });
+
+    try {
+      const [transactions] = await this.transactionsService.findAllWithFiltersAndPagination(
+        params.filters,
+        { page: 1, limit: 10000 },
+      );
+
+      const headers = [
+        'No',
+        'Transaction ID',
+        'Card',
+        'Amount',
+        'Status',
+        'Description',
+        'Merchant',
+        'Country',
+        'Date',
+      ];
+      const rows = transactions.map((transaction, index) => {
+        const cardName = transaction.card
+          ? `${transaction.card.name ?? ''} ${transaction.card.last4 ?? ''}`.trim()
+          : (transaction.cardId ?? '');
+        const merchant =
+          transaction.merchantData?.description ??
+          transaction.merchantData?.name ??
+          '';
+        const country = transaction.merchantData?.location?.country ?? '';
+        const dateValue = transaction.date
+          ? ExportsService.formatDateTimeUtc(new Date(transaction.date))
+          : '';
+        return [
+          index + 1,
+          transaction.slashId ?? '',
+          cardName,
+          Number((transaction.amountCents / 100).toFixed(2)),
+          (transaction.detailedStatus ?? transaction.status ?? '').toUpperCase(),
+          transaction.description ?? '',
+          merchant,
+          country,
+          dateValue,
+        ];
+      });
+
+      const workbook = await XlsxPopulate.fromBlankAsync();
+      const sheet = workbook.sheet(0);
+      sheet.name('Transactions');
+      headers.forEach((header, colIndex) => {
+        const cell = sheet.cell(1, colIndex + 1);
+        cell.value(header);
+        cell.style('bold', true);
+      });
+      rows.forEach((row, rowIndex) => {
+        row.forEach((value, colIndex) => {
+          sheet.cell(rowIndex + 2, colIndex + 1).value(value);
+        });
+      });
+      for (let colIndex = 0; colIndex < headers.length; colIndex++) {
+        const columnLetter = String.fromCharCode(65 + colIndex);
+        sheet.column(columnLetter).width(20);
+      }
+
+      const buffer = (await workbook.outputAsync()) as Buffer;
+      const { fileName, filePath } = await saveExportFile(buffer, 'transactions-web');
+      const fileStats = await fs.stat(filePath);
+      await this.exportJobModel.updateOne(
+        { _id: exportJob._id },
+        {
+          $set: {
+            status: ExportStatus.COMPLETED,
+            fileName,
+            filePath,
+            fileSize: fileStats.size,
+            recordCount: rows.length,
+          },
+        },
+      );
+
+      const token = this.jwtService.sign(
+        {
+          jobId: exportJob._id.toString(),
+          type: 'export-download',
+        },
+        {
+          expiresIn: '24h',
+        },
+      );
+      const downloadUrl = this.buildDownloadUrlFromToken(token);
+      return {
+        downloadUrl,
+        fileName,
+        expiresAt,
+      };
+    } catch (error) {
+      await this.exportJobModel.updateOne(
+        { _id: exportJob._id },
+        {
+          $set: {
+            status: ExportStatus.FAILED,
+            errorMessage: error instanceof Error ? error.message : String(error),
+          },
+        },
+      );
+      throw error;
+    }
+  }
+
+  private static formatDateTimeUtc(date: Date): string {
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    const h = String(date.getUTCHours()).padStart(2, '0');
+    const min = String(date.getUTCMinutes()).padStart(2, '0');
+    const s = String(date.getUTCSeconds()).padStart(2, '0');
+    return `${y}-${m}-${d} ${h}:${min}:${s}`;
+  }
+
+  private buildDownloadUrlFromToken(token: string): string {
+    let baseUrl = this.configService.get<string>('resourceBaseUrl', 'http://localhost:3000');
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = `http://${baseUrl}`;
+    }
+    baseUrl = baseUrl.replace(/\/$/, '');
+    return `${baseUrl}/api/exports/download/${token}`;
+  }
+
+  private toNumericOwnerId(rawId: string): number {
+    const parsed = Number(rawId);
+    if (Number.isFinite(parsed)) {
+      return Math.abs(Math.trunc(parsed));
+    }
+
+    let hash = 0;
+    for (let index = 0; index < rawId.length; index++) {
+      hash = ((hash << 5) - hash + rawId.charCodeAt(index)) | 0;
+    }
+    return Math.abs(hash) || 1;
   }
 
   private toResponseDto(job: ExportJobDoc): ExportJobResponseDto {

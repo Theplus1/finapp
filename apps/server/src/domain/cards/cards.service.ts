@@ -40,6 +40,7 @@ export interface CardFilters {
   status?: string;
   cardGroupId?: string;
   virtualAccountId?: string;
+  slashId?: string;
   sortBy?: string;
   sortOrder?: SortOrder;
   search?: string;
@@ -191,6 +192,10 @@ export class CardsService {
 
     if (filters.virtualAccountId) {
       mongoFilter.virtualAccountId = filters.virtualAccountId;
+    }
+
+    if (filters.slashId) {
+      mongoFilter.slashId = filters.slashId;
     }
 
     if (filters.search && filters.search.trim().length > 0) {

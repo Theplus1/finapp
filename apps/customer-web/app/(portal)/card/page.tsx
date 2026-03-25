@@ -1,14 +1,10 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import {
-  formatCurrency,
-  formatUtcMMDDYYYY,
-  renderNoTable,
-} from "@/app/utils/func";
+import { formatCurrency, formatUtcMMDDYYYY } from "@/app/utils/func";
 import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { Section, SectionContent } from "@/components/layouts/section";
 import { PageLayout } from "@/components/layouts/page-layout";
@@ -23,7 +19,6 @@ import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import CardNameCol from "@repo/ui/components/card-name-col";
-import { ClientPagination } from "@repo/ui/components/client-pagination";
 import { DataTable } from "@repo/ui/components/data-table";
 import { upperCaseFirstCharacter } from "@repo/ui/lib/func";
 import {
@@ -35,20 +30,12 @@ import {
 import FormActionCard from "./components/form-action-card";
 import CardCVVCol from "./components/card-cvv-col";
 import { useDebounce } from "@repo/ui/hooks/use-debounce";
-import { RoleUserEnum, UserBoss } from "@/lib/api/endpoints/users";
-import CVVHistoriesTaken from "./components/cvv-taken";
 import { Switch } from "@repo/ui/components/switch";
 import { toast } from "sonner";
 import { Spinner } from "@repo/ui/components/spinner";
 import { Button } from "@repo/ui/components/button";
 
-import NoPermissionScreen from "@repo/ui/components/no-permission";
-
-const initFilter = {
-  status: "",
-};
-
-const maskDataTable = Array.from({ length: 20 }, () => {
+const maskDataTable = Array.from({ length: 1 }, () => {
   return {};
 }) as Card[];
 
@@ -87,18 +74,6 @@ const initCard: Card = {
   },
 };
 
-const initEmployee: UserBoss = {
-  id: "",
-  username: "",
-  role: RoleUserEnum.BOSS,
-  email: "",
-  isActive: false,
-  bossId: "",
-  virtualAccountId: "",
-  createdAt: "",
-  updatedAt: "",
-};
-
 export default function Cards() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const [cardEdit, setCardEdit] = useState<Card>(initCard);
@@ -109,16 +84,9 @@ export default function Cards() {
   const [transGettedCVV, setTransGettedCVV] = useState<Record<string, string>>(
     {},
   );
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 20,
-    total: 0,
-  });
-  const [currentFilter, setCurrentFilter] = useState(initFilter);
   const [keywordCard, setKeywordCard] = useState("");
   const keywordCardDebounce = useDebounce(keywordCard, 300).toLowerCase();
   const [countGetList, setCountGetList] = useState(0);
-  const [user, setUser] = useState<UserBoss>(initEmployee);
   const [cardLoadingStatus, setCardLoadingStatus] = useState<string | null>(
     null,
   );
@@ -129,49 +97,21 @@ export default function Cards() {
   useEffect(() => {
     setBreadcrumbs([
       { label: "Dashboard", href: "/dashboard" },
-      { label: "Card list", href: "/cards" },
+      { label: "Card", href: "/card" },
     ]);
   }, [setBreadcrumbs]);
 
-  useLayoutEffect(() => {
-    const userLocalStorage = localStorage.getItem("user");
-    if (userLocalStorage) {
-      setUser(JSON.parse(userLocalStorage));
-    }
-  }, []);
-
   const { data: cardInfors, isLoading } = useQuery({
-    queryKey: [
-      "cards",
-      pagination.page,
-      currentFilter,
-      countGetList,
-      keywordCardDebounce,
-    ],
+    queryKey: ["cards", countGetList, keywordCardDebounce],
     queryFn: async () => {
-      const res = await api.cards.getCards({
-        ...currentFilter,
-        page: pagination.page,
-        limit: pagination.pageSize,
-        search: keywordCardDebounce,
-      });
-      setPagination((prev) => ({
-        ...prev,
-        total: res.pagination?.total ?? 0,
-      }));
+      if (!keywordCardDebounce)
+        return {
+          data: [],
+        };
+      const res = await api.cards.getCardBySlashId(keywordCardDebounce);
       return res;
     },
-    refetchOnMount: "always",
-    gcTime: 0,
   });
-
-  useEffect(() => {
-    setPagination((prev) => ({
-      ...prev,
-      page: 1,
-      search: keywordCardDebounce,
-    }));
-  }, [keywordCardDebounce]);
 
   const dataCard: Card[] = useMemo(() => cardInfors?.data ?? [], [cardInfors]);
 
@@ -180,13 +120,11 @@ export default function Cards() {
     [dataCard, isLoading],
   );
 
-  const handleActionVirtualAccount = (type: DrawerCardTypeEnum, card: Card) => {
+  const handleActionCard = (type: DrawerCardTypeEnum, card: Card) => {
     setCardEdit(card);
     setOpenDrawer(true);
     setDrawerType(type);
   };
-
-  const isBoss = user.role === RoleUserEnum.BOSS;
 
   const handleChangeStatus = (card: Card) => {
     const isActivating = card.status === "active";
@@ -208,6 +146,7 @@ export default function Cards() {
         setCardLoadingStatus(null);
       });
   };
+
   const handleChangePreRecharge = (card: Card) => {
     const isSettedRecurring = card.isRecurringOnly;
     setCardLoadingPreRecharge(card.slashId);
@@ -231,22 +170,6 @@ export default function Cards() {
       });
   };
   const columns = [
-    {
-      header: "No",
-      cell: ({ row }: CellContext<Card, number>) => {
-        return isLoading ? (
-          <Skeleton />
-        ) : (
-          renderNoTable(
-            {
-              page: pagination.page,
-              pageSize: pagination.pageSize,
-            },
-            row.index,
-          )
-        );
-      },
-    },
     {
       header: "Card ID",
       cell: ({ row }: CellContext<Card, string>) => {
@@ -283,20 +206,6 @@ export default function Cards() {
         );
       },
     },
-    ...(isBoss
-      ? [
-          {
-            header: "CVV History",
-            cell: ({ row }: CellContext<Card, string>) => {
-              return isLoading ? (
-                <Skeleton />
-              ) : (
-                <CVVHistoriesTaken data={row.original.cvvHistories ?? []} />
-              );
-            },
-          },
-        ]
-      : []),
     {
       header: "Card Status",
       cell: ({ row }: CellContext<Card, string>) => {
@@ -354,7 +263,7 @@ export default function Cards() {
           <Button
             variant={"link"}
             onClick={() =>
-              handleActionVirtualAccount(
+              handleActionCard(
                 DrawerCardTypeEnum.SET_SPENDING_LIMIT,
                 row.original,
               )
@@ -391,16 +300,6 @@ export default function Cards() {
     },
   ] as ColumnDef<Card>[];
 
-  const handleChangeFilter = (field: string, value: string) => {
-    setPagination((prev) => ({
-      ...prev,
-      page: 1,
-    }));
-    setCurrentFilter((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
   const renderTitleDrawer = (typeDrawer: DrawerCardTypeEnum) => {
     switch (typeDrawer) {
       case DrawerCardTypeEnum.SET_SPENDING_LIMIT:
@@ -437,13 +336,12 @@ export default function Cards() {
   return (
     <PageLayout>
       <PageHeader>
-        <PageTitle>Card list</PageTitle>
+        <PageTitle className="flex gap-3 items-center">Card </PageTitle>
       </PageHeader>
 
       <Section>
         <SectionContent>
           <FilterCard
-            onStatusChange={(status) => handleChangeFilter("status", status)}
             onCardChange={handleChangeCard}
             keywordCard={keywordCard}
           />
@@ -451,12 +349,6 @@ export default function Cards() {
             columns={columns}
             data={dataCardGrouped}
             maxHeight={"70vh"}
-          />
-          <ClientPagination
-            total={pagination.total}
-            page={pagination.page}
-            pageSize={pagination.pageSize}
-            onChange={(page) => setPagination((prev) => ({ ...prev, page }))}
           />
           <Drawer direction="right" open={openDrawer}>
             <DrawerContent>

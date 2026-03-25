@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -16,7 +16,7 @@ import { DataTable } from "@repo/ui/components/data-table";
 import { Transaction } from "@/lib/api/endpoints/transaction";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import FilterTransaction from "./filter";
+import ActionTableTransaction from "./filter";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { ClientPagination } from "@repo/ui/components/client-pagination";
 import CardNameCol from "@repo/ui/components/card-name-col";
@@ -37,6 +37,8 @@ const initFilter = {
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as Transaction[];
+
+const RoleShowExportTransaction = [RoleUserEnum.BOSS, RoleUserEnum.ACCOUNTANT];
 
 const initEmployee: Employee | UserBoss = {
   id: "",
@@ -70,7 +72,7 @@ export default function DashboardContainer() {
     setBreadcrumbs([{ label: "Dashboard", href: "/dashboard" }]);
   }, [setBreadcrumbs]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const userLocalStorage = localStorage.getItem("user");
     if (userLocalStorage) {
       setUser(JSON.parse(userLocalStorage));
@@ -271,6 +273,8 @@ export default function DashboardContainer() {
     );
   };
 
+  const showExportTransaction = RoleShowExportTransaction.includes(user.role);
+
   return (
     <PageLayout>
       <PageHeader>
@@ -283,7 +287,7 @@ export default function DashboardContainer() {
 
       <Section>
         <SectionContent>
-          <FilterTransaction
+          <ActionTableTransaction
             onCardChange={(cardId) => handleChangeFilter("cardId", cardId)}
             onStatusChange={(status) =>
               handleChangeFilter("detailedStatus", status)
@@ -291,6 +295,8 @@ export default function DashboardContainer() {
             onDateFromChange={(date) => handleChangeFilter("startDate", date)}
             onDateToChange={(date) => handleChangeFilter("endDate", date)}
             onSearch={(search) => handleChangeFilter("transactionId", search)}
+            currentFilter={currentFilter}
+            showExportTransaction={showExportTransaction}
           />
           <DataTable
             columns={columns}

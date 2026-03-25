@@ -40,12 +40,20 @@ export class ExportsController {
 
       const { jobId, userId } = payload;
 
-      // Get job
-      const job = await this.exportJobModel.findOne({
+      const query: {
+        _id: string;
+        status: ExportStatus;
+        userId?: number;
+      } = {
         _id: jobId,
-        userId,
         status: ExportStatus.COMPLETED,
-      });
+      };
+      if (typeof userId === 'number') {
+        query.userId = userId;
+      }
+
+      // Get job
+      const job = await this.exportJobModel.findOne(query);
 
       if (!job) {
         throw new NotFoundException('Export not found or not ready');
