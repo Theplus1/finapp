@@ -11,8 +11,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Spinner } from "@repo/ui/components/spinner";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
-import { Label } from "@repo/ui/components/label";
 import { useState } from "react";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 
 type Props = {
   onVirtualAccountChange: (virtualAccountId: string) => void;
@@ -52,8 +52,7 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
   const virtualAccountData = virtualAccountInfos ?? [];
 
   return (
-    <>
-      <Label className="px-1">Virtual account</Label>
+    <FormItemWrapper label="Virtual account">
       <Select onValueChange={handleValueChange} value={value}>
         <SelectTrigger className="w-[280px]">
           {isLoadingVirtualAccountInfos ? (
@@ -79,7 +78,7 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
           </SelectGroup>
         </SelectContent>
       </Select>
-    </>
+    </FormItemWrapper>
   );
 };
 

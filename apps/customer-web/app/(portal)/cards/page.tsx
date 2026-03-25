@@ -42,12 +42,6 @@ import { toast } from "sonner";
 import { Spinner } from "@repo/ui/components/spinner";
 import { Button } from "@repo/ui/components/button";
 
-import NoPermissionScreen from "@repo/ui/components/no-permission";
-
-const initFilter = {
-  status: "",
-};
-
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as Card[];
@@ -114,7 +108,7 @@ export default function Cards() {
     pageSize: 20,
     total: 0,
   });
-  const [currentFilter, setCurrentFilter] = useState(initFilter);
+  const [currentFilter, setCurrentFilter] = useState({});
   const [keywordCard, setKeywordCard] = useState("");
   const keywordCardDebounce = useDebounce(keywordCard, 300).toLowerCase();
   const [countGetList, setCountGetList] = useState(0);
@@ -432,6 +426,10 @@ export default function Cards() {
 
   const handleChangeCard = (card: string) => {
     setKeywordCard(card);
+    setCurrentFilter((prev) => ({
+      ...prev,
+      search: card,
+    }));
   };
 
   return (
@@ -446,6 +444,7 @@ export default function Cards() {
             onStatusChange={(status) => handleChangeFilter("status", status)}
             onCardChange={handleChangeCard}
             keywordCard={keywordCard}
+            currentFilter={currentFilter}
           />
           <DataTable
             columns={columns}

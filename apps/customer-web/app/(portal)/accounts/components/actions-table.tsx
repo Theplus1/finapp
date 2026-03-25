@@ -11,10 +11,8 @@ type Props = {
 
 const ActionsTable = ({ employee }: Props) => {
   return (
-    <div>
-      <div className="grid gap-2">
-        <ActionResetPassword employee={employee} />
-      </div>
+    <div className="grid gap-2">
+      <ActionResetPassword employee={employee} />
     </div>
   );
 };

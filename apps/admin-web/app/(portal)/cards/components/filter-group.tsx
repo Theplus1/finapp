@@ -10,8 +10,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Spinner } from "@repo/ui/components/spinner";
-import { Label } from "@repo/ui/components/label";
 import { useState } from "react";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 
 type Props = {
   onGroupChange: (groupId: string) => void;
@@ -33,8 +33,7 @@ const FilterGroup = ({ onGroupChange }: Props) => {
   };
 
   return (
-    <>
-      <Label className="px-1">Group card</Label>
+    <FormItemWrapper label="Group card">
       <Select onValueChange={handleValueChange} value={value}>
         <SelectTrigger className="w-[280px]">
           {isLoadingGroupInfos ? (
@@ -57,7 +56,7 @@ const FilterGroup = ({ onGroupChange }: Props) => {
           </SelectGroup>
         </SelectContent>
       </Select>
-    </>
+    </FormItemWrapper>
   );
 };
 

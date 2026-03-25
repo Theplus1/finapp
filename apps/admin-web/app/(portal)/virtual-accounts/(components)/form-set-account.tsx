@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Field } from "@repo/ui/components/field";
 import { InputGroup, InputGroupInput } from "@repo/ui/components/input-group";
 import { isEmail } from "@repo/ui/lib/utils";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 
 type Props = {
   virtualAccount: VirtualAccount | null;
@@ -78,10 +79,10 @@ const FormSetAccount = ({
   return (
     <>
       <div className="px-4 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Username
-          </label>
+        <FormItemWrapper
+          label="Username"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Input
             placeholder="Enter username"
             value={username}
@@ -90,11 +91,11 @@ const FormSetAccount = ({
               setUsername(value);
             }}
           />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Email (Use for login)
-          </label>
+        </FormItemWrapper>
+        <FormItemWrapper
+          label="Email (Use for login)"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Field data-invalid={!isEmail(email)}>
             <InputGroup className="pr-1">
               <InputGroupInput
@@ -108,11 +109,11 @@ const FormSetAccount = ({
               />
             </InputGroup>
           </Field>
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Password
-          </label>
+        </FormItemWrapper>
+        <FormItemWrapper
+          label="Password"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Input
             placeholder="Enter password"
             value={password}
@@ -122,11 +123,11 @@ const FormSetAccount = ({
               setPassword(value);
             }}
           />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Confirm Password
-          </label>
+        </FormItemWrapper>
+        <FormItemWrapper
+          label="Confirm Password"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Field data-invalid={password !== confirmPassword}>
             <InputGroup className="pr-1">
               <InputGroupInput
@@ -140,7 +141,7 @@ const FormSetAccount = ({
               />
             </InputGroup>
           </Field>
-        </div>
+        </FormItemWrapper>
       </div>
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">

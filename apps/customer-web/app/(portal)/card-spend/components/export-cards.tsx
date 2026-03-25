@@ -8,7 +8,7 @@ type Props = {
   currentFilter?: Record<string, unknown>;
 };
 
-export function ExportTransactions({ currentFilter }: Props) {
+export function ExportCardSpend({ currentFilter }: Props) {
   const { startExport, isExporting } = useExport();
   const disabledExportTransactions = isExporting;
   return (
@@ -17,9 +17,9 @@ export function ExportTransactions({ currentFilter }: Props) {
       variant={"outline"}
       onClick={() =>
         startExport({
-          endpoint: EXPORT_URL.TRANSACTIONS,
+          endpoint: EXPORT_URL.CARD_SPEND,
           params: {
-            dataName: EXPORT_DATA_NAMES.TRANSACTIONS,
+            dataName: EXPORT_DATA_NAMES.CARD_SPEND,
             filters: currentFilter,
           },
         })

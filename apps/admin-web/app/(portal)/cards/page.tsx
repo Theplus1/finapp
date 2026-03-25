@@ -86,7 +86,7 @@ export default function Cards() {
               page: pagination.page,
               pageSize: pagination.pageSize,
             },
-            row.index
+            row.index,
           )
         );
       },

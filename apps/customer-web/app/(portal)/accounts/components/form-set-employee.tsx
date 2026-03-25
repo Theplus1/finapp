@@ -19,6 +19,7 @@ import {
 } from "@repo/ui/components/select";
 import { RoleUserEnum } from "@/lib/api/endpoints/users";
 import { isEmail } from "@repo/ui/lib/utils";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 
 type Props = {
   openDrawer: boolean;
@@ -95,10 +96,10 @@ const FormSetEmployee = ({
   return (
     <>
       <div className="px-4 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Username
-          </label>
+        <FormItemWrapper
+          label="Username"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Input
             placeholder="Enter username"
             value={username}
@@ -107,11 +108,11 @@ const FormSetEmployee = ({
               setUsername(value);
             }}
           />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Role
-          </label>
+        </FormItemWrapper>
+        <FormItemWrapper
+          label="Role"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Select
             onValueChange={(
               value: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT,
@@ -134,12 +135,11 @@ const FormSetEmployee = ({
               </SelectGroup>
             </SelectContent>
           </Select>
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Email
-          </label>
-
+        </FormItemWrapper>
+        <FormItemWrapper
+          label="Email"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Field data-invalid={!isEmail(email)}>
             <InputGroup className="pr-1">
               <InputGroupInput
@@ -153,11 +153,11 @@ const FormSetEmployee = ({
               />
             </InputGroup>
           </Field>
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Password
-          </label>
+        </FormItemWrapper>
+        <FormItemWrapper
+          label="Password"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Input
             placeholder="Enter password"
             value={password}
@@ -167,11 +167,11 @@ const FormSetEmployee = ({
               setPassword(value);
             }}
           />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Confirm Password
-          </label>
+        </FormItemWrapper>
+        <FormItemWrapper
+          label="Confirm Password"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Field data-invalid={password !== confirmPassword}>
             <InputGroup className="pr-1">
               <InputGroupInput
@@ -185,7 +185,7 @@ const FormSetEmployee = ({
               />
             </InputGroup>
           </Field>
-        </div>
+        </FormItemWrapper>
       </div>
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">
