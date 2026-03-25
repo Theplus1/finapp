@@ -178,14 +178,20 @@ export default function DashboardContainer() {
         },
       },
       {
-        header: "Merchant",
+        id: "merchant",
+        header: <div className="text-center">Merchant</div>,
         cell: ({ row }: CellContext<Transaction, string>) => {
-          return isLoading ? (
-            <Skeleton />
-          ) : [RoleUserEnum.BOSS, RoleUserEnum.ACCOUNTANT].includes(
-              user.role,
-            ) || transGettedCode[row.original.slashId] ? (
-            (row.original.merchantData?.description ?? EMPTY_LABEL)
+          if (isLoading) {
+            return <Skeleton />;
+          }
+          const isNotAds = [
+            RoleUserEnum.BOSS,
+            RoleUserEnum.ACCOUNTANT,
+          ].includes(user.role);
+          return isNotAds || transGettedCode[row.original.slashId] ? (
+            <div className="text-center">
+              {row.original.merchantData?.description ?? EMPTY_LABEL}
+            </div>
           ) : (
             <GetConfirmCode
               tranId={row.original.slashId}
