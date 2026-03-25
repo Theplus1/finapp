@@ -7,6 +7,13 @@ import { HtmlUtil } from "src/shared/utils/html.util";
 import type { UserDocument } from "src/users/users.schema";
 import type { AccessStatus } from "src/users/users.schema";
 
+function formatVirtualAccountBalanceLine(
+  vaName: string,
+  balanceUsd: number,
+): string {
+  return `${HtmlUtil.escape(vaName)}: ${Math.round(balanceUsd).toLocaleString("en-US")}$`;
+}
+
 export const Messages = {
   // Welcome & Help
   welcome: (name: string) =>
@@ -446,10 +453,15 @@ export const Messages = {
   exportingTransactions: '⏳ *Generating your export...*\n\n' +
     'This may take a moment. You\'ll receive a download link when it\'s ready.',
 
-  // Balance Alert
-  balanceAlert: (vaName: string, balanceUsd: number) => ({
-    text: `${HtmlUtil.escape(vaName)}: ${Math.round(balanceUsd).toLocaleString('en-US')}$`,
-    parse_mode: 'HTML' as const,
+  // Balance Alert (một tin: tiêu đề + từng dòng VA)
+  balanceAlertsDigest: (
+    items: ReadonlyArray<{ vaName: string; balanceUsd: number }>,
+  ) => ({
+    text: [
+      "💰 Số dư được cập nhật:",
+      ...items.map((i) => formatVirtualAccountBalanceLine(i.vaName, i.balanceUsd)),
+    ].join("\n"),
+    parse_mode: "HTML" as const,
   }),
 
   // Card Spending Alert
