@@ -17,7 +17,6 @@ import { CreateExportDto } from './dto/create-export.dto';
 import { ExportJobResponseDto } from './dto/export-job-response.dto';
 import { TransactionsService } from '../transactions/transactions.service';
 import { saveExportFile } from './helpers/export-file.helper';
-import { format } from 'date-fns';
 
 interface WebTransactionExportParams {
   userId: string;
@@ -252,7 +251,7 @@ export class ExportsService {
           '';
         const country = transaction.merchantData?.location?.country ?? '';
         const dateValue = transaction.date
-          ? format(new Date(transaction.date), 'yyyy-MM-dd HH:mm:ss')
+          ? ExportsService.formatDateTimeUtc(new Date(transaction.date))
           : '';
         return [
           index + 1,
@@ -328,6 +327,19 @@ export class ExportsService {
       );
       throw error;
     }
+  }
+
+  private static formatDateTimeUtc(date: Date): string {
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    const h = String(date.getUTCHours()).padStart(2, '0');
+    const min = String(date.getUTCMinutes()).padStart(2, '0');
+    const s = String(date.getUTCSeconds()).padStart(2, '0');
+    return `${y}-${m}-${d} ${h}:${min}:${s}`;
   }
 
   private buildDownloadUrlFromToken(token: string): string {
