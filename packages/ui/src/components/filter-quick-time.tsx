@@ -12,7 +12,7 @@ import { FormItemWrapper } from "./form-item-wrapper";
 
 type Props = {
   defaultValue: QuickTimeEnum;
-  onQuickTimeChange: (quickTime: QuickTimeEnum) => void;
+  onQuickTimeChange: (quickTime: QuickTimeEnum, start: Date, end: Date) => void;
 };
 
 export enum QuickTimeEnum {
@@ -25,11 +25,41 @@ export enum QuickTimeEnum {
   Custom = "custom",
 }
 
+const dateByQuickTime = {
+  [QuickTimeEnum.Today]: {
+    start: new Date(),
+    end: new Date(),
+  },
+  [QuickTimeEnum.Yesterday]: {
+    start: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    end: new Date(Date.now() - 24 * 60 * 60 * 1000),
+  },
+  [QuickTimeEnum["Last 7 Days"]]: {
+    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    end: new Date(),
+  },
+  [QuickTimeEnum["Last 30 Days"]]: {
+    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    end: new Date(),
+  },
+  [QuickTimeEnum["This Month"]]: {
+    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    end: new Date(),
+  },
+  [QuickTimeEnum["Last Month"]]: {
+    start: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1),
+    end: new Date(new Date().getFullYear(), new Date().getMonth(), 0),
+  },
+};
+
 const FilterQuickTime = ({ defaultValue, onQuickTimeChange }: Props) => {
   const [value, setValue] = useState<QuickTimeEnum>(QuickTimeEnum.Custom);
-  const handleValueChange = (value: string) => {
-    setValue(value as QuickTimeEnum);
-    onQuickTimeChange(value as QuickTimeEnum);
+  const handleValueChange = (value: QuickTimeEnum) => {
+    setValue(value);
+    const date = dateByQuickTime[value as keyof typeof dateByQuickTime];
+    if (date) {
+      onQuickTimeChange(value, date.start, date.end);
+    }
   };
 
   useEffect(() => {

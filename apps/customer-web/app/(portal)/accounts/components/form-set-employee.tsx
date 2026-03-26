@@ -20,6 +20,7 @@ import {
 import { RoleUserEnum } from "@/lib/api/endpoints/users";
 import { isEmail } from "@repo/ui/lib/utils";
 import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
+// import { Checkbox } from "@repo/ui/components/checkbox";
 
 type Props = {
   openDrawer: boolean;
@@ -36,6 +37,7 @@ const FormSetEmployee = ({
   const [role, setRole] = useState<RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT>(
     RoleUserEnum.ADS,
   );
+  // const [permission, setPermission] = useState<PermissionEnum[]>([]);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
@@ -90,8 +92,15 @@ const FormSetEmployee = ({
     !email ||
     !isEmail(email) ||
     !password ||
-    !confirmPassword ||
     password !== confirmPassword;
+
+  // const onCheckPermission = (value: PermissionEnum) => {
+  //   if (permission.includes(value)) {
+  //     setPermission(permission.filter((item) => item !== value));
+  //   } else {
+  //     setPermission([...permission, value]);
+  //   }
+  // };
 
   return (
     <>
@@ -135,6 +144,60 @@ const FormSetEmployee = ({
               </SelectGroup>
             </SelectContent>
           </Select>
+          {/* <div className="grid grid-cols-2 gap-2">
+            <Field orientation="horizontal">
+              <Checkbox
+                id={PermissionEnum.TRANSACTIONS}
+                name={PermissionEnum.TRANSACTIONS}
+                checked={permission.includes(PermissionEnum.TRANSACTIONS)}
+                onCheckedChange={() =>
+                  onCheckPermission(PermissionEnum.TRANSACTIONS)
+                }
+              />
+              <FieldLabel htmlFor={PermissionEnum.TRANSACTIONS} className="text-muted-foreground">
+                Transactions
+              </FieldLabel>
+            </Field>
+            <Field orientation="horizontal">
+              <Checkbox
+                id={PermissionEnum.CARD_LIST}
+                name={PermissionEnum.CARD_LIST}
+                checked={permission.includes(PermissionEnum.CARD_LIST)}
+                onCheckedChange={() =>
+                  onCheckPermission(PermissionEnum.CARD_LIST)
+                }
+              />
+              <FieldLabel htmlFor={PermissionEnum.CARD_LIST} className="text-muted-foreground">
+                Card list
+              </FieldLabel>
+            </Field>
+            <Field orientation="horizontal">
+              <Checkbox
+                id={PermissionEnum.PAYMENTS}
+                name={PermissionEnum.PAYMENTS}
+                checked={permission.includes(PermissionEnum.PAYMENTS)}
+                onCheckedChange={() =>
+                  onCheckPermission(PermissionEnum.PAYMENTS)
+                }
+              />
+              <FieldLabel htmlFor={PermissionEnum.PAYMENTS} className="text-muted-foreground">
+                Payments
+              </FieldLabel>
+            </Field>
+            <Field orientation="horizontal">
+              <Checkbox
+                id={PermissionEnum.CARD_SPEND}
+                name={PermissionEnum.CARD_SPEND}
+                checked={permission.includes(PermissionEnum.CARD_SPEND)}
+                onCheckedChange={() =>
+                  onCheckPermission(PermissionEnum.CARD_SPEND)
+                }
+              />
+              <FieldLabel htmlFor={PermissionEnum.CARD_SPEND} className="text-muted-foreground">
+                Card spend
+              </FieldLabel>
+            </Field>
+          </div> */}
         </FormItemWrapper>
         <FormItemWrapper
           label="Email"

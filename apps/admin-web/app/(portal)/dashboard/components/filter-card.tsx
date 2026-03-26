@@ -71,6 +71,7 @@ const FilterCard = ({ onCardChange }: Props) => {
           <SelectGroup>
             <SelectLabel>Select a card</SelectLabel>
             <Input
+              key={"filterCard"}
               value={textSearch}
               placeholder="Search card"
               className="w-full sticky top-0 z-10 bg-background"

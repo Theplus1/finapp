@@ -23,6 +23,7 @@ export interface CreateEmployeeData {
   email: string;
   password: string;
   role: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT;
+  // permission: PermissionEnum[];
 }
 
 export interface UpdateUserData {

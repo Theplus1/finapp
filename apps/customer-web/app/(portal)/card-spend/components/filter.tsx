@@ -1,6 +1,6 @@
 // import { ExportCardSpend } from "./export-cards";
 import FilterCard from "./filter-card";
-import FilterMonthYear from "./filter-month";
+import FilterMonthYear from "@repo/ui/components/filter-month-year";
 
 interface Props {
   keywordCard: string;

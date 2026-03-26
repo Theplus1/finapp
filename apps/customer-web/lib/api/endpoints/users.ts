@@ -2,6 +2,13 @@
  * Users API endpoints
  */
 
+export enum PermissionEnum {
+  TRANSACTIONS = "transactions",
+  CARD_LIST = "card_list",
+  PAYMENTS = "payments",
+  CARD_SPEND = "card_spend",
+}
+
 export enum RoleUserEnum {
   ADMIN = "admin",
   BOSS = "boss",

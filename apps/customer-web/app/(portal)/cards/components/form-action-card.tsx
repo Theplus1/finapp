@@ -6,11 +6,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Spinner } from "@repo/ui/components/spinner";
 import { cn } from "@/lib/utils";
-import {
-  Card,
-  DrawerCardTypeEnum,
-  LimitPresetEnum,
-} from "@/lib/api/endpoints/card";
+import { Card, LimitPresetEnum } from "@/lib/api/endpoints/card";
 import {
   Select,
   SelectContent,
@@ -112,10 +108,8 @@ const FormActionCard = ({
           </Select>
         </FormItemWrapper>
       </div>
-      <div
-        className={`${isUnSet ? "hidden" : ""} px-4 mt-4`}
-      >
-         <FormItemWrapper
+      <div className={`${isUnSet ? "hidden" : ""} px-4 mt-4`}>
+        <FormItemWrapper
           label="Amount ($)"
           labelClassName="text-sm font-medium text-muted-foreground"
         >

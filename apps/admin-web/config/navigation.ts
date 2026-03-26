@@ -7,6 +7,7 @@ import {
   Group,
   User,
   HandCoins,
+  MapIcon,
 } from "lucide-react";
 import { NavSection, Team } from "@/types";
 
@@ -53,5 +54,10 @@ export const navMain: NavSection[] = [
     title: "Payments",
     url: "/payments",
     icon: HandCoins,
+  },
+  {
+    title: "Locations",
+    url: "/locations",
+    icon: MapIcon,
   },
 ];

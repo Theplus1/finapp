@@ -1,4 +1,4 @@
-import FilterMonthYear from "./filter-month";
+import FilterMonthYear from "@repo/ui/components/filter-month-year";
 
 interface Props {
   onFilterChange: (month: string) => void;

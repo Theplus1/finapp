@@ -31,7 +31,7 @@ const initFilter = {
   virtualAccountId: "",
 };
 
-const dateColumnLabel = ["Recharge", "Consume", "Refund"];
+const dateColumnLabel = ["Consume outside US", "Consume in US"];
 
 const initDataPayment: PaymentResponse = {
   virtualAccountId: "",
@@ -75,14 +75,14 @@ const detectMonthYear = (month: string) => {
   return { year, month: monthNum };
 };
 
-export default function Payments() {
+export default function Locations() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const [currentFilter, setCurrentFilter] = useState(initFilter);
 
   useEffect(() => {
     setBreadcrumbs([
       { label: "Dashboard", href: "/dashboard" },
-      { label: "Payments", href: "/payments" },
+      { label: "Locations", href: "/locations" },
     ]);
   }, [setBreadcrumbs]);
 
@@ -148,12 +148,15 @@ export default function Payments() {
       });
 
       return [
-        { label: "Recharge", key: "totalNap", data: result.totalNap },
-        { label: "Consume", key: "totalTieu", data: result.totalTieu },
         {
-          label: "Refund",
-          key: "refundCents",
-          data: result.refundCents,
+          label: "Consume outside US",
+          key: "spendNonUsCents",
+          data: result.spendNonUsCents,
+        },
+        {
+          label: "Consume in US",
+          key: "spendUsCents",
+          data: result.spendUsCents,
         },
       ];
     }
@@ -242,7 +245,7 @@ export default function Payments() {
   return (
     <PageLayout>
       <PageHeader>
-        <PageTitle>Payments</PageTitle>
+        <PageTitle>Locations</PageTitle>
       </PageHeader>
 
       <Section>
