@@ -7,6 +7,17 @@ export class PaymentSummaryAdminRowDto {
   @ApiProperty({ description: 'Total deposit in cents for the day' })
   depositCents: number;
 
+  @ApiProperty({ description: 'Total spend in cents (pending + settled) for the day' })
+  spendCents: number;
+
+  @ApiProperty({ description: 'Total spend in US cents (pending + settled) for the day' })
+  spendUsCents: number;
+
+  @ApiProperty({
+    description: 'Total spend in Non-US cents (pending + settled) for the day',
+  })
+  spendNonUsCents: number;
+
   @ApiProperty({ description: 'Total spend in cents (settled only) for the day' })
   spendCentsForAdmin: number;
 
@@ -25,6 +36,21 @@ export class PaymentSummaryAdminRowDto {
 export class PaymentSummaryAdminSummaryDto {
   @ApiProperty({ description: 'Total deposit in cents for the range' })
   totalDepositCents: number;
+
+  @ApiProperty({
+    description: 'Total spend in cents (pending + settled) for the range',
+  })
+  totalSpendCents: number;
+
+  @ApiProperty({
+    description: 'Total spend in US cents (pending + settled) for the range',
+  })
+  totalSpendUsCents: number;
+
+  @ApiProperty({
+    description: 'Total spend in Non-US cents (pending + settled) for the range',
+  })
+  totalSpendNonUsCents: number;
 
   @ApiProperty({
     description: 'Total spend in cents (settled only) for the range',
@@ -50,6 +76,12 @@ export class PaymentSummaryAdminSummaryDto {
       'Ending account balance in cents computed with settled-only spend',
   })
   endingAccountBalanceCentsForAdmin: number;
+
+  @ApiProperty({
+    description:
+      'Ending account balance in cents computed with pending + settled spend',
+  })
+  endingAccountBalanceCents: number;
 }
 
 export class PaymentSummaryAdminResponseDto {

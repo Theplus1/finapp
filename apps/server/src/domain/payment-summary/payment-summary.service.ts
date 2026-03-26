@@ -166,6 +166,10 @@ export class PaymentSummaryService {
     const rows = summaries.map((s) => {
       const dateStr = format(s.date, 'yyyy-MM-dd');
 
+      const spendUsCents = s.totalSpendUSCents ?? 0;
+      const spendNonUsCents = s.totalSpendNonUSCents ?? 0;
+      const spendCents = spendUsCents + spendNonUsCents;
+
       const spendUsCentsForAdmin = s.totalSpendUSCentsForAdmin ?? 0;
       const spendNonUsCentsForAdmin = s.totalSpendNonUSCentsForAdmin ?? 0;
       const spendCentsForAdmin =
@@ -176,6 +180,9 @@ export class PaymentSummaryService {
       return {
         date: dateStr,
         depositCents: s.totalDepositCents ?? 0,
+        spendCents,
+        spendUsCents,
+        spendNonUsCents,
         spendCentsForAdmin,
         spendUsCentsForAdmin,
         spendNonUsCentsForAdmin,
@@ -189,6 +196,15 @@ export class PaymentSummaryService {
       (acc, r) => acc + (r.depositCents ?? 0),
       0,
     );
+    const totalSpendUsCents = rows.reduce(
+      (acc, r) => acc + (r.spendUsCents ?? 0),
+      0,
+    );
+    const totalSpendNonUsCents = rows.reduce(
+      (acc, r) => acc + (r.spendNonUsCents ?? 0),
+      0,
+    );
+    const totalSpendCents = totalSpendUsCents + totalSpendNonUsCents;
     const totalSpendUsCentsForAdmin = rows.reduce(
       (acc, r) => acc + (r.spendUsCentsForAdmin ?? 0),
       0,
@@ -206,6 +222,8 @@ export class PaymentSummaryService {
 
     const endingAccountBalanceCentsForAdmin =
       totalDepositCents - totalSpendCentsForAdmin + totalRefundCents;
+    const endingAccountBalanceCents =
+      totalDepositCents - totalSpendCents + totalRefundCents;
 
     return {
       virtualAccountId,
@@ -218,11 +236,15 @@ export class PaymentSummaryService {
       rows,
       summary: {
         totalDepositCents,
+        totalSpendCents,
+        totalSpendUsCents,
+        totalSpendNonUsCents,
         totalSpendCentsForAdmin,
         totalSpendUsCentsForAdmin,
         totalSpendNonUsCentsForAdmin,
         totalRefundCents,
         endingAccountBalanceCentsForAdmin,
+        endingAccountBalanceCents,
       },
     };
   }
@@ -244,11 +266,15 @@ export class PaymentSummaryService {
         timezone: 'local',
         summary: {
           totalDepositCents: 0,
+          totalSpendCents: 0,
+          totalSpendUsCents: 0,
+          totalSpendNonUsCents: 0,
           totalSpendCentsForAdmin: 0,
           totalSpendUsCentsForAdmin: 0,
           totalSpendNonUsCentsForAdmin: 0,
           totalRefundCents: 0,
           endingAccountBalanceCentsForAdmin: 0,
+          endingAccountBalanceCents: 0,
         },
       };
     }
@@ -256,20 +282,27 @@ export class PaymentSummaryService {
     const currency = summaries[0]?.currency ?? 'USD';
 
     let totalDepositCents = 0;
+    let totalSpendUsCents = 0;
+    let totalSpendNonUsCents = 0;
     let totalSpendUsCentsForAdmin = 0;
     let totalSpendNonUsCentsForAdmin = 0;
     let totalRefundCents = 0;
 
     for (const s of summaries) {
       totalDepositCents += s.totalDepositCents ?? 0;
+      totalSpendUsCents += s.totalSpendUSCents ?? 0;
+      totalSpendNonUsCents += s.totalSpendNonUSCents ?? 0;
       totalSpendUsCentsForAdmin += s.totalSpendUSCentsForAdmin ?? 0;
       totalSpendNonUsCentsForAdmin += s.totalSpendNonUSCentsForAdmin ?? 0;
       totalRefundCents += s.totalRefundCents ?? 0;
     }
 
+    const totalSpendCents = totalSpendUsCents + totalSpendNonUsCents;
     const totalSpendCentsForAdmin =
       totalSpendUsCentsForAdmin + totalSpendNonUsCentsForAdmin;
 
+    const endingAccountBalanceCents =
+      totalDepositCents - totalSpendCents + totalRefundCents;
     const endingAccountBalanceCentsForAdmin =
       totalDepositCents - totalSpendCentsForAdmin + totalRefundCents;
 
@@ -279,11 +312,15 @@ export class PaymentSummaryService {
       timezone: 'local',
       summary: {
         totalDepositCents,
+        totalSpendCents,
+        totalSpendUsCents,
+        totalSpendNonUsCents,
         totalSpendCentsForAdmin,
         totalSpendUsCentsForAdmin,
         totalSpendNonUsCentsForAdmin,
         totalRefundCents,
         endingAccountBalanceCentsForAdmin,
+        endingAccountBalanceCents,
       },
     };
   }
