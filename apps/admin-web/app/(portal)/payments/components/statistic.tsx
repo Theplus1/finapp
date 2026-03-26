@@ -6,9 +6,9 @@ import {
   Building2,
   ClipboardClock,
 } from "lucide-react";
-import StatisticItem from "@repo/ui/components/statistic-item";
 import { PaymentSummary } from "@/lib/api/endpoints/payment";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import StatisticItem from "@repo/ui/components/statistic-item";
 
 type Props = {
   data: PaymentSummary;
@@ -25,7 +25,7 @@ const Statistic = ({ data, containerClassName, loading }: Props) => {
     },
     {
       label: "Total spend",
-      value: data.totalSpendCents,
+      value: data.totalSpendCentsForAdmin,
       icon: <ClipboardClock />,
     },
     {
@@ -35,17 +35,17 @@ const Statistic = ({ data, containerClassName, loading }: Props) => {
     },
     {
       label: "Account balance",
-      value: data.endingAccountBalanceCents,
+      value: data.endingAccountBalanceCentsForAdmin,
       icon: <BadgeDollarSign />,
     },
     {
       label: "Consume outside US",
-      value: data.totalSpendNonUsCents,
+      value: data.totalSpendNonUsCentsForAdmin,
       icon: <HouseWifi />,
     },
     {
       label: "Consume in US",
-      value: data.totalSpendUsCents,
+      value: data.totalSpendUsCentsForAdmin,
       icon: <Building2 />,
     },
   ];

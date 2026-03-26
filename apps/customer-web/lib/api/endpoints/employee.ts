@@ -37,14 +37,6 @@ export interface UsersListParams {
   role?: string;
 }
 
-export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
 export const employeeApi = {
   getEmployees: async (
     params?: UsersListParams,

@@ -55,15 +55,6 @@ type Params = {
   search?: string;
 };
 
-export interface CardsDetailResponse {
-  success: true;
-  message: string;
-  data: Card;
-  meta: {
-    timestamp: string;
-  };
-}
-
 export enum LimitPresetEnum {
   DAILY = "daily",
   WEEKLY = "weekly",

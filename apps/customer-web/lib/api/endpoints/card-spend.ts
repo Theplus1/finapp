@@ -35,15 +35,6 @@ type ParamsRange = {
   to: string;
 };
 
-export interface PaymentDetailResponse {
-  success: true;
-  message: string;
-  data: CardSpend;
-  meta: {
-    timestamp: string;
-  };
-}
-
 export const cardSpendApi = {
   getCardSpend: async (
     params?: ParamsRange,

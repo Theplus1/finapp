@@ -10,23 +10,25 @@ import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { Section, SectionContent } from "@/components/layouts/section";
 import { PageLayout } from "@/components/layouts/page-layout";
 import { DataTable } from "@repo/ui/components/data-table";
-import FilterTime from "./components/filter";
+import FilterTable from "./components/filter";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import {
   Payment,
+  PaymentOverallResponse,
   PaymentResponse,
   PaymentRow,
 } from "@/lib/api/endpoints/payment";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import Statistic from "./components/statistic";
+import FilterVirtualAccount from "./components/filter-virtual-account";
 
 const now = new Date();
-
 const initFilter = {
   from: new Date(now.getFullYear(), now.getMonth(), 2)
     .toISOString()
     .slice(0, 10),
   to: now.toISOString().slice(0, 10),
+  virtualAccountId: "",
 };
 
 const dateColumnLabel = [
@@ -37,7 +39,7 @@ const dateColumnLabel = [
   "Refund",
 ];
 
-const initDataPayment = {
+const initDataPayment: PaymentResponse = {
   virtualAccountId: "",
   currency: "USD",
   timezone: "local",
@@ -48,11 +50,25 @@ const initDataPayment = {
   rows: [],
   summary: {
     totalDepositCents: 0,
-    totalSpendCents: 0,
-    totalSpendUsCents: 0,
-    totalSpendNonUsCents: 0,
+    totalSpendCentsForAdmin: 0,
+    totalSpendUsCentsForAdmin: 0,
+    totalSpendNonUsCentsForAdmin: 0,
     totalRefundCents: 0,
-    endingAccountBalanceCents: 0,
+    endingAccountBalanceCentsForAdmin: 0,
+  },
+};
+
+const initOverallDataPayment: PaymentOverallResponse = {
+  virtualAccountId: "",
+  currency: "USD",
+  timezone: "local",
+  summary: {
+    totalDepositCents: 0,
+    totalSpendCentsForAdmin: 0,
+    totalSpendUsCentsForAdmin: 0,
+    totalSpendNonUsCentsForAdmin: 0,
+    totalRefundCents: 0,
+    endingAccountBalanceCentsForAdmin: 0,
   },
 };
 
@@ -77,12 +93,14 @@ export default function Payments() {
   }, [setBreadcrumbs]);
 
   const { data: paymentInfors, isLoading } = useQuery({
-    queryKey: ["payments", currentFilter],
+    queryKey: ["payments", currentFilter.from, currentFilter.virtualAccountId],
     queryFn: async () => {
-      const res = await api.payment.getPayments({
-        from: currentFilter.from,
-        to: currentFilter.to,
-      });
+      if (!currentFilter.virtualAccountId) {
+        return {
+          data: initDataPayment,
+        };
+      }
+      const res = await api.payment.getPayments(currentFilter);
       return res;
     },
     refetchOnMount: "always",
@@ -90,9 +108,16 @@ export default function Payments() {
   });
 
   const { data: overallPaymentInfors, isLoading: isOverallLoading } = useQuery({
-    queryKey: ["overall-payments"],
+    queryKey: ["overall-payments", currentFilter.virtualAccountId],
     queryFn: async () => {
-      const res = await api.payment.getOverallPayments();
+      if (!currentFilter.virtualAccountId) {
+        return {
+          data: initOverallDataPayment,
+        };
+      }
+      const res = await api.payment.getOverallPayments(
+        currentFilter.virtualAccountId,
+      );
       return res;
     },
     refetchOnMount: "always",
@@ -104,8 +129,8 @@ export default function Payments() {
     [paymentInfors],
   );
 
-  const overallDataPayment: PaymentResponse = useMemo(
-    () => overallPaymentInfors?.data ?? initDataPayment,
+  const overallDataPayment: PaymentOverallResponse = useMemo(
+    () => overallPaymentInfors?.data ?? initOverallDataPayment,
     [overallPaymentInfors],
   );
 
@@ -122,9 +147,9 @@ export default function Payments() {
 
       data.forEach((item) => {
         result.totalNap[item.date] = item.depositCents;
-        result.totalTieu[item.date] = item.spendCents;
-        result.spendNonUsCents[item.date] = item.spendNonUsCents;
-        result.spendUsCents[item.date] = item.spendUsCents;
+        result.totalTieu[item.date] = item.spendCentsForAdmin;
+        result.spendNonUsCents[item.date] = item.spendNonUsCentsForAdmin;
+        result.spendUsCents[item.date] = item.spendUsCentsForAdmin;
         result.refundCents[item.date] = item.refundCents;
       });
 
@@ -210,8 +235,16 @@ export default function Payments() {
         Number(detectMonthYear(currentFilter.from).year),
       ),
     ] as ColumnDef<Payment>[];
-  }, [currentFilter.from, isLoading]);
-  const handleChangeFilter = (monthYear: string) => {
+  }, [currentFilter.from, currentFilter.virtualAccountId, isLoading]);
+
+  const handleChangeVirtualAccount = (virtualAccountId: string) => {
+    setCurrentFilter((prev) => ({
+      ...prev,
+      virtualAccountId,
+    }));
+  };
+
+  const handleMonthChange = (monthYear: string) => {
     const [year, month] = monthYear.split("-");
     const firstDateOfMonth = "01";
     const endDateOfMonth = new Date(Number(year), Number(month), 0).getDate();
@@ -230,12 +263,17 @@ export default function Payments() {
 
       <Section>
         <SectionContent>
+          <div className="pb-4">
+            <FilterVirtualAccount
+              onVirtualAccountChange={handleChangeVirtualAccount}
+            />
+          </div>
           <Statistic
             containerClassName="mb-6"
             data={overallDataPayment.summary}
             loading={isOverallLoading}
           />
-          <FilterTime onFilterChange={handleChangeFilter} />
+          <FilterTable onChangeMonth={handleMonthChange} />
           <DataTable
             columns={columns}
             data={dataPaymentGrouped as Payment[]}

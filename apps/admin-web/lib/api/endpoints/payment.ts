@@ -13,6 +13,13 @@ export interface PaymentResponse {
   summary: PaymentSummary;
 }
 
+export interface PaymentOverallResponse {
+  virtualAccountId: string;
+  currency: string;
+  timezone: string;
+  summary: PaymentSummary;
+}
+
 export interface Payment {
   virtualAccountId: string;
   currency: string;
@@ -23,42 +30,41 @@ export interface Payment {
 
 export interface PaymentSummary {
   totalDepositCents: number;
-  totalSpendCents: number;
-  totalSpendUsCents: number;
-  totalSpendNonUsCents: number;
+  totalSpendCentsForAdmin: number;
+  totalSpendUsCentsForAdmin: number;
+  totalSpendNonUsCentsForAdmin: number;
   totalRefundCents: number;
-  endingAccountBalanceCents: number;
+  endingAccountBalanceCentsForAdmin: number;
 }
 
 export interface PaymentRow {
   date: string;
   depositCents: number;
-  spendCents: number;
-  spendNonUsCents: number;
-  spendUsCents: number;
+  spendCentsForAdmin: number;
+  spendNonUsCentsForAdmin: number;
+  spendUsCentsForAdmin: number;
   refundCents: number;
-  accountBalanceCents: number;
+  accountBalanceCentsForAdmin: number;
 }
 
 type Params = {
   from: string;
   to: string;
+  virtualAccountId: string;
 };
 
 export const paymentApi = {
   getPayments: async (
-    params?: Params,
+    params: Params,
   ): Promise<ApiResponse<PaymentResponse>> => {
-    const user = localStorage.getItem("user");
-    const virtualAccountId = JSON.parse(user || "{}")?.virtualAccountId;
     return apiClient.get(
-      `/virtual-account/${virtualAccountId}/payment-summary`,
+      `/virtual-account/${params.virtualAccountId}/payment-summary`,
       { params },
     );
   },
-  getOverallPayments: async (): Promise<ApiResponse<PaymentResponse>> => {
-    const user = localStorage.getItem("user");
-    const virtualAccountId = JSON.parse(user || "{}")?.virtualAccountId;
+  getOverallPayments: async (
+    virtualAccountId: string,
+  ): Promise<ApiResponse<PaymentOverallResponse>> => {
     return apiClient.get(
       `/virtual-account/${virtualAccountId}/payment-summary/overall`,
     );
