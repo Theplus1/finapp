@@ -157,15 +157,24 @@ export class DailyPaymentSummariesService {
       );
     let totalSpendNonUSCents = 0;
     let totalSpendUSCents = 0;
+    let totalSpendNonUSCentsForAdmin = 0;
+    let totalSpendUSCentsForAdmin = 0;
     let totalRefundCents = 0;
 
     // Spend: split by US / Non-US, use abs(amountCents)
     spendTransactions.forEach((transaction) => {
       const spendAmount = Math.abs(transaction.amountCents);
+      const isSettled = transaction.detailedStatus === 'settled';
       if (transaction.merchantData?.location?.country === 'US') {
         totalSpendUSCents += spendAmount;
+        if (isSettled) {
+          totalSpendUSCentsForAdmin += spendAmount;
+        }
       } else {
         totalSpendNonUSCents += spendAmount;
+        if (isSettled) {
+          totalSpendNonUSCentsForAdmin += spendAmount;
+        }
       }
     });
 
@@ -186,6 +195,8 @@ export class DailyPaymentSummariesService {
         totalDepositCents,
         totalSpendNonUSCents,
         totalSpendUSCents,
+        totalSpendNonUSCentsForAdmin,
+        totalSpendUSCentsForAdmin,
         totalRefundCents,
         accountBalanceCents: 0, // Will be calculated separately
         currency,
@@ -261,6 +272,18 @@ export class DailyPaymentSummariesService {
 
     if (!summary) {
       return this.calculateAndSaveDailySummary(virtualAccountId, dayStart, currency);
+    }
+
+    if (
+      summary.totalSpendNonUSCentsForAdmin == null ||
+      summary.totalSpendUSCentsForAdmin == null
+    ) {
+      return this.calculateAndSaveDailySummary(
+        virtualAccountId,
+        dayStart,
+        currency,
+        true,
+      );
     }
 
     return summary;

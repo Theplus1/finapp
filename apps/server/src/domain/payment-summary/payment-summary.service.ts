@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { format } from 'date-fns';
 import { DailyPaymentSummariesService } from '../daily-payment-summaries/daily-payment-summaries.service';
 import type { PaymentSummaryResponseDto } from '../../customer-api/dto/payment-summary.dto';
+import type {
+  PaymentSummaryAdminOverallResponseDto,
+  PaymentSummaryAdminResponseDto,
+} from '../../admin-api/dto/payment-summary-admin.dto';
 
 @Injectable()
 export class PaymentSummaryService {
@@ -141,6 +145,145 @@ export class PaymentSummaryService {
         totalSpendNonUsCents,
         totalRefundCents,
         endingAccountBalanceCents,
+      },
+    };
+  }
+
+  async getRangeSummaryForAdmin(
+    virtualAccountId: string,
+    fromDate: Date,
+    toDate: Date,
+    fromString: string,
+    toString: string,
+  ): Promise<PaymentSummaryAdminResponseDto> {
+    const summaries =
+      await this.dailyPaymentSummariesService.getDailySummaries(
+        virtualAccountId,
+        fromDate,
+        toDate,
+      );
+
+    const rows = summaries.map((s) => {
+      const dateStr = format(s.date, 'yyyy-MM-dd');
+
+      const spendUsCentsForAdmin = s.totalSpendUSCentsForAdmin ?? 0;
+      const spendNonUsCentsForAdmin = s.totalSpendNonUSCentsForAdmin ?? 0;
+      const spendCentsForAdmin =
+        spendUsCentsForAdmin + spendNonUsCentsForAdmin;
+
+      const refundCents = s.totalRefundCents ?? 0;
+
+      return {
+        date: dateStr,
+        depositCents: s.totalDepositCents ?? 0,
+        spendCentsForAdmin,
+        spendUsCentsForAdmin,
+        spendNonUsCentsForAdmin,
+        refundCents,
+      };
+    });
+
+    const currency = summaries[0]?.currency ?? 'USD';
+
+    const totalDepositCents = rows.reduce(
+      (acc, r) => acc + (r.depositCents ?? 0),
+      0,
+    );
+    const totalSpendUsCentsForAdmin = rows.reduce(
+      (acc, r) => acc + (r.spendUsCentsForAdmin ?? 0),
+      0,
+    );
+    const totalSpendNonUsCentsForAdmin = rows.reduce(
+      (acc, r) => acc + (r.spendNonUsCentsForAdmin ?? 0),
+      0,
+    );
+    const totalSpendCentsForAdmin =
+      totalSpendUsCentsForAdmin + totalSpendNonUsCentsForAdmin;
+    const totalRefundCents = rows.reduce(
+      (acc, r) => acc + (r.refundCents ?? 0),
+      0,
+    );
+
+    const endingAccountBalanceCentsForAdmin =
+      totalDepositCents - totalSpendCentsForAdmin + totalRefundCents;
+
+    return {
+      virtualAccountId,
+      currency,
+      timezone: 'local',
+      range: {
+        from: fromString,
+        to: toString,
+      },
+      rows,
+      summary: {
+        totalDepositCents,
+        totalSpendCentsForAdmin,
+        totalSpendUsCentsForAdmin,
+        totalSpendNonUsCentsForAdmin,
+        totalRefundCents,
+        endingAccountBalanceCentsForAdmin,
+      },
+    };
+  }
+
+  async getOverallSummaryForAdmin(
+    virtualAccountId: string,
+  ): Promise<PaymentSummaryAdminOverallResponseDto> {
+    const summaries =
+      await this.dailyPaymentSummariesService.getDailySummaries(
+        virtualAccountId,
+        new Date(0),
+        new Date(),
+      );
+
+    if (!summaries || summaries.length === 0) {
+      return {
+        virtualAccountId,
+        currency: 'USD',
+        timezone: 'local',
+        summary: {
+          totalDepositCents: 0,
+          totalSpendCentsForAdmin: 0,
+          totalSpendUsCentsForAdmin: 0,
+          totalSpendNonUsCentsForAdmin: 0,
+          totalRefundCents: 0,
+          endingAccountBalanceCentsForAdmin: 0,
+        },
+      };
+    }
+
+    const currency = summaries[0]?.currency ?? 'USD';
+
+    let totalDepositCents = 0;
+    let totalSpendUsCentsForAdmin = 0;
+    let totalSpendNonUsCentsForAdmin = 0;
+    let totalRefundCents = 0;
+
+    for (const s of summaries) {
+      totalDepositCents += s.totalDepositCents ?? 0;
+      totalSpendUsCentsForAdmin += s.totalSpendUSCentsForAdmin ?? 0;
+      totalSpendNonUsCentsForAdmin += s.totalSpendNonUSCentsForAdmin ?? 0;
+      totalRefundCents += s.totalRefundCents ?? 0;
+    }
+
+    const totalSpendCentsForAdmin =
+      totalSpendUsCentsForAdmin + totalSpendNonUsCentsForAdmin;
+
+    const endingAccountBalanceCentsForAdmin =
+      totalDepositCents - totalSpendCentsForAdmin + totalRefundCents;
+
+    return {
+      virtualAccountId,
+      currency,
+      timezone: 'local',
+      summary: {
+        totalDepositCents,
+        totalSpendCentsForAdmin,
+        totalSpendUsCentsForAdmin,
+        totalSpendNonUsCentsForAdmin,
+        totalRefundCents,
+        endingAccountBalanceCentsForAdmin,
       },
     };
   }
