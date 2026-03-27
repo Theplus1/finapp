@@ -17,7 +17,7 @@ import { DataTable } from "@repo/ui/components/data-table";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { EMPTY_LABEL } from "@/app/utils/constants";
 import { ClientPagination } from "@repo/ui/components/client-pagination";
-import { Employee } from "@/lib/api/endpoints/employee";
+import { Employee, EmployeeDrawerTypeEnum } from "@/lib/api/endpoints/employee";
 import { Button } from "@repo/ui/components/button";
 import { Switch } from "@repo/ui/components/switch";
 import { Ellipsis } from "lucide-react";
@@ -27,7 +27,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@repo/ui/components/drawer";
-import FormSetEmployee from "./components/form-set-employee";
 import {
   Popover,
   PopoverContent,
@@ -37,6 +36,7 @@ import ActionsTable from "./components/actions-table";
 import { upperCaseFirstCharacter } from "@repo/ui/lib/func";
 import { toast } from "sonner";
 import { Spinner } from "@repo/ui/components/spinner";
+import FormActionEmployee from "./components/form-action-employee";
 
 const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
@@ -49,6 +49,10 @@ export default function Accounts() {
     total: 0,
   });
   const [openDrawer, setOpenDrawer] = useState(false);
+  const [drawerType, setDrawerType] = useState<EmployeeDrawerTypeEnum>(
+    EmployeeDrawerTypeEnum.CREATE,
+  );
+  const [employeeEdit, setEmployeeEdit] = useState<Employee | null>(null);
   const [countGetList, setCountGetList] = useState(0);
   const [employeeLoadingStatus, setEmployeeLoadingStatus] = useState<
     string | null
@@ -194,7 +198,15 @@ export default function Accounts() {
                 <Ellipsis />
               </PopoverTrigger>
               <PopoverContent>
-                <ActionsTable employee={row.original} />
+                <ActionsTable
+                  employee={row.original}
+                  onEditEmployee={() =>
+                    handleClickActionEmployee(
+                      EmployeeDrawerTypeEnum.EDIT,
+                      row.original,
+                    )
+                  }
+                />
               </PopoverContent>
             </Popover>
           </div>
@@ -209,12 +221,27 @@ export default function Accounts() {
     setOpenDrawer(false);
     setCountGetList((prev) => prev + 1);
   };
+
+  const handleClickActionEmployee = (
+    actionType: EmployeeDrawerTypeEnum,
+    employee: Employee | null,
+  ) => {
+    setDrawerType(actionType);
+    setEmployeeEdit(employee);
+    setOpenDrawer(true);
+  };
+
   return (
     <PageLayout>
       <PageHeader>
         <PageTitle>Accounts</PageTitle>
         <PageActions>
-          <Button variant="outline" onClick={() => setOpenDrawer(true)}>
+          <Button
+            variant="outline"
+            onClick={() =>
+              handleClickActionEmployee(EmployeeDrawerTypeEnum.CREATE, null)
+            }
+          >
             Create Employee
           </Button>
         </PageActions>
@@ -237,10 +264,11 @@ export default function Accounts() {
               <DrawerHeader>
                 <DrawerTitle>Create Employee</DrawerTitle>
               </DrawerHeader>
-              <FormSetEmployee
-                openDrawer={openDrawer}
-                onCancelSetEmployee={handleCancelDrawer}
-                onSubmitEmployeeSuccess={handleSuccessDrawer}
+              <FormActionEmployee
+                drawerType={drawerType}
+                employee={employeeEdit}
+                onCancelDrawer={handleCancelDrawer}
+                onSubmitDrawerSuccess={handleSuccessDrawer}
               />
             </DrawerContent>
           </Drawer>
