@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 import { Input } from "@repo/ui/components/input";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 
 type Props = {
   card: Card;
@@ -80,40 +81,44 @@ const FormActionCard = ({
 
   return (
     <>
-      <div className="px-4 flex flex-col gap-2">
-        <label className="block text-sm font-medium text-muted-foreground">
-          Select a preset
-        </label>
-        <Select
-          value={presetLimit}
-          onValueChange={(value) => setPresetLimit(value as LimitPresetEnum)}
+      <div className="px-4">
+        <FormItemWrapper
+          label="Select a preset"
+          labelClassName="text-sm font-medium text-muted-foreground"
         >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select a preset" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={LimitPresetEnum.DAILY}>Daily</SelectItem>
-            <SelectItem value={LimitPresetEnum.WEEKLY}>Weekly</SelectItem>
-            <SelectItem value={LimitPresetEnum.MONTHLY}>Monthly</SelectItem>
-            <SelectItem value={LimitPresetEnum.YEARLY}>Yearly</SelectItem>
-            <SelectItem value={LimitPresetEnum.COLLECTIVE}>
-              Collective
-            </SelectItem>
-            <SelectItem value={LimitPresetEnum.UNLIMITED}>Unlimited</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select
+            value={presetLimit}
+            onValueChange={(value) => setPresetLimit(value as LimitPresetEnum)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a preset" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={LimitPresetEnum.DAILY}>Daily</SelectItem>
+              <SelectItem value={LimitPresetEnum.WEEKLY}>Weekly</SelectItem>
+              <SelectItem value={LimitPresetEnum.MONTHLY}>Monthly</SelectItem>
+              <SelectItem value={LimitPresetEnum.YEARLY}>Yearly</SelectItem>
+              <SelectItem value={LimitPresetEnum.COLLECTIVE}>
+                Collective
+              </SelectItem>
+              <SelectItem value={LimitPresetEnum.UNLIMITED}>
+                Unlimited
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </FormItemWrapper>
       </div>
-      <div
-        className={`${isUnSet ? "hidden" : ""} px-4 flex flex-col gap-2 mt-4`}
-      >
-        <label className="block text-sm font-medium text-muted-foreground">
-          Amount ($)
-        </label>
-        <Input
-          type="number"
-          value={amountLimit}
-          onChange={(e) => setAmountLimit(Number(e.target.value))}
-        />
+      <div className={`${isUnSet ? "hidden" : ""} px-4 mt-4`}>
+        <FormItemWrapper
+          label="Amount ($)"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
+          <Input
+            type="number"
+            value={amountLimit}
+            onChange={(e) => setAmountLimit(Number(e.target.value))}
+          />
+        </FormItemWrapper>
       </div>
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">

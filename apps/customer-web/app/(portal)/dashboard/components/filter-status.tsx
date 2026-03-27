@@ -1,4 +1,4 @@
-import { Label } from "@repo/ui/components/label";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 import {
   Select,
   SelectContent,
@@ -32,10 +32,9 @@ const FilterStatus = ({ onStatusChange }: Props) => {
   };
 
   return (
-    <>
-      <Label className="px-1">Status</Label>
+    <FormItemWrapper label="Status">
       <Select onValueChange={handleValueChange} value={value}>
-        <SelectTrigger className="w-[280px]">
+        <SelectTrigger className="w-[240px]">
           <SelectValue placeholder="Select a status" />
         </SelectTrigger>
         <SelectContent>
@@ -52,7 +51,7 @@ const FilterStatus = ({ onStatusChange }: Props) => {
           </SelectGroup>
         </SelectContent>
       </Select>
-    </>
+    </FormItemWrapper>
   );
 };
 

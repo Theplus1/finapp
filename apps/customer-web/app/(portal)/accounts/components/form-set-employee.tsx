@@ -19,6 +19,8 @@ import {
 } from "@repo/ui/components/select";
 import { RoleUserEnum } from "@/lib/api/endpoints/users";
 import { isEmail } from "@repo/ui/lib/utils";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
+// import { Checkbox } from "@repo/ui/components/checkbox";
 
 type Props = {
   openDrawer: boolean;
@@ -35,6 +37,7 @@ const FormSetEmployee = ({
   const [role, setRole] = useState<RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT>(
     RoleUserEnum.ADS,
   );
+  // const [permission, setPermission] = useState<PermissionEnum[]>([]);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
@@ -89,16 +92,23 @@ const FormSetEmployee = ({
     !email ||
     !isEmail(email) ||
     !password ||
-    !confirmPassword ||
     password !== confirmPassword;
+
+  // const onCheckPermission = (value: PermissionEnum) => {
+  //   if (permission.includes(value)) {
+  //     setPermission(permission.filter((item) => item !== value));
+  //   } else {
+  //     setPermission([...permission, value]);
+  //   }
+  // };
 
   return (
     <>
       <div className="px-4 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Username
-          </label>
+        <FormItemWrapper
+          label="Username"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Input
             placeholder="Enter username"
             value={username}
@@ -107,11 +117,11 @@ const FormSetEmployee = ({
               setUsername(value);
             }}
           />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Role
-          </label>
+        </FormItemWrapper>
+        <FormItemWrapper
+          label="Role"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Select
             onValueChange={(
               value: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT,
@@ -134,12 +144,65 @@ const FormSetEmployee = ({
               </SelectGroup>
             </SelectContent>
           </Select>
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Email
-          </label>
-
+          {/* <div className="grid grid-cols-2 gap-2">
+            <Field orientation="horizontal">
+              <Checkbox
+                id={PermissionEnum.TRANSACTIONS}
+                name={PermissionEnum.TRANSACTIONS}
+                checked={permission.includes(PermissionEnum.TRANSACTIONS)}
+                onCheckedChange={() =>
+                  onCheckPermission(PermissionEnum.TRANSACTIONS)
+                }
+              />
+              <FieldLabel htmlFor={PermissionEnum.TRANSACTIONS} className="text-muted-foreground">
+                Transactions
+              </FieldLabel>
+            </Field>
+            <Field orientation="horizontal">
+              <Checkbox
+                id={PermissionEnum.CARD_LIST}
+                name={PermissionEnum.CARD_LIST}
+                checked={permission.includes(PermissionEnum.CARD_LIST)}
+                onCheckedChange={() =>
+                  onCheckPermission(PermissionEnum.CARD_LIST)
+                }
+              />
+              <FieldLabel htmlFor={PermissionEnum.CARD_LIST} className="text-muted-foreground">
+                Card list
+              </FieldLabel>
+            </Field>
+            <Field orientation="horizontal">
+              <Checkbox
+                id={PermissionEnum.PAYMENTS}
+                name={PermissionEnum.PAYMENTS}
+                checked={permission.includes(PermissionEnum.PAYMENTS)}
+                onCheckedChange={() =>
+                  onCheckPermission(PermissionEnum.PAYMENTS)
+                }
+              />
+              <FieldLabel htmlFor={PermissionEnum.PAYMENTS} className="text-muted-foreground">
+                Payments
+              </FieldLabel>
+            </Field>
+            <Field orientation="horizontal">
+              <Checkbox
+                id={PermissionEnum.CARD_SPEND}
+                name={PermissionEnum.CARD_SPEND}
+                checked={permission.includes(PermissionEnum.CARD_SPEND)}
+                onCheckedChange={() =>
+                  onCheckPermission(PermissionEnum.CARD_SPEND)
+                }
+              />
+              <FieldLabel htmlFor={PermissionEnum.CARD_SPEND} className="text-muted-foreground">
+                Card spend
+              </FieldLabel>
+            </Field>
+          </div> */}
+        </FormItemWrapper>
+        <FormItemWrapper
+          label="Email"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Field data-invalid={!isEmail(email)}>
             <InputGroup className="pr-1">
               <InputGroupInput
@@ -153,11 +216,11 @@ const FormSetEmployee = ({
               />
             </InputGroup>
           </Field>
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Password
-          </label>
+        </FormItemWrapper>
+        <FormItemWrapper
+          label="Password"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Input
             placeholder="Enter password"
             value={password}
@@ -167,11 +230,11 @@ const FormSetEmployee = ({
               setPassword(value);
             }}
           />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Confirm Password
-          </label>
+        </FormItemWrapper>
+        <FormItemWrapper
+          label="Confirm Password"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Field data-invalid={password !== confirmPassword}>
             <InputGroup className="pr-1">
               <InputGroupInput
@@ -185,7 +248,7 @@ const FormSetEmployee = ({
               />
             </InputGroup>
           </Field>
-        </div>
+        </FormItemWrapper>
       </div>
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">

@@ -1,0 +1,270 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { formatDollarByCent } from "@/app/utils/func";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { PageHeader, PageTitle } from "@/components/layouts/page-header";
+import { Section, SectionContent } from "@/components/layouts/section";
+import { PageLayout } from "@/components/layouts/page-layout";
+import { DataTable } from "@repo/ui/components/data-table";
+import FilterTable from "./components/filter";
+import { CellContext, ColumnDef } from "@tanstack/react-table";
+import {
+  Payment,
+  PaymentOverallResponse,
+  PaymentResponse,
+  PaymentRow,
+} from "@/lib/api/endpoints/payment";
+import { EMPTY_LABEL } from "@/app/utils/constants";
+import Statistic from "./components/statistic";
+import FilterVirtualAccount from "../cards/components/filter-virtual-account";
+
+const now = new Date();
+const initFilter = {
+  from: new Date(now.getFullYear(), now.getMonth(), 2)
+    .toISOString()
+    .slice(0, 10),
+  to: now.toISOString().slice(0, 10),
+  virtualAccountId: "",
+};
+
+const dateColumnLabel = ["Recharge", "Consume", "Refund"];
+
+const initDataPayment: PaymentResponse = {
+  virtualAccountId: "",
+  currency: "USD",
+  timezone: "local",
+  range: {
+    from: "",
+    to: "",
+  },
+  rows: [],
+  summary: {
+    totalDepositCents: 0,
+    totalSpendCentsForAdmin: 0,
+    totalSpendUsCentsForAdmin: 0,
+    totalSpendNonUsCentsForAdmin: 0,
+    totalRefundCents: 0,
+    endingAccountBalanceCentsForAdmin: 0,
+  },
+};
+
+const initOverallDataPayment: PaymentOverallResponse = {
+  virtualAccountId: "",
+  currency: "USD",
+  timezone: "local",
+  summary: {
+    totalDepositCents: 0,
+    totalSpendCentsForAdmin: 0,
+    totalSpendUsCentsForAdmin: 0,
+    totalSpendNonUsCentsForAdmin: 0,
+    totalRefundCents: 0,
+    endingAccountBalanceCentsForAdmin: 0,
+  },
+};
+
+const maskDataTable = Array.from({ length: 4 }, () => {
+  return {};
+}) as Payment[];
+
+const detectMonthYear = (month: string) => {
+  const [year, monthNum] = month.split("-");
+  return { year, month: monthNum };
+};
+
+export default function Payments() {
+  const { setBreadcrumbs } = useBreadcrumbs();
+  const [currentFilter, setCurrentFilter] = useState(initFilter);
+
+  useEffect(() => {
+    setBreadcrumbs([
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "Payments", href: "/payments" },
+    ]);
+  }, [setBreadcrumbs]);
+
+  const { data: paymentInfors, isLoading } = useQuery({
+    queryKey: ["payments", currentFilter.from, currentFilter.virtualAccountId],
+    queryFn: async () => {
+      if (!currentFilter.virtualAccountId) {
+        return {
+          data: initDataPayment,
+        };
+      }
+      const res = await api.payment.getPayments(currentFilter);
+      return res;
+    },
+    refetchOnMount: "always",
+    gcTime: 0,
+  });
+
+  const { data: overallPaymentInfors, isLoading: isOverallLoading } = useQuery({
+    queryKey: ["overall-payments", currentFilter.virtualAccountId],
+    queryFn: async () => {
+      if (!currentFilter.virtualAccountId) {
+        return {
+          data: initOverallDataPayment,
+        };
+      }
+      const res = await api.payment.getOverallPayments(
+        currentFilter.virtualAccountId,
+      );
+      return res;
+    },
+    refetchOnMount: "always",
+    gcTime: 0,
+  });
+
+  const dataPayment: PaymentResponse = useMemo(
+    () => paymentInfors?.data ?? initDataPayment,
+    [paymentInfors],
+  );
+
+  const overallDataPayment: PaymentOverallResponse = useMemo(
+    () => overallPaymentInfors?.data ?? initOverallDataPayment,
+    [overallPaymentInfors],
+  );
+
+  const dataPaymentGrouped = useMemo(() => {
+    if (isLoading) return maskDataTable;
+    function transformPaymentData(data: PaymentRow[]) {
+      const result = {
+        totalNap: {} as Record<string, number>,
+        totalTieu: {} as Record<string, number>,
+        spendNonUsCents: {} as Record<string, number>,
+        spendUsCents: {} as Record<string, number>,
+        refundCents: {} as Record<string, number>,
+      };
+
+      data.forEach((item) => {
+        result.totalNap[item.date] = item.depositCents;
+        result.totalTieu[item.date] = item.spendCentsForAdmin;
+        result.spendNonUsCents[item.date] = item.spendNonUsCentsForAdmin;
+        result.spendUsCents[item.date] = item.spendUsCentsForAdmin;
+        result.refundCents[item.date] = item.refundCents;
+      });
+
+      return [
+        { label: "Recharge", key: "totalNap", data: result.totalNap },
+        { label: "Consume", key: "totalTieu", data: result.totalTieu },
+        {
+          label: "Refund",
+          key: "refundCents",
+          data: result.refundCents,
+        },
+      ];
+    }
+
+    return transformPaymentData(dataPayment.rows);
+  }, [dataPayment, isLoading]);
+
+  const columns = useMemo(() => {
+    function generateDateColumns(
+      month: number,
+      year: number,
+    ): ColumnDef<Payment>[] {
+      const days = new Date(year, month, 0).getDate();
+
+      return Array.from({ length: days }, (_, index) => {
+        const day = index + 1;
+        const dayStr = String(day).padStart(2, "0");
+        const monthStr = String(month).padStart(2, "0");
+
+        const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+        return {
+          accessorKey: dateKey,
+          header: (
+            <div className="w-[100px] text-center">{`${dayStr}/${monthStr}`}</div>
+          ) as unknown as string,
+          cell: ({ row }) => {
+            return isLoading ? (
+              <Skeleton />
+            ) : (
+              <div style={{ textAlign: "end" }}>
+                {(
+                  row.original as Payment & {
+                    data: Record<string, number>;
+                  }
+                ).data[dateKey] > 0
+                  ? formatDollarByCent(
+                      (
+                        row.original as Payment & {
+                          data: Record<string, number>;
+                        }
+                      ).data[dateKey],
+                    )
+                  : EMPTY_LABEL}
+              </div>
+            );
+          },
+        };
+      });
+    }
+    return [
+      {
+        header: "Date",
+        cell: ({ row }: CellContext<Payment, number>) => {
+          return dateColumnLabel[row.index];
+        },
+        meta: {
+          fixed: 0,
+        },
+      },
+      ...generateDateColumns(
+        Number(detectMonthYear(currentFilter.from).month),
+        Number(detectMonthYear(currentFilter.from).year),
+      ),
+    ] as ColumnDef<Payment>[];
+  }, [currentFilter.from, currentFilter.virtualAccountId, isLoading]);
+
+  const handleChangeVirtualAccount = (virtualAccountId: string) => {
+    setCurrentFilter((prev) => ({
+      ...prev,
+      virtualAccountId,
+    }));
+  };
+
+  const handleMonthChange = (monthYear: string) => {
+    const [year, month] = monthYear.split("-");
+    const firstDateOfMonth = "01";
+    const endDateOfMonth = new Date(Number(year), Number(month), 0).getDate();
+    setCurrentFilter((prev) => ({
+      ...prev,
+      from: `${year}-${month}-${firstDateOfMonth}`,
+      to: `${year}-${month}-${endDateOfMonth}`,
+    }));
+  };
+
+  return (
+    <PageLayout>
+      <PageHeader>
+        <PageTitle>Payments</PageTitle>
+      </PageHeader>
+
+      <Section>
+        <SectionContent>
+          <div className="pb-4">
+            <FilterVirtualAccount
+              onVirtualAccountChange={handleChangeVirtualAccount}
+            />
+          </div>
+          <Statistic
+            containerClassName="mb-6"
+            data={overallDataPayment.summary}
+            loading={isOverallLoading}
+          />
+          <FilterTable onChangeMonth={handleMonthChange} />
+          <DataTable
+            columns={columns}
+            data={dataPaymentGrouped as Payment[]}
+            maxHeight={"70vh"}
+          />
+        </SectionContent>
+      </Section>
+    </PageLayout>
+  );
+}

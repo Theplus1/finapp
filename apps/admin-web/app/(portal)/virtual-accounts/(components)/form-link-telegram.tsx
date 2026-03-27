@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from "@repo/ui/components/tooltip";
 import { Field } from "@repo/ui/components/field";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 
 const maxLengthIdTelegram = 15;
 
@@ -119,66 +120,68 @@ const FormLinkTelegram = ({
   return (
     <>
       <div className="px-4 flex flex-col gap-2">
-        <label className="block text-sm font-medium text-muted-foreground">
-          Telegram IDs
-        </label>
-        {telegramIds.map((id, index) => {
-          const progress = (id.toString().length / maxLengthIdTelegram) * 100;
-          const isZeroId = id === 0;
-          const isDuplicateId = telegramIds.some(
-            (telegramId, idx) => telegramId === id && idx !== index,
-          );
-          return (
-            <div key={index} className="flex items-center gap-3">
-              <Field data-invalid={isZeroId || isDuplicateId}>
-                <InputGroup className="pr-1">
-                  <InputGroupInput
-                    placeholder="Enter telegram id"
-                    value={id}
-                    maxLength={maxLengthIdTelegram}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      handleChangeTelegramId(value, index);
-                    }}
-                    onBlur={(e) => {
-                      setTelegramIds((prev) => {
-                        const newIds = [...prev];
-                        newIds[index] = Number(e.target.value) || 0;
-                        return newIds;
-                      });
-                    }}
-                  />
-                  <InputGroupAddon align={"inline-end"}>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info
-                          size={16}
-                          opacity={progress === 100 ? 1 : 0}
-                          style={{
-                            transition: "opacity 0.3s ease",
-                          }}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Reached maximum {maxLengthIdTelegram} characters
-                      </TooltipContent>
-                    </Tooltip>
-                  </InputGroupAddon>
-                </InputGroup>
-              </Field>
-              <Trash
-                size={22}
-                className="cursor-pointer"
-                onClick={() => handleRemoveTelegramId(index)}
-              />
-            </div>
-          );
-        })}
-        <CirclePlus
-          size={22}
-          className="text-muted-foreground cursor-pointer mt-4"
-          onClick={handleAddTelegramId}
-        />
+        <FormItemWrapper
+          label="Telegram IDs"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
+          {telegramIds.map((id, index) => {
+            const progress = (id.toString().length / maxLengthIdTelegram) * 100;
+            const isZeroId = id === 0;
+            const isDuplicateId = telegramIds.some(
+              (telegramId, idx) => telegramId === id && idx !== index,
+            );
+            return (
+              <div key={index} className="flex items-center gap-3">
+                <Field data-invalid={isZeroId || isDuplicateId}>
+                  <InputGroup className="pr-1">
+                    <InputGroupInput
+                      placeholder="Enter telegram id"
+                      value={id}
+                      maxLength={maxLengthIdTelegram}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        handleChangeTelegramId(value, index);
+                      }}
+                      onBlur={(e) => {
+                        setTelegramIds((prev) => {
+                          const newIds = [...prev];
+                          newIds[index] = Number(e.target.value) || 0;
+                          return newIds;
+                        });
+                      }}
+                    />
+                    <InputGroupAddon align={"inline-end"}>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info
+                            size={16}
+                            opacity={progress === 100 ? 1 : 0}
+                            style={{
+                              transition: "opacity 0.3s ease",
+                            }}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Reached maximum {maxLengthIdTelegram} characters
+                        </TooltipContent>
+                      </Tooltip>
+                    </InputGroupAddon>
+                  </InputGroup>
+                </Field>
+                <Trash
+                  size={22}
+                  className="cursor-pointer"
+                  onClick={() => handleRemoveTelegramId(index)}
+                />
+              </div>
+            );
+          })}
+          <CirclePlus
+            size={22}
+            className="text-muted-foreground cursor-pointer mt-4"
+            onClick={handleAddTelegramId}
+          />
+        </FormItemWrapper>
       </div>
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">

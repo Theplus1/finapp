@@ -20,6 +20,13 @@ export class DailyPaymentSummary {
   @Prop({ default: 0 })
   totalSpendUSCents: number;
 
+  // Admin-specific totals (settled spend only)
+  @Prop({ default: 0 })
+  totalSpendNonUSCentsForAdmin: number;
+
+  @Prop({ default: 0 })
+  totalSpendUSCentsForAdmin: number;
+
   @Prop({ default: 0 })
   totalRefundCents: number;
 

@@ -138,10 +138,11 @@ export default function DashboardContainer() {
         cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? (
             <Skeleton />
-          ) : row.original.card?.name ? (
-            <CardNameCol card={row.original.card} />
           ) : (
-            EMPTY_LABEL
+            <CardNameCol
+              card={row.original.card}
+              cardId={row.original.cardId}
+            />
           );
         },
       },

@@ -189,6 +189,24 @@ export default function VirtualAccount() {
         );
       },
     },
+    // {
+    //   header: "Transfer",
+    //   cell: ({ row }: CellContext<VirtualAccount, string>) => {
+    //     return isLoading ? <Skeleton /> : formatDollarByCent(0);
+    //   },
+    // },
+    // {
+    //   header: "Recharge",
+    //   cell: ({ row }: CellContext<VirtualAccount, string>) => {
+    //     return isLoading ? <Skeleton /> : formatDollarByCent(0);
+    //   },
+    // },
+    // {
+    //   header: "Debt",
+    //   cell: ({ row }: CellContext<VirtualAccount, string>) => {
+    //     return isLoading ? <Skeleton /> : formatDollarByCent(0);
+    //   },
+    // },
     {
       id: "telegram",
       header: (

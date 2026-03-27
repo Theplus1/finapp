@@ -1,17 +1,18 @@
 "use client";
 
 import { ChevronDownIcon } from "lucide-react";
-import { Label } from "./label";
 import { Button } from "./button";
 import { Calendar } from "./calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { FormItemWrapper } from "./form-item-wrapper";
 
 type Props = {
   label?: string | React.ReactNode;
   onChange: (date?: Date) => void;
   showClear?: boolean;
   triggerClassName?: string;
+  dateDefault?: Date;
 };
 
 export function DatePicker({
@@ -19,6 +20,7 @@ export function DatePicker({
   onChange,
   showClear = true,
   triggerClassName,
+  dateDefault,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(undefined);
@@ -28,13 +30,14 @@ export function DatePicker({
     onChange(date);
   };
 
+  useEffect(() => {
+    if (dateDefault) {
+      setDate(dateDefault);
+    }
+  }, [dateDefault]);
+
   return (
-    <>
-      {label && (
-        <Label htmlFor="date" className="px-1">
-          {label}
-        </Label>
-      )}
+    <FormItemWrapper label={label}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -67,6 +70,6 @@ export function DatePicker({
           </>
         </PopoverContent>
       </Popover>
-    </>
+    </FormItemWrapper>
   );
 }

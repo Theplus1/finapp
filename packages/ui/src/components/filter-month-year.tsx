@@ -7,8 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
-import { Label } from "@repo/ui/components/label";
 import { useState } from "react";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 
 type Props = {
   onMonthYearChange: (month: string) => void;
@@ -37,8 +37,7 @@ const FilterMonthYear = ({ onMonthYearChange }: Props) => {
   };
 
   return (
-    <>
-      <Label className="px-1">Month</Label>
+    <FormItemWrapper label="Month">
       <Select onValueChange={handleValueChange} value={value}>
         <SelectTrigger className="w-[120px]">
           <SelectValue placeholder="Select a month" />
@@ -54,7 +53,7 @@ const FilterMonthYear = ({ onMonthYearChange }: Props) => {
           </SelectGroup>
         </SelectContent>
       </Select>
-    </>
+    </FormItemWrapper>
   );
 };
 

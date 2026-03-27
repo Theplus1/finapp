@@ -29,9 +29,11 @@ import { SetCardLimitDto } from '../dto/set-card-limit.dto';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 import { CardStatus } from '../../integrations/slash/dto/card.dto';
 import type { CardWithRelations } from '../../domain/cards/types/card.types';
-import { CARDS_API_ROLES } from '../../common/constants/auth.constants';
+import { BOSS_AND_ACCOUNTANT_ROLES, CARDS_API_ROLES } from '../../common/constants/auth.constants';
 import { CvvRevealRepository } from '../../database/repositories/cvv-reveal.repository';
 import { SYNC_CONSTANTS } from '../../integrations/slash/constants/sync.constants';
+import { ExportsService } from '../../domain/exports/exports.service';
+import { ExportType } from '../../database/schemas/export-job.schema';
 
 interface RequestUser {
   userId: string;
@@ -53,6 +55,7 @@ export class CustomerCardsController {
     private readonly cardsService: CardsService,
     private readonly slashApiService: SlashApiService,
     private readonly cvvRevealRepository: CvvRevealRepository,
+    private readonly exportsService: ExportsService,
   ) {}
 
   private getVirtualAccountId(req: { user?: RequestUser }): string {
@@ -269,6 +272,43 @@ export class CustomerCardsController {
         total,
       },
     };
+  }
+
+  @Post('export')
+  @Roles(...BOSS_AND_ACCOUNTANT_ROLES)
+  @ApiOperation({
+    summary: 'Export cards and return download URL (boss/accountant)',
+  })
+  @ApiResponse({ status: 200, description: 'Export generated successfully' })
+  async exportCards(
+    @Query() query: CustomerCardQueryDto,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{
+    downloadUrl: string;
+    fileName: string;
+    expiresAt: Date;
+  }> {
+    const virtualAccountId = this.getVirtualAccountId(req);
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new BadRequestException('Missing user ID for export');
+    }
+
+    const filters = {
+      virtualAccountId,
+      status: query.status,
+      cardGroupId: query.cardGroupId,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+      search: query.search,
+    };
+
+    return this.exportsService.generateCardsExportDownloadUrlForWeb({
+      userId,
+      virtualAccountId,
+      type: ExportType.CARDS,
+      filters,
+    });
   }
 
   @Post(':id/lock')

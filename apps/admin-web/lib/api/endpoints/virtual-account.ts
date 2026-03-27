@@ -61,15 +61,6 @@ type Params = {
   date?: string;
 };
 
-export interface VirtualAccountsDetailResponse {
-  success: true;
-  message: string;
-  data: VirtualAccount;
-  meta: {
-    timestamp: string;
-  };
-}
-
 export interface DataRechargeHistory {
   id: string;
   date: string;
@@ -79,19 +70,12 @@ export interface DataRechargeHistory {
 }
 
 export interface VirtualAccountsRechargeHistoryResponse {
-  success: true;
-  message: string;
-  data: {
-    virtualAccountId: string;
-    data: DataRechargeHistory[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
-  meta: {
-    timestamp: string;
-  };
+  virtualAccountId: string;
+  data: DataRechargeHistory[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export const virtualAccountsApi = {

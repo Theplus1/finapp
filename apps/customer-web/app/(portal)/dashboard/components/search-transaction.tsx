@@ -1,6 +1,6 @@
 "use client";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 import { Input } from "@repo/ui/components/input";
-import { Label } from "@repo/ui/components/label";
 
 type Props = {
   onSearch: (search: string) => void;
@@ -8,12 +8,11 @@ type Props = {
 
 export function SearchTransaction({ onSearch }: Props) {
   return (
-    <div className="flex gap-3">
-      <Label className="px-1">Search</Label>
+    <FormItemWrapper label="Search">
       <Input
         placeholder="Search transaction"
         onChange={(e) => onSearch(e.target.value)}
       />
-    </div>
+    </FormItemWrapper>
   );
 }

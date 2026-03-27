@@ -23,6 +23,9 @@ interface ApiResponse<T = unknown> {
     page: number;
     limit: number;
   };
+  meta?: {
+    timestamp: string;
+  };
 }
 
 interface ApiError {

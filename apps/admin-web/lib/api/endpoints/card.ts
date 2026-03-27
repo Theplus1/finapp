@@ -35,15 +35,6 @@ type Params = {
   limit: number;
 };
 
-export interface CardsDetailResponse {
-  success: true;
-  message: string;
-  data: Card;
-  meta: {
-    timestamp: string;
-  };
-}
-
 export const cardsApi = {
   getCards: async (params?: Params): Promise<ApiResponse<Card[]>> => {
     return apiClient.get("/card", { params });

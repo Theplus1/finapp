@@ -23,6 +23,7 @@ export interface CreateEmployeeData {
   email: string;
   password: string;
   role: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT;
+  // permission: PermissionEnum[];
 }
 
 export interface UpdateUserData {
@@ -35,14 +36,6 @@ export interface UsersListParams {
   limit?: number;
   search?: string;
   role?: string;
-}
-
-export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
 }
 
 export const employeeApi = {

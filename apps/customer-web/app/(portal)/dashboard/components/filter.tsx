@@ -24,7 +24,7 @@ const ActionTableTransaction = ({
   showExportTransaction = false,
 }: Props) => {
   return (
-    <div className="pb-4 flex gap-4">
+    <div className="pb-4 flex gap-4 items-end">
       <SearchTransaction onSearch={onSearch} />
       <FilterCard onCardChange={onCardChange} />
       <FilterStatus onStatusChange={onStatusChange} />

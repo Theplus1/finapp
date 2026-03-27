@@ -172,7 +172,11 @@ export default function Cards() {
           row,
         }: CellContext<CardSpendRow & { label: string }, number>) => {
           if (isLoading) return <Skeleton />;
-          return <p className="text-end">{formatDollarByCent(row.original.totalSpendCents)}</p>;
+          return (
+            <p className="text-end">
+              {formatDollarByCent(row.original.totalSpendCents)}
+            </p>
+          );
         },
       },
       ...generateDateColumns(
@@ -218,6 +222,7 @@ export default function Cards() {
             keywordCard={keywordCard}
             onFilterMonthChange={handleChangeMonth}
             onFilterCardChange={handleChangeCard}
+            // currentFilter={currentFilter}
           />
           <DataTable
             columns={columns}

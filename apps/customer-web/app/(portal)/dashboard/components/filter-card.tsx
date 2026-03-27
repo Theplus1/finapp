@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 import { Spinner } from "@repo/ui/components/spinner";
 import { Input } from "@repo/ui/components/input";
 import { useMemo, useState } from "react";
-import { Label } from "@repo/ui/components/label";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 
 type Props = {
   onCardChange: (cardId: string) => void;
@@ -43,10 +43,9 @@ const FilterCard = ({ onCardChange }: Props) => {
   }, [cardInfos, textSearch]);
 
   return (
-    <>
-      <Label className="px-1">Card</Label>
+    <FormItemWrapper label="Card">
       <Select onValueChange={handleValueChange} value={value}>
-        <SelectTrigger className="w-[280px]">
+        <SelectTrigger className="w-[240px]">
           {isLoadingCardInfos ? (
             <Spinner />
           ) : (
@@ -78,7 +77,7 @@ const FilterCard = ({ onCardChange }: Props) => {
           </SelectGroup>
         </SelectContent>
       </Select>
-    </>
+    </FormItemWrapper>
   );
 };
 

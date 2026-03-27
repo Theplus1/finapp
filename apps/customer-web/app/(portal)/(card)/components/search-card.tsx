@@ -1,5 +1,5 @@
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 import { Input } from "@repo/ui/components/input";
-import { Label } from "@repo/ui/components/label";
 
 type Props = {
   onCardChange: (card: string) => void;
@@ -12,15 +12,14 @@ const SearchCard = ({ onCardChange, value }: Props) => {
   };
 
   return (
-    <div className="mb-4 w-full flex items-center gap-2">
-      <Label>Search Card</Label>
+    <FormItemWrapper label="Search Card" className="mb-4">
       <Input
         className="w-[240px]"
         placeholder="Enter Card ID"
         value={value}
         onChange={(e) => handleValueChange(e.target.value)}
       />
-    </div>
+    </FormItemWrapper>
   );
 };
 
