@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DailyPaymentSummariesService } from './daily-payment-summaries.service';
 import {
@@ -16,7 +16,7 @@ import { DatabaseModule } from 'src/database/database.module';
       { name: DailyPaymentSummary.name, schema: DailyPaymentSummarySchema },
     ]),
     TransactionsModule,
-    AccountsModule,
+    forwardRef(() => AccountsModule),
     DatabaseModule,
   ],
   providers: [DailyPaymentSummariesService, DailyPaymentSummariesJob],

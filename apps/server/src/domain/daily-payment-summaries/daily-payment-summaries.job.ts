@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DailyPaymentSummariesService } from './daily-payment-summaries.service';
 import { AccountsService } from '../accounts/accounts.service';
@@ -13,6 +13,7 @@ export class DailyPaymentSummariesJob {
 
   constructor(
     private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
+    @Inject(forwardRef(() => AccountsService))
     private readonly accountsService: AccountsService,
   ) {}
 

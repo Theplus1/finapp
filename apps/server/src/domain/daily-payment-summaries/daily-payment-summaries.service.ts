@@ -349,4 +349,53 @@ export class DailyPaymentSummariesService {
   async deleteSummariesForAccount(virtualAccountId: string): Promise<void> {
     await this.dailyPaymentSummaryModel.deleteMany({ virtualAccountId });
   }
+
+  /**
+   * Aggregate overall ending balances for multiple virtual accounts in one query.
+   * endingAccountBalanceCents = totalDepositCents - (totalSpendUSCents + totalSpendNonUSCents) + totalRefundCents
+   */
+  async getOverallEndingBalancesByVirtualAccountIds(
+    virtualAccountIds: string[],
+  ): Promise<Map<string, number>> {
+    if (virtualAccountIds.length === 0) {
+      return new Map<string, number>();
+    }
+
+    const rows = await this.dailyPaymentSummaryModel.aggregate<{
+      virtualAccountId: string;
+      endingAccountBalanceCents: number;
+    }>([
+      {
+        $match: {
+          virtualAccountId: { $in: virtualAccountIds },
+        },
+      },
+      {
+        $group: {
+          _id: '$virtualAccountId',
+          totalDepositCents: { $sum: '$totalDepositCents' },
+          totalSpendUSCents: { $sum: '$totalSpendUSCents' },
+          totalSpendNonUSCents: { $sum: '$totalSpendNonUSCents' },
+          totalRefundCents: { $sum: '$totalRefundCents' },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          virtualAccountId: '$_id',
+          endingAccountBalanceCents: {
+            $add: [
+              '$totalDepositCents',
+              { $multiply: [{ $add: ['$totalSpendUSCents', '$totalSpendNonUSCents'] }, -1] },
+              '$totalRefundCents',
+            ],
+          },
+        },
+      },
+    ]);
+
+    return new Map<string, number>(
+      rows.map((row) => [row.virtualAccountId, row.endingAccountBalanceCents]),
+    );
+  }
 }
