@@ -256,6 +256,7 @@ export class AccountsService {
         internalBalanceCents: internalMetrics?.endingAccountBalanceCents ?? 0,
         internalSpendCents: internalMetrics?.totalSpendCents ?? 0,
         internalDepositCents: internalMetrics?.totalDepositCents ?? 0,
+        internalTransferCents: accountData.transferNetChange ?? 0,
       };
 
       return enriched;
