@@ -70,7 +70,7 @@ const initOverallDataPayment: PaymentOverallResponse = {
   },
 };
 
-const maskDataTable = Array.from({ length: 4 }, () => {
+const maskDataTable = Array.from({ length: 3 }, () => {
   return {};
 }) as Payment[];
 
