@@ -374,46 +374,38 @@ export class ExportsService {
       );
 
       const headers = [
-        'No',
-        'Card Id',
-        'Card Name',
-        'Card Status',
-        'Recurring Payment Only',
-        'Spending Limit',
-        'Created',
-        'Expiry',
+        'Profile Name',
+        'Card Type',
+        'Card Number',
+        'Expiration Month',
+        'Expiration Year',
+        'Expiration Date',
+        'CVV',
+        'Card ID',
+        'Card Group Name',
       ];
 
       const rows = cards.map((card, index) => {
-        const cardStatus =
-          card.status === CardStatus.ACTIVE ? 'Active' : 'Paused';
-        const recurringOnly = card.isRecurringOnly ? 'Allow' : 'Not allow';
-
-        const preset = card.spendingLimit?.preset ?? 'unlimited';
-        const amountUsd = card.spendingLimit?.amount ?? 0;
-        const spendingLimit =
-          preset === 'unlimited'
-            ? 'Unlimited'
-            : `${ExportsService.capitalizeFirst(preset)}: ${ExportsService.formatUsd(amountUsd)}`;
-
-        const created = card.createdAt
-          ? ExportsService.formatUtcMMDDYYYY(new Date(card.createdAt))
-          : '';
-
-        const expiry =
-          card.expiryMonth && card.expiryYear
-            ? `${card.expiryMonth}/${card.expiryYear}`
+        const expiryMonth = card.expiryMonth ?? '';
+        const expiryYear = card.expiryYear ?? '';
+        const expiryDate =
+          expiryMonth && expiryYear
+            ? `${expiryMonth}/${expiryYear.slice(-2)}`
             : '';
+        const cardNumber = card.pan ?? '';
+        const cardType = ExportsService.detectCardType(cardNumber);
 
+        void index;
         return [
-          index + 1,
-          card.slashId ?? '',
           card.name ?? '',
-          cardStatus,
-          recurringOnly,
-          spendingLimit,
-          created,
-          expiry,
+          cardType,
+          cardNumber,
+          expiryMonth,
+          expiryYear,
+          expiryDate,
+          '', // CVV must always be blank in web export
+          card.slashId ?? '',
+          card.cardGroupName ?? '',
         ];
       });
 
@@ -699,6 +691,15 @@ export class ExportsService {
   private static capitalizeFirst(value: string): string {
     if (!value) return '';
     return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  private static detectCardType(pan: string): string {
+    if (!pan) return 'unknown';
+    if (/^4\d+/.test(pan)) return 'Visa';
+    if (/^(5[1-5]|2[2-7])\d+/.test(pan)) return 'Mastercard';
+    if (/^3[47]\d+/.test(pan)) return 'Amex';
+    if (/^6(?:011|5)\d+/.test(pan)) return 'Discover';
+    return 'unknown';
   }
 
   private static formatUsd(value: number): string {
