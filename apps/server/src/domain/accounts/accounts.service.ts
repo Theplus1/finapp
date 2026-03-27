@@ -220,15 +220,22 @@ export class AccountsService {
       }
     });
 
-    let internalBalanceMap = new Map<string, number>();
+    let internalMetricsMap = new Map<
+      string,
+      {
+        endingAccountBalanceCents: number;
+        totalSpendCents: number;
+        totalDepositCents: number;
+      }
+    >();
     try {
-      internalBalanceMap =
-        await this.dailyPaymentSummariesService.getOverallEndingBalancesByVirtualAccountIds(
+      internalMetricsMap =
+        await this.dailyPaymentSummariesService.getOverallMetricsByVirtualAccountIds(
           slashIds,
         );
     } catch (error) {
       this.logger.warn(
-        `Failed to aggregate internal balances for admin virtual-account list: ${
+        `Failed to aggregate internal metrics for admin virtual-account list: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
@@ -238,6 +245,7 @@ export class AccountsService {
       const accountData = account.toObject();
       const user = userMap.get(account.slashId);
       const boss = bossMap.get(account.slashId);
+      const internalMetrics = internalMetricsMap.get(account.slashId);
 
       const enriched: VirtualAccountDetail = {
         ...accountData,
@@ -245,7 +253,9 @@ export class AccountsService {
         linkedTelegramIds: user?.telegramIds,
         bossUsername: boss?.username,
         bossEmail: boss?.email,
-        internalBalanceCents: internalBalanceMap.get(account.slashId) ?? 0,
+        internalBalanceCents: internalMetrics?.endingAccountBalanceCents ?? 0,
+        internalSpendCents: internalMetrics?.totalSpendCents ?? 0,
+        internalDepositCents: internalMetrics?.totalDepositCents ?? 0,
       };
 
       return enriched;

@@ -351,19 +351,24 @@ export class DailyPaymentSummariesService {
   }
 
   /**
-   * Aggregate overall ending balances for multiple virtual accounts in one query.
+   * Aggregate overall payment metrics for multiple virtual accounts in one query.
    * endingAccountBalanceCents = totalDepositCents - (totalSpendUSCents + totalSpendNonUSCents) + totalRefundCents
    */
-  async getOverallEndingBalancesByVirtualAccountIds(
+  async getOverallMetricsByVirtualAccountIds(
     virtualAccountIds: string[],
-  ): Promise<Map<string, number>> {
+  ): Promise<Map<string, { endingAccountBalanceCents: number; totalSpendCents: number; totalDepositCents: number }>> {
     if (virtualAccountIds.length === 0) {
-      return new Map<string, number>();
+      return new Map<
+        string,
+        { endingAccountBalanceCents: number; totalSpendCents: number; totalDepositCents: number }
+      >();
     }
 
     const rows = await this.dailyPaymentSummaryModel.aggregate<{
       virtualAccountId: string;
       endingAccountBalanceCents: number;
+      totalSpendCents: number;
+      totalDepositCents: number;
     }>([
       {
         $match: {
@@ -383,6 +388,8 @@ export class DailyPaymentSummariesService {
         $project: {
           _id: 0,
           virtualAccountId: '$_id',
+          totalDepositCents: 1,
+          totalSpendCents: { $add: ['$totalSpendUSCents', '$totalSpendNonUSCents'] },
           endingAccountBalanceCents: {
             $add: [
               '$totalDepositCents',
@@ -394,8 +401,18 @@ export class DailyPaymentSummariesService {
       },
     ]);
 
-    return new Map<string, number>(
-      rows.map((row) => [row.virtualAccountId, row.endingAccountBalanceCents]),
+    return new Map<
+      string,
+      { endingAccountBalanceCents: number; totalSpendCents: number; totalDepositCents: number }
+    >(
+      rows.map((row) => [
+        row.virtualAccountId,
+        {
+          endingAccountBalanceCents: row.endingAccountBalanceCents,
+          totalSpendCents: row.totalSpendCents,
+          totalDepositCents: row.totalDepositCents,
+        },
+      ]),
     );
   }
 }

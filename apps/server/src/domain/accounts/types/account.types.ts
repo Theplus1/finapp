@@ -19,6 +19,8 @@ export interface VirtualAccountDetail extends Omit<VirtualAccount, 'toObject'> {
   bossUsername?: string;
   bossEmail?: string;
   internalBalanceCents?: number;
+  internalSpendCents?: number;
+  internalDepositCents?: number;
 }
 
 /**
