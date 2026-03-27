@@ -29,6 +29,7 @@ export interface VirtualAccount {
   name: string;
   pendingBalanceCents: number;
   internalSpendCents: number;
+  internalTransferCents: number;
   internalDepositCents: number;
   spend: {
     amountCents: number;
