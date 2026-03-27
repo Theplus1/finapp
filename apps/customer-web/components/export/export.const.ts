@@ -8,5 +8,6 @@ export const EXPORT_DATA_NAMES = {
 export const EXPORT_URL = {
   TRANSACTIONS: "/transaction/export",
   CARDS: "/card/export",
-  CARD_SPEND: "/card-spend/export",
+  CARD_SPEND: "/virtual-account/card-spend/export",
+  
 } as const;

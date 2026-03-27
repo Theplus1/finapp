@@ -11,22 +11,28 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Spinner } from "@repo/ui/components/spinner";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 import { Input } from "@repo/ui/components/input";
+import { usePathname } from "next/navigation";
 
 type Props = {
   onVirtualAccountChange: (virtualAccountId: string) => void;
+  showAll?: boolean;
 };
 const limitPerRequest = 100;
 
-const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
+const FilterVirtualAccount = ({
+  onVirtualAccountChange,
+  showAll = true,
+}: Props) => {
   const [value, setValue] = useState("all");
   const [textSearch, setTextSearch] = useState("");
+  const pathName = usePathname();
 
   const { data: virtualAccountInfos, isLoading: isLoadingVirtualAccountInfos } =
     useQuery({
-      queryKey: ["virtual-account-infos"],
+      queryKey: ["virtual-account-infos", showAll],
       queryFn: async () => {
         let totalVirtualAccounts: VirtualAccount[] = [];
         let hasNext = true;
@@ -61,6 +67,12 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
     });
   }, [virtualAccountInfos, textSearch]);
 
+  useEffect(() => {
+    handleValueChange(
+      showAll ? "all" : virtualAccountInfos?.[0]?.slashId || "",
+    );
+  }, [pathName, virtualAccountInfos, showAll]);
+
   return (
     <FormItemWrapper label="Virtual account">
       <Select onValueChange={handleValueChange} value={value}>
@@ -86,9 +98,11 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
                 setTextSearch(e.target.value);
               }}
             />
-            <SelectItem key="all" value="all">
-              All
-            </SelectItem>
+            {showAll && (
+              <SelectItem key="all" value="all">
+                All
+              </SelectItem>
+            )}
             {virtualAccountDataFiltered.map(
               (virtualAccount: VirtualAccount) => (
                 <SelectItem

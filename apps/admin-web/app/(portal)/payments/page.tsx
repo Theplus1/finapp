@@ -45,9 +45,11 @@ const initDataPayment: PaymentResponse = {
   summary: {
     totalDepositCents: 0,
     totalSpendCentsForAdmin: 0,
+    totalSpendCents: 0,
     totalSpendUsCentsForAdmin: 0,
     totalSpendNonUsCentsForAdmin: 0,
     totalRefundCents: 0,
+    endingAccountBalanceCents: 0,
     endingAccountBalanceCentsForAdmin: 0,
   },
 };
@@ -62,6 +64,8 @@ const initOverallDataPayment: PaymentOverallResponse = {
     totalSpendUsCentsForAdmin: 0,
     totalSpendNonUsCentsForAdmin: 0,
     totalRefundCents: 0,
+    totalSpendCents: 0,
+    endingAccountBalanceCents: 0,
     endingAccountBalanceCentsForAdmin: 0,
   },
 };
@@ -134,16 +138,12 @@ export default function Payments() {
       const result = {
         totalNap: {} as Record<string, number>,
         totalTieu: {} as Record<string, number>,
-        spendNonUsCents: {} as Record<string, number>,
-        spendUsCents: {} as Record<string, number>,
         refundCents: {} as Record<string, number>,
       };
 
       data.forEach((item) => {
         result.totalNap[item.date] = item.depositCents;
-        result.totalTieu[item.date] = item.spendCentsForAdmin;
-        result.spendNonUsCents[item.date] = item.spendNonUsCentsForAdmin;
-        result.spendUsCents[item.date] = item.spendUsCentsForAdmin;
+        result.totalTieu[item.date] = item.spendCents;
         result.refundCents[item.date] = item.refundCents;
       });
 
@@ -250,6 +250,7 @@ export default function Payments() {
           <div className="pb-4">
             <FilterVirtualAccount
               onVirtualAccountChange={handleChangeVirtualAccount}
+              showAll={false}
             />
           </div>
           <Statistic

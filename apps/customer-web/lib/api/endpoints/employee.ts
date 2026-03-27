@@ -6,6 +6,10 @@ import { RoleUserEnum } from "./users";
 import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
 
+export enum EmployeeDrawerTypeEnum {
+  CREATE = "create",
+  EDIT = "edit",
+}
 export interface Employee {
   id: string;
   username: string;
@@ -23,6 +27,7 @@ export interface CreateEmployeeData {
   email: string;
   password: string;
   role: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT;
+  confirmPassword?: string;
   // permission: PermissionEnum[];
 }
 
@@ -55,7 +60,7 @@ export const employeeApi = {
 
   updateEmployee: async (
     id: string,
-    data: BodyInit,
+    data: Partial<CreateEmployeeData>,
   ): Promise<ApiResponse<Employee>> => {
     return apiClient.patch<Employee>(`/employees/${id}`, data);
   },

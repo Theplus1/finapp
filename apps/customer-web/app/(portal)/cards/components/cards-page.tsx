@@ -280,12 +280,20 @@ export default function CardsPage() {
     ...(isBoss
       ? [
           {
-            header: "CVV History",
+            header: <div className="text-center">CVV History</div>,
+            id: "cvv-history",
             cell: ({ row }: CellContext<Card, string>) => {
-              return isLoading ? (
-                <Skeleton />
-              ) : (
-                <CVVHistoriesTaken data={row.original.cvvHistories ?? []} />
+              if (isLoading) return <Skeleton />;
+              return (
+                <div className="text-center">
+                  {row.original.cvvHistories.length > 0 ? (
+                    <CVVHistoriesTaken card={row.original} />
+                  ) : (
+                    <Button variant={"link"} disabled>
+                      0
+                    </Button>
+                  )}
+                </div>
               );
             },
           },

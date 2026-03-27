@@ -45,6 +45,8 @@ const initDataPayment: PaymentResponse = {
   summary: {
     totalDepositCents: 0,
     totalSpendCentsForAdmin: 0,
+    totalSpendCents: 0,
+    endingAccountBalanceCents: 0,
     totalSpendUsCentsForAdmin: 0,
     totalSpendNonUsCentsForAdmin: 0,
     totalRefundCents: 0,
@@ -59,6 +61,8 @@ const initOverallDataPayment: PaymentOverallResponse = {
   summary: {
     totalDepositCents: 0,
     totalSpendCentsForAdmin: 0,
+    totalSpendCents: 0,
+    endingAccountBalanceCents: 0,
     totalSpendUsCentsForAdmin: 0,
     totalSpendNonUsCentsForAdmin: 0,
     totalRefundCents: 0,
@@ -132,31 +136,26 @@ export default function Locations() {
     if (isLoading) return maskDataTable;
     function transformPaymentData(data: PaymentRow[]) {
       const result = {
-        totalNap: {} as Record<string, number>,
-        totalTieu: {} as Record<string, number>,
-        spendNonUsCents: {} as Record<string, number>,
-        spendUsCents: {} as Record<string, number>,
-        refundCents: {} as Record<string, number>,
+        totalSpendNonUsCentsForAdmin: {} as Record<string, number>,
+        totalSpendUsCentsForAdmin: {} as Record<string, number>,
       };
 
       data.forEach((item) => {
-        result.totalNap[item.date] = item.depositCents;
-        result.totalTieu[item.date] = item.spendCentsForAdmin;
-        result.spendNonUsCents[item.date] = item.spendNonUsCentsForAdmin;
-        result.spendUsCents[item.date] = item.spendUsCentsForAdmin;
-        result.refundCents[item.date] = item.refundCents;
+        result.totalSpendNonUsCentsForAdmin[item.date] =
+          item.spendNonUsCentsForAdmin;
+        result.totalSpendUsCentsForAdmin[item.date] = item.spendUsCentsForAdmin;
       });
 
       return [
         {
           label: "Consume outside US",
-          key: "spendNonUsCents",
-          data: result.spendNonUsCents,
+          key: "totalSpendNonUsCentsForAdmin",
+          data: result.totalSpendNonUsCentsForAdmin,
         },
         {
           label: "Consume in US",
-          key: "spendUsCents",
-          data: result.spendUsCents,
+          key: "totalSpendUsCentsForAdmin",
+          data: result.totalSpendUsCentsForAdmin,
         },
       ];
     }
@@ -217,12 +216,26 @@ export default function Locations() {
           fixed: 0,
         },
       },
+      {
+        id: "summary",
+        header: <p className="text-end">Summary</p>,
+        cell: ({
+          row,
+        }: CellContext<
+          Payment & { key: keyof Payment["summary"] },
+          number
+        >) => {
+          if (isLoading) return <Skeleton />;
+          const value = dataPayment.summary[row.original.key];
+          return <p className="text-end">{formatDollarByCent(value)}</p>;
+        },
+      },
       ...generateDateColumns(
         Number(detectMonthYear(currentFilter.from).month),
         Number(detectMonthYear(currentFilter.from).year),
       ),
     ] as ColumnDef<Payment>[];
-  }, [currentFilter.from, currentFilter.virtualAccountId, isLoading]);
+  }, [currentFilter.from, currentFilter.virtualAccountId, isLoading, dataPayment.summary]);
 
   const handleChangeVirtualAccount = (virtualAccountId: string) => {
     setCurrentFilter((prev) => ({
@@ -253,6 +266,7 @@ export default function Locations() {
           <div className="pb-4">
             <FilterVirtualAccount
               onVirtualAccountChange={handleChangeVirtualAccount}
+              showAll={false}
             />
           </div>
           <Statistic

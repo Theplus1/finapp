@@ -34,6 +34,8 @@ export interface PaymentSummary {
   totalSpendUsCentsForAdmin: number;
   totalSpendNonUsCentsForAdmin: number;
   totalRefundCents: number;
+  totalSpendCents: number;
+  endingAccountBalanceCents: number;
   endingAccountBalanceCentsForAdmin: number;
 }
 
@@ -41,6 +43,7 @@ export interface PaymentRow {
   date: string;
   depositCents: number;
   spendCentsForAdmin: number;
+  spendCents: number;
   spendNonUsCentsForAdmin: number;
   spendUsCentsForAdmin: number;
   refundCents: number;
