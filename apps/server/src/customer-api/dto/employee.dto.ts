@@ -40,16 +40,26 @@ export class CreateEmployeeDto {
 }
 
 export class UpdateEmployeeDto {
-  @ApiPropertyOptional({ description: 'New password', example: 'NewSecurePassword123!' })
+  @ApiPropertyOptional({ description: 'Username', example: 'nv.ads.2' })
   @IsString()
-  @MinLength(8)
+  @IsNotEmpty()
+  @MinLength(3)
   @IsOptional()
-  password?: string;
+  username?: string;
 
   @ApiPropertyOptional({ description: 'Email', example: 'nv@example.com' })
   @IsEmail()
   @IsOptional()
   email?: string;
+
+  @ApiPropertyOptional({
+    description: 'Role',
+    enum: EMPLOYEE_ROLES,
+    example: 'accountant',
+  })
+  @IsEnum(EMPLOYEE_ROLES)
+  @IsOptional()
+  role?: EmployeeRole;
 }
 
 export class SetEmployeeActiveDto {

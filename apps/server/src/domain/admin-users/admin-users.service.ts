@@ -342,12 +342,12 @@ export class AdminUsersService {
   }
 
   /**
-   * Update employee (password, email). Caller must be the boss of this employee.
+   * Update employee (username, email, role). Caller must be the boss of this employee.
    */
   async updateEmployee(
     employeeId: string,
     bossId: string,
-    updates: { password?: string; email?: string },
+    updates: { username?: string; email?: string; role?: 'ads' | 'accountant' },
   ): Promise<AdminUserDocument> {
     const employee = await this.adminUserRepository.findById(employeeId);
     if (!employee) {
@@ -356,13 +356,43 @@ export class AdminUsersService {
     if (employee.bossId !== bossId) {
       throw new ForbiddenException('Not allowed to update this employee');
     }
-    const updateData: { passwordHash?: string; email?: string } = {};
-    if (updates.password !== undefined) {
-      updateData.passwordHash = await bcrypt.hash(updates.password, 10);
+
+    const updateData: {
+      username?: string;
+      email?: string;
+      role?: 'ads' | 'accountant';
+    } = {};
+
+    if (updates.username !== undefined && updates.username !== employee.username) {
+      const existingUser = await this.adminUserRepository.findByUsername(
+        updates.username,
+      );
+      if (existingUser && String(existingUser._id) !== String(employee._id)) {
+        throw new BadRequestException('Admin user already exists');
+      }
+      updateData.username = updates.username;
     }
-    if (updates.email !== undefined) {
+
+    if (updates.email !== undefined && updates.email !== employee.email) {
+      const existingEmailUser = await this.adminUserRepository.findOne({
+        email: updates.email,
+      });
+      if (
+        existingEmailUser &&
+        String(existingEmailUser._id) !== String(employee._id)
+      ) {
+        throw new BadRequestException('Email is already in use');
+      }
       updateData.email = updates.email;
     }
+
+    if (updates.role !== undefined) {
+      if (!EMPLOYEE_ROLES.includes(updates.role)) {
+        throw new BadRequestException('Role must be ads or accountant');
+      }
+      updateData.role = updates.role;
+    }
+
     if (Object.keys(updateData).length === 0) {
       return employee;
     }
