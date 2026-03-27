@@ -41,9 +41,9 @@ CvvRevealSchema.index(
   { name: 'card_revealedAt_desc_idx' },
 );
 
-// Đảm bảo mỗi (cardSlashId, revealedByUserId) chỉ có 1 bản ghi
+// Index for per-card event timeline pagination
 CvvRevealSchema.index(
-  { cardSlashId: 1, revealedByUserId: 1 },
-  { unique: true, name: 'card_user_unique_reveal_idx' },
+  { cardSlashId: 1, _id: -1 },
+  { name: 'card_timeline_desc_idx' },
 );
 

@@ -19,39 +19,16 @@ export class CvvRevealRepository {
     revealedByUsername: string;
   }): Promise<CvvRevealDocument> {
     const now = new Date();
-
-    // find existing record for (card, user)
-    const existing = await this.model
-      .findOne({
-        cardSlashId: data.cardSlashId,
-        revealedByUserId: data.revealedByUserId,
-      })
-      .exec();
-
-    if (!existing) {
-      // first time: create new record
-      const doc = new this.model({
-        ...data,
-        revealedAt: now,
-        lastRevealedAt: now,
-        revealCount: 1,
-      });
-      const saved = await doc.save();
-      this.logger.log(
-        `Recorded FIRST CVV reveal for card ${data.cardSlashId} by ${data.revealedByUsername}`,
-      );
-      return saved;
-    }
-
-    // subsequent times: only update lastRevealedAt + increase revealCount
-    existing.virtualAccountId = data.virtualAccountId;
-    existing.revealedByUsername = data.revealedByUsername;
-    existing.lastRevealedAt = now;
-    existing.revealCount = (existing.revealCount ?? 1) + 1;
-
-    const updated = await existing.save();
+    // append-only history: each reveal action is a dedicated record
+    const doc = new this.model({
+      ...data,
+      revealedAt: now,
+      lastRevealedAt: now,
+      revealCount: 1,
+    });
+    const updated = await doc.save();
     this.logger.log(
-      `Updated CVV reveal (count=${updated.revealCount}) for card ${data.cardSlashId} by ${data.revealedByUsername}`,
+      `Recorded CVV reveal for card ${data.cardSlashId} by ${data.revealedByUsername}`,
     );
     return updated;
   }
@@ -66,7 +43,7 @@ export class CvvRevealRepository {
 
     const query = this.model
       .find({ cardSlashId })
-      .sort({ lastRevealedAt: -1, revealedAt: -1 });
+      .sort({ revealedAt: -1, _id: -1 });
     const [items, total] = await Promise.all([
       query
         .skip((safePage - 1) * safeLimit)
@@ -84,7 +61,10 @@ export class CvvRevealRepository {
     if (cardSlashIds.length === 0) {
       return [];
     }
-    return this.model.find({ cardSlashId: { $in: cardSlashIds } }).exec();
+    return this.model
+      .find({ cardSlashId: { $in: cardSlashIds } })
+      .sort({ revealedAt: -1, _id: -1 })
+      .exec();
   }
 }
 

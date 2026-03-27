@@ -7,7 +7,7 @@ export const PAGINATION_DEFAULTS = {
   LIMIT: 20,
   MIN_PAGE: 1,
   MIN_LIMIT: 1,
-  MAX_LIMIT: 100,
+  MAX_LIMIT: 1000,
 } as const;
 
 export enum SortOrder {

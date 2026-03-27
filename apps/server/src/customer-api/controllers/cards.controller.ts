@@ -153,6 +153,7 @@ export class CustomerCardsController {
     page: number;
     limit: number;
     totalPages: number;
+    hasMore: boolean;
   }> {
     const virtualAccountId = this.getVirtualAccountId(req);
     const owned = await this.cardsService.verifyOwnership(
@@ -165,8 +166,13 @@ export class CustomerCardsController {
       );
     }
 
-    const pageNum = Number(page) || 1;
-    const limitNum = Number(limit) || 20;
+    const parsedPage = Number(page);
+    const parsedLimit = Number(limit);
+    const pageNum = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const limitNum =
+      Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, 1000)
+        : 20;
 
     const [items, total] = await this.cvvRevealRepository.findByCardSlashId(
       cardSlashId,
@@ -184,6 +190,7 @@ export class CustomerCardsController {
 
     const totalPages =
       limitNum > 0 ? Math.ceil(total / limitNum) || 1 : 1;
+    const hasMore = pageNum * limitNum < total;
 
     return {
       cardId: cardSlashId,
@@ -192,6 +199,7 @@ export class CustomerCardsController {
       page: pageNum,
       limit: limitNum,
       totalPages,
+      hasMore,
     };
   }
 
