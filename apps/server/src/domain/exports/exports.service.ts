@@ -34,8 +34,17 @@ interface WebCardsExportParams {
   filters: CardFilters;
 }
 
+interface WebCardSpendExportParams {
+  userId: string;
+  virtualAccountId: string;
+  from: string;
+  to: string;
+}
+
 @Injectable()
 export class ExportsService {
+  private static readonly CARD_SPEND_ALERT_FILL_RGB = 'FFC7CE';
+
   private readonly logger = new Logger(ExportsService.name);
 
   constructor(
@@ -470,6 +479,202 @@ export class ExportsService {
     }
   }
 
+  async generateCardSpendExportDownloadUrlForWeb(
+    params: WebCardSpendExportParams,
+  ): Promise<{
+    downloadUrl: string;
+    fileName: string;
+    expiresAt: Date;
+  }> {
+    const ownerId = this.toNumericOwnerId(params.userId);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    const exportJob = await this.exportJobModel.create({
+      userId: ownerId,
+      chatId: ownerId,
+      type: ExportType.TRANSACTIONS,
+      status: ExportStatus.PROCESSING,
+      filters: {
+        virtualAccountId: params.virtualAccountId,
+        from: params.from,
+        to: params.to,
+      },
+      expiresAt,
+    });
+
+    try {
+      const spendingAlertThresholdUsd = this.configService.get<number>(
+        'cardSpendingAlert.thresholdUsd',
+        1000,
+      );
+      const fromDate = new Date(`${params.from}T00:00:00.000Z`);
+      const toDate = new Date(`${params.to}T23:59:59.999Z`);
+      const aggregated = await this.transactionsService.aggregateCardSpendByCardAndDay({
+        virtualAccountId: params.virtualAccountId,
+        detailedStatuses: ['pending', 'settled'],
+        startDate: fromDate,
+        endDate: toDate,
+      });
+
+      const perCard = new Map<
+        string,
+        { cardName: string; cardLast4?: string; daySpendCents: Record<string, number> }
+      >();
+
+      for (const item of aggregated.rows) {
+        const existing =
+          perCard.get(item.cardId) ??
+          {
+            cardName: item.cardName,
+            cardLast4: item.cardLast4,
+            daySpendCents: {} as Record<string, number>,
+          };
+        existing.daySpendCents[item.day] =
+          (existing.daySpendCents[item.day] ?? 0) + item.amountCents;
+        if (!existing.cardLast4 && item.cardLast4) {
+          existing.cardLast4 = item.cardLast4;
+        }
+        perCard.set(item.cardId, existing);
+      }
+
+      const days = ExportsService.enumerateUtcDateKeysInclusive(
+        params.from,
+        params.to,
+      );
+      const cardRows = Array.from(perCard.entries()).map(([cardId, data]) => {
+        const daySpendCents: Record<string, number> = {};
+        let totalSpendCents = 0;
+        for (const day of days) {
+          const value = data.daySpendCents[day] ?? 0;
+          daySpendCents[day] = value;
+          totalSpendCents += value;
+        }
+        return {
+          cardId,
+          cardName: data.cardName,
+          daySpendCents,
+          totalSpendCents,
+        };
+      });
+
+      const totalDaySpend: Record<string, number> = {};
+      let totalRowSum = 0;
+      for (const day of days) {
+        const sumForDay = cardRows.reduce(
+          (acc, row) => acc + (row.daySpendCents[day] ?? 0),
+          0,
+        );
+        totalDaySpend[day] = sumForDay;
+        totalRowSum += sumForDay;
+      }
+
+      const pivotRows = [
+        {
+          cardId: 'Total',
+          cardName: 'Total',
+          daySpendCents: totalDaySpend,
+          totalSpendCents: totalRowSum,
+          isTotal: true,
+        },
+        ...cardRows.map((row) => ({ ...row, isTotal: false })),
+      ];
+
+      const headers = ['No', 'Card Id', 'Card Name', 'Summary', ...days];
+      const rows = pivotRows.map((row, index) => {
+        const serial = row.isTotal ? '' : index;
+        const dayValues = days.map((day) => {
+          const cents = row.daySpendCents[day] ?? 0;
+          return cents > 0 ? ExportsService.formatUsd(cents / 100) : '';
+        });
+        return [
+          serial,
+          row.cardId,
+          row.cardName,
+          row.totalSpendCents > 0
+            ? ExportsService.formatUsd(row.totalSpendCents / 100)
+            : '',
+          ...dayValues,
+        ];
+      });
+
+      const workbook = await XlsxPopulate.fromBlankAsync();
+      const sheet = workbook.sheet(0);
+      sheet.name('Card Spend');
+      headers.forEach((header, colIndex) => {
+        const cell = sheet.cell(1, colIndex + 1);
+        cell.value(header);
+        cell.style('bold', true);
+      });
+      rows.forEach((row, rowIndex) => {
+        const pivot = pivotRows[rowIndex];
+        row.forEach((value, colIndex) => {
+          const cell = sheet.cell(rowIndex + 2, colIndex + 1);
+          cell.value(value);
+          if (rowIndex === 0) {
+            cell.style('bold', true);
+          }
+          const centsForDay =
+            colIndex >= 4 ? pivot.daySpendCents[days[colIndex - 4]] ?? 0 : 0;
+          if (
+            pivot.isTotal !== true &&
+            colIndex >= 4 &&
+            centsForDay > 0 &&
+            centsForDay / 100 > spendingAlertThresholdUsd
+          ) {
+            cell.style('fill', ExportsService.CARD_SPEND_ALERT_FILL_RGB);
+          }
+        });
+      });
+      for (let colIdx = 4; colIdx < headers.length; colIdx++) {
+        sheet.cell(1, colIdx + 1).style('fill', undefined);
+        sheet.cell(2, colIdx + 1).style('fill', undefined);
+      }
+      for (let colIndex = 0; colIndex < headers.length; colIndex++) {
+        const columnLetter = ExportsService.columnIndexToLetter(colIndex);
+        sheet.column(columnLetter).width(colIndex < 4 ? 18 : 14);
+      }
+
+      const buffer = (await workbook.outputAsync()) as Buffer;
+      const { fileName, filePath } = await saveExportFile(buffer, 'card-spend-web');
+      const fileStats = await fs.stat(filePath);
+
+      await this.exportJobModel.updateOne(
+        { _id: exportJob._id },
+        {
+          $set: {
+            status: ExportStatus.COMPLETED,
+            fileName,
+            filePath,
+            fileSize: fileStats.size,
+            recordCount: rows.length,
+          },
+        },
+      );
+
+      const token = this.jwtService.sign(
+        {
+          jobId: exportJob._id.toString(),
+          type: 'export-download',
+        },
+        { expiresIn: '24h' },
+      );
+      const downloadUrl = this.buildDownloadUrlFromToken(token);
+      return { downloadUrl, fileName, expiresAt };
+    } catch (error) {
+      await this.exportJobModel.updateOne(
+        { _id: exportJob._id },
+        {
+          $set: {
+            status: ExportStatus.FAILED,
+            errorMessage:
+              error instanceof Error ? error.message : String(error),
+          },
+        },
+      );
+      throw error;
+    }
+  }
+
   private static formatDateTimeUtc(date: Date): string {
     if (Number.isNaN(date.getTime())) {
       return '';
@@ -503,6 +708,46 @@ export class ExportsService {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
+  }
+
+  private static enumerateUtcDateKeysInclusive(
+    fromYmd: string,
+    toYmd: string,
+  ): string[] {
+    const dayPattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dayPattern.test(fromYmd) || !dayPattern.test(toYmd)) {
+      return [];
+    }
+    const start = new Date(`${fromYmd}T00:00:00.000Z`);
+    const endDayStart = new Date(`${toYmd}T00:00:00.000Z`);
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(endDayStart.getTime()) ||
+      endDayStart < start
+    ) {
+      return [];
+    }
+    const result: string[] = [];
+    const cursor = new Date(start);
+    while (cursor.getTime() <= endDayStart.getTime()) {
+      const y = cursor.getUTCFullYear();
+      const m = String(cursor.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(cursor.getUTCDate()).padStart(2, '0');
+      result.push(`${y}-${m}-${d}`);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    return result;
+  }
+
+  private static columnIndexToLetter(colIndex: number): string {
+    let n = colIndex + 1;
+    let result = '';
+    while (n > 0) {
+      n -= 1;
+      result = String.fromCharCode(65 + (n % 26)) + result;
+      n = Math.floor(n / 26);
+    }
+    return result;
   }
 
   private buildDownloadUrlFromToken(token: string): string {
