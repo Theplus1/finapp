@@ -208,7 +208,7 @@ export default function Cards() {
         ?.toLowerCase()
         .includes(keywordCardDebounce),
     );
-  }, [dataCardSpendGrouped, keywordCardDebounce]);
+  }, [dataCardSpendGrouped, keywordCardDebounce, isLoading]);
 
   return (
     <PageLayout>
@@ -222,7 +222,7 @@ export default function Cards() {
             keywordCard={keywordCard}
             onFilterMonthChange={handleChangeMonth}
             onFilterCardChange={handleChangeCard}
-            // currentFilter={currentFilter}
+            currentFilter={currentFilter}
           />
           <DataTable
             columns={columns}

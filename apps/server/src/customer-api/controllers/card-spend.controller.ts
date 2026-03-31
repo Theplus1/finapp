@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Controller,
   Get,
+  Post,
   Param,
   Query,
   Request,
@@ -21,6 +22,7 @@ import { Roles } from '../../admin-api/decorators/roles.decorator';
 import { TransactionsService } from '../../domain/transactions/transactions.service';
 import { CardSpendResponseDto } from '../dto/card-spend.dto';
 import { BOSS_AND_ACCOUNTANT_ROLES } from '../../common/constants/auth.constants';
+import { ExportsService } from '../../domain/exports/exports.service';
 
 interface RequestUser {
   userId: string;
@@ -38,6 +40,7 @@ interface RequestUser {
 export class CustomerCardSpendController {
   constructor(
     private readonly transactionsService: TransactionsService,
+    private readonly exportsService: ExportsService,
   ) {}
 
   @Get(':id/card-spend')
@@ -192,6 +195,62 @@ export class CustomerCardSpendController {
       days,
       rows,
     };
+  }
+
+  @Post('card-spend/export')
+  @ApiOperation({
+    summary: 'Export card spend pivot to Excel (boss/accountant)',
+    description:
+      'Exports the same pivot structure as card-spend web table with Total row first.',
+  })
+  @ApiQuery({
+    name: 'from',
+    required: true,
+    description: 'Start date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: true,
+    description: 'End date (YYYY-MM-DD)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Card spend export generated successfully',
+  })
+  async exportCardSpend(
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{
+    downloadUrl: string;
+    fileName: string;
+    expiresAt: Date;
+  }> {
+    const vaIdFromToken = req.user?.virtualAccountId;
+    if (!vaIdFromToken) {
+      throw new BadRequestException('No virtual account linked to this user');
+    }
+
+    if (!from || !to) {
+      throw new BadRequestException('from and to query params are required');
+    }
+
+    const dayPattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dayPattern.test(from) || !dayPattern.test(to)) {
+      throw new BadRequestException('from/to must be in YYYY-MM-DD format');
+    }
+
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new BadRequestException('Missing user ID for export');
+    }
+
+    return this.exportsService.generateCardSpendExportDownloadUrlForWeb({
+      userId,
+      virtualAccountId: vaIdFromToken,
+      from,
+      to,
+    });
   }
 }
 

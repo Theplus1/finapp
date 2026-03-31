@@ -150,7 +150,7 @@ export default function VirtualAccount() {
       header: <p className={isLoading ? "" : "text-end"}>Balance</p>,
       id: "balance",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        const balance = row.original.balance?.amountCents ?? 0;
+        const balance = row.original.internalBalanceCents ?? 0;
         return isLoading ? (
           <Skeleton />
         ) : (
@@ -162,12 +162,52 @@ export default function VirtualAccount() {
       header: <p className={isLoading ? "" : "text-end"}>Spend</p>,
       id: "spend",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        const spend = row.original.spend?.amountCents ?? 0;
+        const spend = row.original.internalSpendCents ?? 0;
         return isLoading ? (
           <Skeleton />
         ) : (
           <p className={"text-end"}>{formatDollarByCent(spend)}</p>
         );
+      },
+    },
+    {
+      header: <p className={isLoading ? "" : "text-end"}>Transfer</p>,
+      id: "transfer",
+      cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        if (isLoading) {
+          return <Skeleton />;
+        }
+        return (
+          <p className={"text-end"}>
+            {formatDollarByCent(row.original.internalTransferCents)}
+          </p>
+        );
+      },
+    },
+    {
+      header: <p className={isLoading ? "" : "text-end"}>Recharge</p>,
+      id: "recharge",
+      cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        if (isLoading) {
+          return <Skeleton />;
+        }
+        return (
+          <p className={"text-end"}>
+            {formatDollarByCent(row.original.internalSpendCents)}
+          </p>
+        );
+      },
+    },
+    {
+      header: <p className={isLoading ? "" : "text-end"}>Debt</p>,
+      id: "debt",
+      cell: ({ row }: CellContext<VirtualAccount, string>) => {
+        if (isLoading) {
+          return <Skeleton />;
+        }
+        const debtValue =
+          row.original.internalTransferCents - row.original.internalSpendCents;
+        return <p className={"text-end"}>{formatDollarByCent(debtValue)}</p>;
       },
     },
     {
@@ -189,18 +229,6 @@ export default function VirtualAccount() {
         );
       },
     },
-    // {
-    //   header: "Transfer",
-    //   cell: ({ row }: CellContext<VirtualAccount, string>) => {
-    //     return isLoading ? <Skeleton /> : formatDollarByCent(0);
-    //   },
-    // },
-    // {
-    //   header: "Recharge",
-    //   cell: ({ row }: CellContext<VirtualAccount, string>) => {
-    //     return isLoading ? <Skeleton /> : formatDollarByCent(0);
-    //   },
-    // },
     // {
     //   header: "Debt",
     //   cell: ({ row }: CellContext<VirtualAccount, string>) => {

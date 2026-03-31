@@ -105,4 +105,26 @@ export const cardsApi = {
   getCardCVV: async (id: string): Promise<ApiResponse<{ cvv: string }>> => {
     return await apiClient.post(`/card/${id}/cvv`);
   },
+  getCardCVVHistory: async (
+    id: string,
+    params: Params,
+  ): Promise<
+    ApiResponse<{
+      cardId: string;
+      data: {
+        revealedAt: string;
+        lastRevealedAt: string;
+        revealCount: number;
+        revealedByUserId: string;
+        revealedByUsername: string;
+      }[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+      hasMore: boolean;
+    }>
+  > => {
+    return await apiClient.get(`/card/${id}/cvv-history`, { params });
+  },
 };

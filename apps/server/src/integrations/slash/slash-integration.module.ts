@@ -17,6 +17,7 @@ import { SlashLongSyncService } from './services/slash-long-sync.service';
 
 // Jobs
 import { SlashSyncJob } from './jobs/slash-sync.job';
+import { SlashTransactionAggregationJob } from './jobs/slash-transaction-aggregation.job';
 
 // Controllers
 import { SlashWebhookController } from './controllers/slash-webhook.controller';
@@ -52,6 +53,7 @@ import { NotificationsModule } from 'src/domain/notifications/notifications.modu
     SlashSyncService,
     SlashLongSyncService,
     SlashSyncJob,
+    SlashTransactionAggregationJob,
     BotService,
   ],
   exports: [

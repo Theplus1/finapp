@@ -107,6 +107,18 @@ export class VirtualAccountRepository {
     await this.virtualAccountModel.updateOne({ slashId }, updateData).exec();
   }
 
+  async updateTransferNetChange(slashId: string, transferNetChange: number): Promise<void> {
+    await this.virtualAccountModel
+      .updateOne(
+        { slashId },
+        {
+          transferNetChange,
+          lastSyncedAt: new Date(),
+        },
+      )
+      .exec();
+  }
+
   async softDelete(slashId: string): Promise<void> {
     await this.virtualAccountModel.updateOne(
       { slashId },

@@ -349,4 +349,70 @@ export class DailyPaymentSummariesService {
   async deleteSummariesForAccount(virtualAccountId: string): Promise<void> {
     await this.dailyPaymentSummaryModel.deleteMany({ virtualAccountId });
   }
+
+  /**
+   * Aggregate overall payment metrics for multiple virtual accounts in one query.
+   * endingAccountBalanceCents = totalDepositCents - (totalSpendUSCents + totalSpendNonUSCents) + totalRefundCents
+   */
+  async getOverallMetricsByVirtualAccountIds(
+    virtualAccountIds: string[],
+  ): Promise<Map<string, { endingAccountBalanceCents: number; totalSpendCents: number; totalDepositCents: number }>> {
+    if (virtualAccountIds.length === 0) {
+      return new Map<
+        string,
+        { endingAccountBalanceCents: number; totalSpendCents: number; totalDepositCents: number }
+      >();
+    }
+
+    const rows = await this.dailyPaymentSummaryModel.aggregate<{
+      virtualAccountId: string;
+      endingAccountBalanceCents: number;
+      totalSpendCents: number;
+      totalDepositCents: number;
+    }>([
+      {
+        $match: {
+          virtualAccountId: { $in: virtualAccountIds },
+        },
+      },
+      {
+        $group: {
+          _id: '$virtualAccountId',
+          totalDepositCents: { $sum: '$totalDepositCents' },
+          totalSpendUSCents: { $sum: '$totalSpendUSCents' },
+          totalSpendNonUSCents: { $sum: '$totalSpendNonUSCents' },
+          totalRefundCents: { $sum: '$totalRefundCents' },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          virtualAccountId: '$_id',
+          totalDepositCents: 1,
+          totalSpendCents: { $add: ['$totalSpendUSCents', '$totalSpendNonUSCents'] },
+          endingAccountBalanceCents: {
+            $add: [
+              '$totalDepositCents',
+              { $multiply: [{ $add: ['$totalSpendUSCents', '$totalSpendNonUSCents'] }, -1] },
+              '$totalRefundCents',
+            ],
+          },
+        },
+      },
+    ]);
+
+    return new Map<
+      string,
+      { endingAccountBalanceCents: number; totalSpendCents: number; totalDepositCents: number }
+    >(
+      rows.map((row) => [
+        row.virtualAccountId,
+        {
+          endingAccountBalanceCents: row.endingAccountBalanceCents,
+          totalSpendCents: row.totalSpendCents,
+          totalDepositCents: row.totalDepositCents,
+        },
+      ]),
+    );
+  }
 }

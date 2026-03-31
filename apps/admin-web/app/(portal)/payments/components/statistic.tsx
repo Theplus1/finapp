@@ -2,8 +2,6 @@ import {
   BanknoteArrowDown,
   BadgeDollarSign,
   DatabaseBackup,
-  HouseWifi,
-  Building2,
   ClipboardClock,
 } from "lucide-react";
 import { PaymentSummary } from "@/lib/api/endpoints/payment";
@@ -25,7 +23,7 @@ const Statistic = ({ data, containerClassName, loading }: Props) => {
     },
     {
       label: "Total spend",
-      value: data.totalSpendCentsForAdmin,
+      value: data.totalSpendCents,
       icon: <ClipboardClock />,
     },
     {
@@ -35,7 +33,7 @@ const Statistic = ({ data, containerClassName, loading }: Props) => {
     },
     {
       label: "Account balance",
-      value: data.endingAccountBalanceCentsForAdmin,
+      value: data.endingAccountBalanceCents,
       icon: <BadgeDollarSign />,
     },
   ];

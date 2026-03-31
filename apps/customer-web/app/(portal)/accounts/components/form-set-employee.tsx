@@ -1,12 +1,3 @@
-import { DrawerFooter } from "@repo/ui/components/drawer";
-import { Button } from "@repo/ui/components/button";
-import { Input } from "@repo/ui/components/input";
-import { useEffect, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { toast } from "sonner";
-import { Spinner } from "@repo/ui/components/spinner";
-import { cn } from "@/lib/utils";
 import { Field } from "@repo/ui/components/field";
 import { InputGroup, InputGroupInput } from "@repo/ui/components/input-group";
 import {
@@ -20,79 +11,18 @@ import {
 import { RoleUserEnum } from "@/lib/api/endpoints/users";
 import { isEmail } from "@repo/ui/lib/utils";
 import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
+import { CreateEmployeeData } from "@/lib/api/endpoints/employee";
 // import { Checkbox } from "@repo/ui/components/checkbox";
 
 type Props = {
-  openDrawer: boolean;
+  employeeData: CreateEmployeeData;
+  onChangeEmployeeData: (employeeData: CreateEmployeeData) => void;
   onCancelSetEmployee: () => void;
   onSubmitEmployeeSuccess: () => void;
 };
 
-const FormSetEmployee = ({
-  openDrawer,
-  onCancelSetEmployee,
-  onSubmitEmployeeSuccess,
-}: Props) => {
-  const [username, setUsername] = useState<string>("");
-  const [role, setRole] = useState<RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT>(
-    RoleUserEnum.ADS,
-  );
+const FormSetEmployee = ({ employeeData, onChangeEmployeeData }: Props) => {
   // const [permission, setPermission] = useState<PermissionEnum[]>([]);
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  const { mutateAsync: setAccount } = useMutation({
-    mutationFn: async () => {
-      setIsLoading(true);
-      api.employees
-        .createEmployee({
-          username: username!,
-          email: email!,
-          password: password!,
-          role: role,
-        })
-        .then(() => {
-          toast.success("Employee set successfully");
-          onSubmitEmployeeSuccess();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    },
-  });
-
-  useEffect(() => {
-    if (!openDrawer) {
-      return;
-    }
-    setUsername("");
-  }, [openDrawer]);
-
-  const onSubmit = () => {
-    if (!username) {
-      toast.error("Username is required");
-      return;
-    }
-    setAccount();
-  };
-
-  const handleDrawerClose = () => {
-    setUsername("");
-    onCancelSetEmployee();
-  };
-
-  const disableSubmit =
-    isLoading ||
-    !username ||
-    !email ||
-    !isEmail(email) ||
-    !password ||
-    password !== confirmPassword;
 
   // const onCheckPermission = (value: PermissionEnum) => {
   //   if (permission.includes(value)) {
@@ -102,6 +32,18 @@ const FormSetEmployee = ({
   //   }
   // };
 
+  const handleChangeEmployeeData = (
+    field: keyof CreateEmployeeData,
+    value: string,
+  ) => {
+    onChangeEmployeeData({
+      ...employeeData,
+      [field]: value,
+    });
+  };
+
+  const isEdit = !!employeeData.username;
+
   return (
     <>
       <div className="px-4 flex flex-col gap-4">
@@ -109,41 +51,54 @@ const FormSetEmployee = ({
           label="Username"
           labelClassName="text-sm font-medium text-muted-foreground"
         >
-          <Input
-            placeholder="Enter username"
-            value={username}
-            onChange={(e) => {
-              const value = e.target.value;
-              setUsername(value);
-            }}
-          />
+          <Field>
+            <InputGroup className="pr-1">
+              <InputGroupInput
+                placeholder="Enter username"
+                value={employeeData.username}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleChangeEmployeeData("username", value);
+                }}
+              />
+            </InputGroup>
+          </Field>
         </FormItemWrapper>
         <FormItemWrapper
           label="Role"
           labelClassName="text-sm font-medium text-muted-foreground"
         >
-          <Select
-            onValueChange={(
-              value: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT,
-            ) => {
-              setRole(value);
-            }}
-            value={role}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem key="ads" value={RoleUserEnum.ADS}>
-                  Ads
-                </SelectItem>
-                <SelectItem key="accountant" value={RoleUserEnum.ACCOUNTANT}>
-                  Accountant
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <Field>
+            <InputGroup className="pr-1">
+              <Select
+                disabled={isEdit}
+                onValueChange={(
+                  value: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT,
+                ) => {
+                  handleChangeEmployeeData("role", value);
+                }}
+                value={employeeData.role}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem key="ads" value={RoleUserEnum.ADS}>
+                      Ads
+                    </SelectItem>
+                    <SelectItem
+                      key="accountant"
+                      value={RoleUserEnum.ACCOUNTANT}
+                    >
+                      Accountant
+                    </SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </InputGroup>
+          </Field>
+
           {/* <div className="grid grid-cols-2 gap-2">
             <Field orientation="horizontal">
               <Checkbox
@@ -203,15 +158,16 @@ const FormSetEmployee = ({
           label="Email"
           labelClassName="text-sm font-medium text-muted-foreground"
         >
-          <Field data-invalid={!isEmail(email)}>
+          <Field data-invalid={!isEmail(employeeData.email)}>
             <InputGroup className="pr-1">
               <InputGroupInput
                 type="email"
+                disabled={isEdit}
                 placeholder="Enter email"
-                value={email}
+                value={employeeData.email}
                 onChange={(e) => {
                   const value = e.target.value;
-                  setEmail(value);
+                  handleChangeEmployeeData("email", value);
                 }}
               />
             </InputGroup>
@@ -221,36 +177,46 @@ const FormSetEmployee = ({
           label="Password"
           labelClassName="text-sm font-medium text-muted-foreground"
         >
-          <Input
-            placeholder="Enter password"
-            value={password}
-            type="password"
-            onChange={(e) => {
-              const value = e.target.value;
-              setPassword(value);
-            }}
-          />
+          <Field>
+            <InputGroup className="pr-1">
+              <InputGroupInput
+                type="password"
+                disabled={isEdit}
+                placeholder="Enter password"
+                value={employeeData.password}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleChangeEmployeeData("password", value);
+                }}
+              />
+            </InputGroup>
+          </Field>
         </FormItemWrapper>
         <FormItemWrapper
           label="Confirm Password"
           labelClassName="text-sm font-medium text-muted-foreground"
         >
-          <Field data-invalid={password !== confirmPassword}>
+          <Field
+            data-invalid={
+              employeeData.password !== employeeData.confirmPassword
+            }
+          >
             <InputGroup className="pr-1">
               <InputGroupInput
                 type="password"
+                disabled={isEdit}
                 placeholder="Enter confirm password"
-                value={confirmPassword}
+                value={employeeData.confirmPassword}
                 onChange={(e) => {
                   const value = e.target.value;
-                  setConfirmPassword(value);
+                  handleChangeEmployeeData("confirmPassword", value);
                 }}
               />
             </InputGroup>
           </Field>
         </FormItemWrapper>
       </div>
-      <DrawerFooter className="px-4">
+      {/* <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={handleDrawerClose}>
             Cancel
@@ -263,7 +229,7 @@ const FormSetEmployee = ({
             Submit
           </Button>
         </div>
-      </DrawerFooter>
+      </DrawerFooter> */}
     </>
   );
 };
