@@ -193,7 +193,7 @@ export default function VirtualAccount() {
         }
         return (
           <p className={"text-end"}>
-            {formatDollarByCent(row.original.internalSpendCents)}
+            {formatDollarByCent(row.original.internalDepositCents)}
           </p>
         );
       },
