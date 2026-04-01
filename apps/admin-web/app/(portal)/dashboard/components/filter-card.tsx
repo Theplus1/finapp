@@ -18,7 +18,7 @@ import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 type Props = {
   onCardChange: (cardId: string) => void;
 };
-const limitPerRequest = 100;
+const limitPerRequest = 200;
 
 const FilterCard = ({ onCardChange }: Props) => {
   const [value, setValue] = useState("all");
