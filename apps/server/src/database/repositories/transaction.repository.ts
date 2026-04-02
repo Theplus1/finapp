@@ -174,6 +174,52 @@ export class TransactionRepository {
       .exec();
   }
 
+  /**
+   * Latest N transactions relevant to Google Sheets detail tabs (history / hold / reversed / refund pool).
+   * Sorted by date descending in DB; caller may re-sort for export.
+   */
+  findRecentForGoogleSheetsDetailPool(
+    virtualAccountId: string,
+    limit: number,
+  ): Promise<TransactionDocument[]> {
+    const query: FilterQuery<TransactionDocument> = {
+      isDeleted: false,
+      virtualAccountId,
+      cardId: { $exists: true, $ne: null },
+      merchantData: { $exists: true, $ne: null },
+      $or: [
+        {
+          detailedStatus: { $in: ['settled', 'pending', 'reversed'] },
+          amountCents: { $lt: 0 },
+        },
+        { detailedStatus: 'refund' },
+      ],
+    };
+    return this.transactionModel
+      .find(query)
+      .sort({ date: -1 })
+      .limit(limit)
+      .exec();
+  }
+
+  findRecentRefundsForGoogleSheets(
+    virtualAccountId: string,
+    limit: number,
+  ): Promise<TransactionDocument[]> {
+    const query: FilterQuery<TransactionDocument> = {
+      isDeleted: false,
+      virtualAccountId,
+      detailedStatus: 'refund',
+      cardId: { $exists: true, $ne: null },
+      merchantData: { $exists: true, $ne: null },
+    };
+    return this.transactionModel
+      .find(query)
+      .sort({ date: -1 })
+      .limit(limit)
+      .exec();
+  }
+
   async aggregateCardSpendByCardAndDay(
     filters: CardSpendAggregateFilters,
   ): Promise<CardSpendAggregateResult> {

@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { format } from 'date-fns';
 import { GoogleSheetsService, SheetData } from './google-sheets.service';
 import { GoogleSheetReportAllService } from './google-sheet-report-all.service';
 import { LocationSheetService } from './location-sheet.service';
@@ -10,14 +9,18 @@ import { ReversedSheetService } from './reversed-sheet.service';
 import { RefundedSheetService } from './refunded-sheet.service';
 import { PaymentSheetService } from './payment-sheet.service';
 import { DepositSheetService } from './deposit-sheet.service';
-import { SheetName } from '../constants/sheet-names.constant';
 import { TransactionsService } from '../../../domain/transactions/transactions.service';
+import { TransactionWithRelations } from '../../../domain/transactions/types/transaction.types';
 import { AccountsService } from '../../../domain/accounts/accounts.service';
 import { TransactionDetailedStatus } from '../../../integrations/slash/types';
 import { getTransactionColumns } from '../../../domain/exports/helpers/column-definitions.helper';
 import { generateDateRange } from '../utils/date-range.utils';
 import { normalizeDateToUTC } from '../utils/sheet.utils';
 import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
+import { DailyPaymentSummariesService } from '../../../domain/daily-payment-summaries/daily-payment-summaries.service';
+
+/** Max rows loaded from DB for transaction-detail tabs (per VA). */
+const GOOGLE_SHEETS_FULL_SYNC_DETAIL_LIMIT = 25_000;
 
 /**
  * Helper function to delay execution
@@ -46,6 +49,7 @@ export class GoogleSheetsSyncFullService {
     private readonly refundedSheetService: RefundedSheetService,
     private readonly transactionsService: TransactionsService,
     private readonly accountsService: AccountsService,
+    private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
     private readonly configService: ConfigService,
   ) {
     const delayStr = this.configService.get<string>(
@@ -86,143 +90,95 @@ export class GoogleSheetsSyncFullService {
         throw new Error(`Spreadsheet ${report.sheetId} not found`);
       }
 
-      // Load all transactions, sort by date ASC
-      const filters: any = {
-        virtualAccountId,
-        detailedStatus: {
-          $in: [
-            TransactionDetailedStatus.SETTLED,
-            TransactionDetailedStatus.PENDING,
-            TransactionDetailedStatus.REVERSED,
-          ],
-        },
-        cardId: { $ne: null },
-        merchantData: { $ne: null },
-        amountCents: { $lt: 0 },
+      const dailySummaries =
+        await this.dailyPaymentSummariesService.findAllByVirtualAccountSortedAsc(
+          virtualAccountId,
+        );
+
+      if (dailySummaries.length === 0) {
+        this.logger.warn(
+          `No daily payment summaries for VA ${virtualAccountId}; skip full sync (run daily summary job first).`,
+        );
+        return;
+      }
+
+      const firstSummaryDate = normalizeDateToUTC(
+        new Date(dailySummaries[0].date),
+      );
+      const rangeEnd = normalizeDateToUTC(now);
+
+      this.logger.log(
+        `Date range from daily summaries: ${firstSummaryDate.toISOString()} to ${rangeEnd.toISOString()} (${dailySummaries.length} summary rows)`,
+      );
+
+      const fullDateRange = {
+        startDate: firstSummaryDate,
+        endDate: rangeEnd,
+        today: rangeEnd,
+        days: generateDateRange(firstSummaryDate, rangeEnd).length,
       };
 
-      const nonRefundTransactions = await this.transactionsService.findAllWithFilters(filters);
-      // Query for refund transactions
-      const refundFilters: any = {
-        virtualAccountId,
-        detailedStatus: TransactionDetailedStatus.REFUND,
-        cardId: { $ne: null },
-        merchantData: { $ne: null },
-      };
+      const virtualAccount =
+        await this.accountsService.findBySlashId(virtualAccountId);
 
-      const refundTransactions = await this.transactionsService.findAllWithFilters(refundFilters);
-      
-      // Merge all transactions
-      const allTransactions = [...nonRefundTransactions, ...refundTransactions];
-      // Sort all transactions by date ASC
-      allTransactions.sort((a, b) => {
+      const detailPool =
+        await this.transactionsService.findRecentForGoogleSheetsDetailPool(
+          virtualAccountId,
+          GOOGLE_SHEETS_FULL_SYNC_DETAIL_LIMIT,
+        );
+
+      detailPool.sort((a, b) => {
         const dateA = a.date ? new Date(a.date).getTime() : 0;
         const dateB = b.date ? new Date(b.date).getTime() : 0;
         return dateA - dateB;
       });
-      // If no transactions found, return
-      if(allTransactions.length === 0) {
-        this.logger.warn(`No transactions found for VA ${virtualAccountId}`);
-        return;
-      }
-      this.logger.log(
-        `Loaded ${allTransactions.length} total transactions (sorted by date ASC)`,
+
+      const transactionsHistoryTransactions = detailPool.filter((t) =>
+        [
+          TransactionDetailedStatus.SETTLED,
+          TransactionDetailedStatus.PENDING,
+        ].includes(t.detailedStatus),
       );
 
-      // Get first transaction date
-      let firstTransactionDate: Date;
-      if (allTransactions.length > 0) {
-        const firstTx = allTransactions[0];
-        if (!firstTx.date) {
-          throw new Error('First transaction has no date');
-        }
-        firstTransactionDate = normalizeDateToUTC(new Date(firstTx.date));
-      } else {
-        firstTransactionDate = normalizeDateToUTC(now);
-      }
-
-      const rangeEnd = normalizeDateToUTC(now);
-      
-      this.logger.log(
-        `Date range: ${firstTransactionDate.toISOString()} to ${rangeEnd.toISOString()}`,
-      );
-
-      // Generate date range from first date to now for Deposit, Payment, Location sheets
-      const fullDateRange = {
-        startDate: firstTransactionDate,
-        endDate: rangeEnd,
-        today: rangeEnd,
-        days: generateDateRange(firstTransactionDate, rangeEnd).length,
-      };
-
-      // Generate Payment sheet using all transactions
-      const virtualAccount = await this.accountsService.findBySlashId(virtualAccountId);
-      
-      // Extract latest 25k transactions
-      const allTransactionsDesc = [...allTransactions].sort((a, b) => {
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        return dateB - dateA;
-      });
-      
-      const latest25kTransactions = allTransactionsDesc.slice(0, 25000);
-      
-      this.logger.log(
-        `Extracted ${latest25kTransactions.length} latest transactions (from ${allTransactions.length} total)`,
-      );
-
-      // Process and distribute latest 25k transactions   
-      const transactionsHistoryTransactions = latest25kTransactions.filter(
-        (t) => [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING].includes(t.detailedStatus),
-      );
-      
-      const holdTransactions = latest25kTransactions.filter(
+      const holdTransactions = detailPool.filter(
         (t) => t.detailedStatus === TransactionDetailedStatus.PENDING,
       );
-      
-      const reversedTransactions = latest25kTransactions.filter(
+
+      const reversedTransactions = detailPool.filter(
         (t) => t.detailedStatus === TransactionDetailedStatus.REVERSED,
       );
-      
-      const refundedTransactions = allTransactions.filter(
-        (t) => t.detailedStatus === TransactionDetailedStatus.REFUND,
-      );
-      
-      // Sort refund transactions
-      const refundedTransactionsSorted = refundedTransactions
-        .sort((a, b) => {
-          const dateA = a.date ? new Date(a.date).getTime() : 0;
-          const dateB = b.date ? new Date(b.date).getTime() : 0;
-          return dateB - dateA;
-        })
-        .slice(0, 25000);
-      
+
+      const refundedTransactionsSorted =
+        await this.transactionsService.findRecentRefundsForGoogleSheets(
+          virtualAccountId,
+          GOOGLE_SHEETS_FULL_SYNC_DETAIL_LIMIT,
+        );
+
       this.logger.log(
-        `Filtered transactions: ` +
-        `Transactions History (${transactionsHistoryTransactions.length}), ` +
-        `Hold (${holdTransactions.length}), ` +
-        `Reversed (${reversedTransactions.length}), ` +
-        `Refund (${refundedTransactionsSorted.length} from ${refundedTransactions.length} total)`,
+        `Detail pool (DB limit ${GOOGLE_SHEETS_FULL_SYNC_DETAIL_LIMIT}): ` +
+          `history+hold source ${detailPool.length} rows; ` +
+          `Transactions History ${transactionsHistoryTransactions.length}, ` +
+          `Hold ${holdTransactions.length}, ` +
+          `Reversed ${reversedTransactions.length}, ` +
+          `Refund tab ${refundedTransactionsSorted.length}`,
       );
-      
+
       if (refundedTransactionsSorted.length > 0) {
         this.logger.log(
-          `Found ${refundedTransactionsSorted.length} refund transactions. ` +
-          `Sample dates: ${refundedTransactionsSorted.slice(0, 5).map(t => t.date).join(', ')}`,
+          `Refund sample dates: ${refundedTransactionsSorted
+            .slice(0, 5)
+            .map((t) => t.date)
+            .join(', ')}`,
         );
       } else {
-        this.logger.warn(`No REFUND transactions found for VA ${virtualAccountId}`);
+        this.logger.warn(
+          `No REFUND transactions in latest ${GOOGLE_SHEETS_FULL_SYNC_DETAIL_LIMIT} for VA ${virtualAccountId}`,
+        );
       }
 
-      // Filter transactions for Payment and Location sheets
-      const paymentLocationTransactions = allTransactions.filter(
-        (t) => [TransactionDetailedStatus.PENDING, TransactionDetailedStatus.SETTLED].includes(t.detailedStatus),
-      );
-
-      // Generate sheets data
       const sheets = await this.generateFullDataSheets(
         virtualAccount,
-        paymentLocationTransactions,
+        dailySummaries,
         fullDateRange,
         transactionsHistoryTransactions,
         holdTransactions,
@@ -243,7 +199,8 @@ export class GoogleSheetsSyncFullService {
         virtualAccountId,
       });
 
-      const transactionCount = allTransactions.length;
+      const transactionCount =
+        detailPool.length + refundedTransactionsSorted.length;
       const duration = Date.now() - startTime;
       const sheetNameDisplay = report.sheetName || report.sheetId;
       this.logger.log(
@@ -283,25 +240,40 @@ export class GoogleSheetsSyncFullService {
    */
   private async generateFullDataSheets(
     virtualAccount: VirtualAccountDocument,
-    paymentLocationTransactions: any[], 
+    dailySummaries: { date: Date; totalDepositCents: number; totalSpendNonUSCents: number; totalSpendUSCents: number }[],
     fullDateRange: { startDate: Date; endDate: Date; today: Date; days: number },
-    transactionsHistoryTransactions: any[],
-    holdTransactions: any[],
-    reversedTransactions: any[],
-    refundedTransactions: any[],
+    transactionsHistoryTransactions: TransactionWithRelations[],
+    holdTransactions: TransactionWithRelations[],
+    reversedTransactions: TransactionWithRelations[],
+    refundedTransactions: TransactionWithRelations[],
   ): Promise<SheetData[]> {
     const sheets: SheetData[] = [
-      this.depositSheetService.generateDepositSheetFullRange(fullDateRange.startDate, fullDateRange.endDate),
-      this.paymentSheetService.generatePaymentSheetFullRange(virtualAccount, fullDateRange, paymentLocationTransactions),
-      this.transactionsHistorySheetService.generateTransactionsHistorySheet(transactionsHistoryTransactions),
+      this.depositSheetService.generateDepositSheetFullRangeFromSummaries(
+        fullDateRange.startDate,
+        fullDateRange.endDate,
+        dailySummaries,
+      ),
+      this.paymentSheetService.generatePaymentSheetFullRangeFromSummaries(
+        virtualAccount,
+        fullDateRange,
+        dailySummaries,
+      ),
+      this.transactionsHistorySheetService.generateTransactionsHistorySheet(
+        transactionsHistoryTransactions,
+      ),
       this.holdSheetService.generateHoldSheet(holdTransactions),
       this.reversedSheetService.generateReversedSheet(reversedTransactions),
       this.refundedSheetService.generateRefundedSheet(refundedTransactions),
-      this.locationSheetService.generateLocationSheetFullRange(virtualAccount, fullDateRange, paymentLocationTransactions),
+      this.locationSheetService.generateLocationSheetFullRangeFromSummaries(
+        fullDateRange,
+        dailySummaries,
+      ),
     ];
 
     this.logger.log(
-      `Generated sheets: Deposit, Payment (${paymentLocationTransactions.length} PENDING+SETTLED transactions), Location (${paymentLocationTransactions.length} PENDING+SETTLED transactions), Transactions History (${transactionsHistoryTransactions.length}), Hold (${holdTransactions.length}), Reversed (${reversedTransactions.length}), Refund (${refundedTransactions.length})`,
+      `Generated sheets from ${dailySummaries.length} daily summaries; ` +
+        `Transactions History (${transactionsHistoryTransactions.length}), Hold (${holdTransactions.length}), ` +
+        `Reversed (${reversedTransactions.length}), Refund (${refundedTransactions.length})`,
     );
 
     return sheets;

@@ -126,6 +126,35 @@ export class TransactionsService {
   }
 
   /**
+   * Latest N rows for Google Sheets full-sync detail tabs (single DB query, capped).
+   */
+  async findRecentForGoogleSheetsDetailPool(
+    virtualAccountId: string,
+    limit: number,
+  ): Promise<TransactionWithRelations[]> {
+    const data =
+      await this.transactionRepository.findRecentForGoogleSheetsDetailPool(
+        virtualAccountId,
+        limit,
+      );
+    return this.enrichTransactions(data);
+  }
+
+  /**
+   * Latest N refund rows for Google Sheets Refund tab.
+   */
+  async findRecentRefundsForGoogleSheets(
+    virtualAccountId: string,
+    limit: number,
+  ): Promise<TransactionWithRelations[]> {
+    const data = await this.transactionRepository.findRecentRefundsForGoogleSheets(
+      virtualAccountId,
+      limit,
+    );
+    return this.enrichTransactions(data);
+  }
+
+  /**
    * Get transaction statistics with filters
    */
   async getStatsWithFilters(query: {
