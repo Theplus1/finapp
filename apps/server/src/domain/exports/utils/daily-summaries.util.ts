@@ -1,4 +1,8 @@
-import { formatSheetDate, formatSheetDateISO, normalizeDateToLocalMidnight } from '../../../integrations/google-sheets/utils/sheet.utils';
+import {
+  formatSheetDate,
+  formatSheetDateISOUtc,
+  normalizeDateToUTC,
+} from '../../../integrations/google-sheets/utils/sheet.utils';
 
 export interface DailySummary {
   date: Date;
@@ -91,9 +95,8 @@ export function calculateLocationDailySummaries(
 }
 
 /**
- * Calculate location daily summaries for a full date range (not limited to one month)
- * Normalizes transaction dates to UTC midnight for accurate matching
- * Creates summaries for ALL dates in range (from startDate to endDate), matching Payment sheet behavior
+ * Calculate location daily summaries for a full date range (not limited to one month).
+ * Ngày theo UTC (cùng chuẩn daily_payment_summaries / Payment sheet full sync).
  */
 export function calculateLocationDailySummariesRange(
   transactions: any[],
@@ -102,38 +105,44 @@ export function calculateLocationDailySummariesRange(
 ): LocationDailySummary[] {
   const dailySummariesMap = new Map<string, LocationDailySummary>();
 
-  // Normalize start and end dates to local midnight (preserve timezone from DB)
-  const normalizedStartDate = normalizeDateToLocalMidnight(startDate);
-  const normalizedEndDate = normalizeDateToLocalMidnight(endDate);
+  const normalizedStartDate = normalizeDateToUTC(startDate);
+  const normalizedEndDate = normalizeDateToUTC(endDate);
 
-  // Generate all dates in range (same as Payment sheet)
-  const current = new Date(normalizedStartDate);
+  let current = new Date(normalizedStartDate);
   while (current.getTime() <= normalizedEndDate.getTime()) {
-    const dateStr = formatSheetDateISO(current); // Use ISO format to match Payment sheet
+    const dateStr = formatSheetDateISOUtc(current);
     dailySummariesMap.set(dateStr, {
       date: new Date(current),
       totalSpendNonUSCents: 0,
       totalSpendUSCents: 0,
     });
-    
-    // Move to next day (local time)
-    current.setDate(current.getDate() + 1);
-    current.setHours(0, 0, 0, 0);
+
+    current = new Date(
+      Date.UTC(
+        current.getUTCFullYear(),
+        current.getUTCMonth(),
+        current.getUTCDate() + 1,
+        0,
+        0,
+        0,
+        0,
+      ),
+    );
   }
 
-  // Process transactions
   transactions.forEach((transaction) => {
     if (!transaction.date) return;
 
-    // Normalize transaction date to local midnight (preserve timezone from DB)
-    const normalizedDate = normalizeDateToLocalMidnight(new Date(transaction.date));
-    
-    // Only process transactions within the date range
-    if (normalizedDate.getTime() < normalizedStartDate.getTime() || normalizedDate.getTime() > normalizedEndDate.getTime()) {
+    const normalizedDate = normalizeDateToUTC(new Date(transaction.date));
+
+    if (
+      normalizedDate.getTime() < normalizedStartDate.getTime() ||
+      normalizedDate.getTime() > normalizedEndDate.getTime()
+    ) {
       return;
     }
-    
-    const dateStr = formatSheetDateISO(normalizedDate); // Use ISO format to match Payment sheet
+
+    const dateStr = formatSheetDateISOUtc(normalizedDate);
 
     const summary = dailySummariesMap.get(dateStr);
     if (summary) {

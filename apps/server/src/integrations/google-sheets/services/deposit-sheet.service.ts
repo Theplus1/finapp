@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SheetData } from './google-sheets.service';
 import { SheetName } from '../constants/sheet-names.constant';
-import { generateMonthDates, formatSheetDate, formatSheetDateISO } from '../utils/sheet.utils';
+import { generateMonthDates, formatSheetDate, formatSheetDateISOUtc } from '../utils/sheet.utils';
 import { generateDateRange } from '../utils/date-range.utils';
 
 @Injectable()
@@ -22,7 +22,7 @@ export class DepositSheetService {
    */
   generateDepositSheetFullRange(startDate: Date, endDate: Date): SheetData {
     const dates = generateDateRange(startDate, endDate);
-    const dailyRows = dates.map(date => [formatSheetDateISO(date), '']);
+    const dailyRows = dates.map(date => [formatSheetDateISOUtc(date), '']);
     
     return {
       name: SheetName.DEPOSIT,
