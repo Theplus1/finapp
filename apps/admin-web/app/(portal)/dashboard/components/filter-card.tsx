@@ -60,7 +60,7 @@ const FilterCard = ({ onCardChange }: Props) => {
   return (
     <FormItemWrapper label="Card">
       <Select onValueChange={handleValueChange} value={value}>
-        <SelectTrigger className="w-[280px]">
+        <SelectTrigger className="w-[220px]">
           {isLoadingCardInfos ? (
             <Spinner />
           ) : (

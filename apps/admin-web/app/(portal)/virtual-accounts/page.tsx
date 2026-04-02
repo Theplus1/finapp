@@ -206,7 +206,7 @@ export default function VirtualAccount() {
           return <Skeleton />;
         }
         const debtValue =
-          row.original.internalTransferCents - row.original.internalSpendCents;
+          row.original.internalTransferCents - row.original.internalDepositCents;
         return <p className={"text-end"}>{formatDollarByCent(debtValue)}</p>;
       },
     },

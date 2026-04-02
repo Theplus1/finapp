@@ -71,7 +71,7 @@ const FilterQuickTime = ({ defaultValue, onQuickTimeChange }: Props) => {
   return (
     <FormItemWrapper label="Quick Time">
       <Select onValueChange={handleValueChange} value={value}>
-        <SelectTrigger className="w-[240px]">
+        <SelectTrigger className="w-[220px]">
           <SelectValue placeholder="Select a quick time" />
         </SelectTrigger>
         <SelectContent>
