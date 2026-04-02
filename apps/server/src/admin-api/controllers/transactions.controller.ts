@@ -43,6 +43,7 @@ export class TransactionsController {
         virtualAccountId: query.virtualAccountId,
         cardId: query.cardId,
         status: query.status,
+        detailedStatus: query.detailedStatus,
         startDate: query.startDate,
         endDate: query.endDate,
         sortBy: query.sortBy,
