@@ -3,7 +3,7 @@ import { SheetData } from './google-sheets.service';
 import { SheetName } from '../constants/sheet-names.constant';
 import { formatCurrency, centsToDollars } from '../../../shared/utils/formatCurrency.util';
 import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
-import { createSummaryMap, formatSheetDate, formatSheetDateISO } from '../utils/sheet.utils';
+import { createSummaryMap, formatSheetDate, formatSheetDateISOUtc } from '../utils/sheet.utils';
 import { DailySummarySheetBuilder, DailyRowBuilder, SummaryRowBuilder, formatCurrencyOrEmpty } from '../utils/sheet-builder.utils';
 import { calculateLocationDailySummaries, calculateLocationDailySummariesRange, LocationDailySummary } from '../../../domain/exports/utils/daily-summaries.util';
 import { generateDateRange } from '../utils/date-range.utils';
@@ -61,7 +61,7 @@ export class LocationSheetService {
     // Create summary map
     const summaryMapISO = new Map<string, LocationDailySummary>();
     dailySummaries.forEach(summary => {
-      const dateStr = formatSheetDateISO(summary.date);
+      const dateStr = formatSheetDateISOUtc(summary.date);
       summaryMapISO.set(dateStr, summary);
     });
 
@@ -80,11 +80,11 @@ export class LocationSheetService {
     
     // Daily rows
     dates.forEach((date: Date) => {
-      const dateStr = formatSheetDateISO(date);
+      const dateStr = formatSheetDateISOUtc(date);
       const summary = summaryMapISO.get(dateStr);
       
       rows.push([
-        formatSheetDateISO(date),
+        formatSheetDateISOUtc(date),
         summary?.totalSpendNonUSCents ? centsToDollars(summary.totalSpendNonUSCents) : '',
         summary?.totalSpendUSCents ? centsToDollars(summary.totalSpendUSCents) : '',
       ]);

@@ -1,24 +1,27 @@
-import { format } from 'date-fns';
 import { ExcelColumn } from 'src/shared/utils/excel.util';
 import { centsToDollars } from 'src/shared/utils/formatCurrency.util';
 
-const DATE_TIME_FORMAT = 'yyyy-MM-dd HH:mm:ss';
-const MONTH_FORMAT = 'yyyy-MM';
-const DAY_FORMAT = 'yyyy-MM-dd';
-
+/** Hiển thị thời điểm theo UTC (khớp daily summaries / sync sheet). */
 function formatDate(date: Date | undefined): string {
   if (!date) return '';
-  return format(date, DATE_TIME_FORMAT);
+  return new Date(date).toISOString().slice(0, 19).replace('T', ' ');
 }
 
 function formatGroupMonth(date: Date | undefined): string {
   if (!date) return '';
-  return format(date, MONTH_FORMAT);
+  const d = new Date(date);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
 }
 
 function formatGroupDay(date: Date | undefined): string {
   if (!date) return '';
-  return format(date, DAY_FORMAT);
+  const d = new Date(date);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function formatAmount(amountCents: number): string {

@@ -3,7 +3,12 @@ import { SheetData } from './google-sheets.service';
 import { SheetName } from '../constants/sheet-names.constant';
 import { formatCurrency } from '../../../shared/utils/formatCurrency.util';
 import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
-import { createSummaryMap, formatSheetDate, formatSheetDateISO, normalizeDateToLocalMidnight } from '../utils/sheet.utils';
+import {
+  createSummaryMap,
+  formatSheetDate,
+  formatSheetDateISOUtc,
+  normalizeDateToUTC,
+} from '../utils/sheet.utils';
 import { DailySummarySheetBuilder, DailyRowBuilder, SummaryRowBuilder, formatCurrencyOrEmpty } from '../utils/sheet-builder.utils';
 import { calculatePaymentDailySummaries, DailySummary } from '../../../domain/exports/utils/daily-summaries.util';
 import { generateDateRange } from '../utils/date-range.utils';
@@ -57,7 +62,7 @@ export class PaymentSheetService {
         
         // Initialize all dates
         dates.forEach(date => {
-            const dateStr = formatSheetDateISO(date);
+            const dateStr = formatSheetDateISOUtc(date);
             dailySummariesMap.set(dateStr, {
                 date,
                 totalDepositCents: 0,
@@ -70,10 +75,9 @@ export class PaymentSheetService {
         transactions.forEach((transaction) => {
             if (!transaction.date) return;
             
-            // Normalize to local midnight (preserve timezone from DB)
-            const normalizedDate = normalizeDateToLocalMidnight(new Date(transaction.date));
+            const normalizedDate = normalizeDateToUTC(new Date(transaction.date));
             
-            const dateStr = formatSheetDateISO(normalizedDate);
+            const dateStr = formatSheetDateISOUtc(normalizedDate);
             const summary = dailySummariesMap.get(dateStr);
             
             if (summary) {
@@ -108,20 +112,20 @@ export class PaymentSheetService {
         // Create summary map
         const summaryMapISO = new Map<string, DailySummary>();
         dailySummaries.forEach(summary => {
-            const dateStr = formatSheetDateISO(summary.date);
+            const dateStr = formatSheetDateISOUtc(summary.date);
             summaryMapISO.set(dateStr, summary);
         });
         
         // Daily rows
         // Payment row 3 = Deposit row 2 (lệch 1 row do Payment có summary row ở row 2)
         dates.forEach((date, index) => {
-            const dateStr = formatSheetDateISO(date);
+            const dateStr = formatSheetDateISOUtc(date);
             const summary = summaryMapISO.get(dateStr);
             const dayTotalSpend = summary ? summary.totalSpendNonUSCents + summary.totalSpendUSCents : 0;
             const depositRowNumber = index + 2;
             
             rows.push([
-                formatSheetDateISO(date),
+                formatSheetDateISOUtc(date),
                 `='${SheetName.DEPOSIT}'!B${depositRowNumber}`,
                 formatCurrencyOrEmpty(dayTotalSpend, virtualAccount.currency),
                 '',
