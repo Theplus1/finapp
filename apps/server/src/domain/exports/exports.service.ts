@@ -232,11 +232,45 @@ export class ExportsService {
     fileName: string;
     expiresAt: Date;
   }> {
-    const ownerId = this.toNumericOwnerId(params.userId);
+    return this.runTransactionExportToDownloadUrl({
+      ownerId: this.toNumericOwnerId(params.userId),
+      filters: params.filters,
+      filePrefix: 'transactions-web',
+    });
+  }
+
+  async generateTransactionExportDownloadUrlForAdmin(params: {
+    adminUserId: string;
+    filters: Record<string, unknown>;
+  }): Promise<{
+    downloadUrl: string;
+    fileName: string;
+    expiresAt: Date;
+  }> {
+    return this.runTransactionExportToDownloadUrl({
+      ownerId: this.toNumericOwnerId(params.adminUserId),
+      filters: params.filters,
+      filePrefix: 'transactions-admin',
+    });
+  }
+
+  private async runTransactionExportToDownloadUrl(params: {
+    ownerId: number;
+    filters: Record<string, unknown>;
+    filePrefix: string;
+  }): Promise<{
+    downloadUrl: string;
+    fileName: string;
+    expiresAt: Date;
+  }> {
+    type ListFilters = Parameters<
+      TransactionsService['findAllWithFilters']
+    >[0];
+
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const exportJob = await this.exportJobModel.create({
-      userId: ownerId,
-      chatId: ownerId,
+      userId: params.ownerId,
+      chatId: params.ownerId,
       type: ExportType.TRANSACTIONS,
       status: ExportStatus.PROCESSING,
       filters: params.filters,
@@ -244,9 +278,8 @@ export class ExportsService {
     });
 
     try {
-      const [transactions] = await this.transactionsService.findAllWithFiltersAndPagination(
-        params.filters,
-        { page: 1, limit: 10000 },
+      const transactions = await this.transactionsService.findAllWithFilters(
+        params.filters as ListFilters,
       );
 
       const headers = [
@@ -304,7 +337,7 @@ export class ExportsService {
       }
 
       const buffer = (await workbook.outputAsync()) as Buffer;
-      const { fileName, filePath } = await saveExportFile(buffer, 'transactions-web');
+      const { fileName, filePath } = await saveExportFile(buffer, params.filePrefix);
       const fileStats = await fs.stat(filePath);
       await this.exportJobModel.updateOne(
         { _id: exportJob._id },
@@ -370,7 +403,6 @@ export class ExportsService {
     try {
       const [cards] = await this.cardsService.findAllWithFilters(
         params.filters as CardFilters,
-        { page: 1, limit: 10000 },
       );
 
       const headers = [

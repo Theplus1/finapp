@@ -35,6 +35,7 @@ import { RolesGuard } from './guards/roles.guard';
 import { DailySummaryController } from './controllers/daily-summary.controller';
 import { DailyPaymentSummariesModule } from 'src/domain/daily-payment-summaries/daily-payment-summaries.module';
 import { PaymentSummaryModule } from 'src/domain/payment-summary/payment-summary.module';
+import { ExportsModule } from '../domain/exports/exports.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { PaymentSummaryModule } from 'src/domain/payment-summary/payment-summary
     DailyPaymentSummariesModule,
     PaymentSummaryModule,
     DatabaseModule, // Access to repositories like DepositHistoryRepository
+    ExportsModule,
   ],
   controllers: [
     AuthController,
