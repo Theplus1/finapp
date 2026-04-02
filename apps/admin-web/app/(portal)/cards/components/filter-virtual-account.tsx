@@ -76,7 +76,7 @@ const FilterVirtualAccount = ({
   return (
     <FormItemWrapper label="Virtual account">
       <Select onValueChange={handleValueChange} value={value}>
-        <SelectTrigger className="w-[280px]">
+        <SelectTrigger className="w-[220px]">
           {isLoadingVirtualAccountInfos ? (
             <Spinner />
           ) : (

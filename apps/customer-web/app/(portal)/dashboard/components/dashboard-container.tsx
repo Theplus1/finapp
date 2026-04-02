@@ -169,7 +169,7 @@ export default function DashboardContainer() {
       {
         header: "Status",
         cell: ({ row }: CellContext<Transaction, string>) => {
-          return isLoading ? <Skeleton /> : row.original.detailedStatus;
+          return isLoading ? <Skeleton /> : <span className="capitalize">{row.original.detailedStatus}</span>;
         },
       },
       {
