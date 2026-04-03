@@ -37,6 +37,7 @@ import { virtualAccountsApi } from './endpoints/virtual-account'
 import { cardsApi } from './endpoints/card'
 import { cardGroupsApi } from './endpoints/card-group'
 import { transactionsApi } from './endpoints/transaction'
+import { paymentApi } from './endpoints/payment'
 
 export const api = {
   auth: authApi,
@@ -45,4 +46,5 @@ export const api = {
   cards: cardsApi,
   cardGroups: cardGroupsApi,
   transactions: transactionsApi,
+  payment: paymentApi,
 }

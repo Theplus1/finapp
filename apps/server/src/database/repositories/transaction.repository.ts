@@ -21,6 +21,26 @@ export interface TransactionFilters {
   skip?: number;
 }
 
+export interface CardSpendAggregateFilters {
+  virtualAccountId: string;
+  detailedStatuses: string[];
+  startDate: Date;
+  endDate: Date;
+}
+
+export interface CardSpendAggregateRow {
+  cardId: string;
+  day: string;
+  amountCents: number;
+  cardName: string;
+  cardLast4?: string;
+}
+
+export interface CardSpendAggregateResult {
+  rows: CardSpendAggregateRow[];
+  currency?: string;
+}
+
 @Injectable()
 export class TransactionRepository {
   private readonly logger = new Logger(TransactionRepository.name);
@@ -152,6 +172,182 @@ export class TransactionRepository {
       .findOne({ virtualAccountId, isDeleted: false })
       .sort({ date: 1 })
       .exec();
+  }
+
+  /**
+   * Latest N transactions relevant to Google Sheets detail tabs (history / hold / reversed / refund pool).
+   * Sorted by date descending in DB; caller may re-sort for export.
+   */
+  findRecentForGoogleSheetsDetailPool(
+    virtualAccountId: string,
+    limit: number,
+  ): Promise<TransactionDocument[]> {
+    const query: FilterQuery<TransactionDocument> = {
+      isDeleted: false,
+      virtualAccountId,
+      cardId: { $exists: true, $ne: null },
+      merchantData: { $exists: true, $ne: null },
+      $or: [
+        {
+          detailedStatus: { $in: ['settled', 'pending', 'reversed'] },
+          amountCents: { $lt: 0 },
+        },
+        { detailedStatus: 'refund' },
+      ],
+    };
+    return this.transactionModel
+      .find(query)
+      .sort({ date: -1 })
+      .limit(limit)
+      .exec();
+  }
+
+  findRecentRefundsForGoogleSheets(
+    virtualAccountId: string,
+    limit: number,
+  ): Promise<TransactionDocument[]> {
+    const query: FilterQuery<TransactionDocument> = {
+      isDeleted: false,
+      virtualAccountId,
+      detailedStatus: 'refund',
+      cardId: { $exists: true, $ne: null },
+      merchantData: { $exists: true, $ne: null },
+    };
+    return this.transactionModel
+      .find(query)
+      .sort({ date: -1 })
+      .limit(limit)
+      .exec();
+  }
+
+  async aggregateCardSpendByCardAndDay(
+    filters: CardSpendAggregateFilters,
+  ): Promise<CardSpendAggregateResult> {
+    type AggregateFacetResult = {
+      grouped: CardSpendAggregateRow[];
+      currency: Array<{ currency?: string }>;
+    };
+    type MatchStage = {
+      isDeleted: boolean;
+      virtualAccountId: string;
+      detailedStatus: { $in: string[] };
+      date: { $gte: Date; $lte: Date };
+      cardId: { $exists: boolean; $ne: null };
+    };
+
+    const matchStage: MatchStage = {
+      isDeleted: false,
+      virtualAccountId: filters.virtualAccountId,
+      detailedStatus: { $in: filters.detailedStatuses },
+      date: { $gte: filters.startDate, $lte: filters.endDate },
+      cardId: { $exists: true, $ne: null },
+    };
+
+    const [result] = await this.transactionModel.aggregate<AggregateFacetResult>([
+      {
+        $match: matchStage,
+      },
+      {
+        $facet: {
+          grouped: [
+            {
+              $lookup: {
+                from: 'slash_cards',
+                let: { txCardId: '$cardId' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$slashId', '$$txCardId'] },
+                          { $ne: ['$isDeleted', true] },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 0,
+                      slashId: 1,
+                      name: 1,
+                      last4: 1,
+                    },
+                  },
+                ],
+                as: 'card',
+              },
+            },
+            {
+              $unwind: {
+                path: '$card',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $addFields: {
+                day: {
+                  $dateToString: {
+                    format: '%Y-%m-%d',
+                    date: '$date',
+                    timezone: 'UTC',
+                  },
+                },
+              },
+            },
+            {
+              $group: {
+                _id: {
+                  cardId: '$cardId',
+                  day: '$day',
+                },
+                amountCents: { $sum: { $abs: '$amountCents' } },
+                cardName: {
+                  $first: {
+                    $ifNull: ['$card.name', '$cardId'],
+                  },
+                },
+                cardLast4: {
+                  $first: '$card.last4',
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                cardId: '$_id.cardId',
+                day: '$_id.day',
+                amountCents: 1,
+                cardName: 1,
+                cardLast4: 1,
+              },
+            },
+            {
+              $sort: {
+                day: 1,
+                cardName: 1,
+              },
+            },
+          ],
+          currency: [
+            {
+              $project: {
+                _id: 0,
+                currency: {
+                  $ifNull: ['$originalCurrency.code', '$currency'],
+                },
+              },
+            },
+            { $match: { currency: { $ne: null } } },
+            { $limit: 1 },
+          ],
+        },
+      },
+    ]);
+
+    return {
+      rows: result?.grouped ?? [],
+      currency: result?.currency?.[0]?.currency,
+    };
   }
 
   async getSpendingByCategory(

@@ -55,15 +55,6 @@ type Params = {
   search?: string;
 };
 
-export interface CardsDetailResponse {
-  success: true;
-  message: string;
-  data: Card;
-  meta: {
-    timestamp: string;
-  };
-}
-
 export enum LimitPresetEnum {
   DAILY = "daily",
   WEEKLY = "weekly",
@@ -76,6 +67,9 @@ export enum LimitPresetEnum {
 export const cardsApi = {
   getCards: async (params?: Params): Promise<ApiResponse<Card[]>> => {
     return apiClient.get("/card", { params });
+  },
+  getCardBySlashId: async (slashId: string): Promise<ApiResponse<Card[]>> => {
+    return apiClient.get(`/card/by-slash-id/${slashId}`);
   },
   getCardsLookup: async (): Promise<ApiResponse<Card[]>> => {
     return await apiClient.get("/card-lookup");
@@ -110,5 +104,27 @@ export const cardsApi = {
   },
   getCardCVV: async (id: string): Promise<ApiResponse<{ cvv: string }>> => {
     return await apiClient.post(`/card/${id}/cvv`);
+  },
+  getCardCVVHistory: async (
+    id: string,
+    params: Params,
+  ): Promise<
+    ApiResponse<{
+      cardId: string;
+      data: {
+        revealedAt: string;
+        lastRevealedAt: string;
+        revealCount: number;
+        revealedByUserId: string;
+        revealedByUsername: string;
+      }[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+      hasMore: boolean;
+    }>
+  > => {
+    return await apiClient.get(`/card/${id}/cvv-history`, { params });
   },
 };

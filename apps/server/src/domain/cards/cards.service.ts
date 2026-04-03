@@ -40,6 +40,7 @@ export interface CardFilters {
   status?: string;
   cardGroupId?: string;
   virtualAccountId?: string;
+  slashId?: string;
   sortBy?: string;
   sortOrder?: SortOrder;
   search?: string;
@@ -193,6 +194,10 @@ export class CardsService {
       mongoFilter.virtualAccountId = filters.virtualAccountId;
     }
 
+    if (filters.slashId) {
+      mongoFilter.slashId = filters.slashId;
+    }
+
     if (filters.search && filters.search.trim().length > 0) {
       const regex = new RegExp(filters.search.trim(), 'i');
       mongoFilter.$or = [
@@ -223,15 +228,15 @@ export class CardsService {
     const out = new Map<string, CardCvvHistoryItem[]>();
     for (const [cardSlashId, docs] of buckets) {
       const sorted = [...docs].sort((a, b) => {
-        const tb = (b.lastRevealedAt ?? b.revealedAt).getTime();
-        const ta = (a.lastRevealedAt ?? a.revealedAt).getTime();
+        const tb = b.revealedAt.getTime();
+        const ta = a.revealedAt.getTime();
         return tb - ta;
       });
       out.set(
         cardSlashId,
         sorted.map((d) => ({
           name: d.revealedByUsername,
-          gettedAt: (d.lastRevealedAt ?? d.revealedAt).toISOString(),
+          gettedAt: d.revealedAt.toISOString(),
         })),
       );
     }

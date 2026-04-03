@@ -1,10 +1,11 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, forwardRef } from '@nestjs/common';
 import { VirtualAccountRepository } from '../../database/repositories/virtual-account.repository';
 import { VirtualAccountDocument } from '../../database/schemas/virtual-account.schema';
 import { PaginationOptions, RepositoryQuery } from '../../common/types/repository-query.types';
 import { SortOrder } from '../../common/constants/pagination.constants';
 import { UsersService } from '../../users/users.service';
 import { AdminUsersService } from '../admin-users/admin-users.service';
+import { DailyPaymentSummariesService } from '../daily-payment-summaries/daily-payment-summaries.service';
 import {
   VirtualAccountDetail,
   AccountStats,
@@ -19,6 +20,8 @@ export class AccountsService {
     private readonly virtualAccountRepository: VirtualAccountRepository,
     private readonly usersService: UsersService,
     private readonly adminUsersService: AdminUsersService,
+    @Inject(forwardRef(() => DailyPaymentSummariesService))
+    private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
   ) {}
 
   /**
@@ -217,10 +220,32 @@ export class AccountsService {
       }
     });
 
+    let internalMetricsMap = new Map<
+      string,
+      {
+        endingAccountBalanceCents: number;
+        totalSpendCents: number;
+        totalDepositCents: number;
+      }
+    >();
+    try {
+      internalMetricsMap =
+        await this.dailyPaymentSummariesService.getOverallMetricsByVirtualAccountIds(
+          slashIds,
+        );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to aggregate internal metrics for admin virtual-account list: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+
     return accounts.map((account) => {
       const accountData = account.toObject();
       const user = userMap.get(account.slashId);
       const boss = bossMap.get(account.slashId);
+      const internalMetrics = internalMetricsMap.get(account.slashId);
 
       const enriched: VirtualAccountDetail = {
         ...accountData,
@@ -228,6 +253,10 @@ export class AccountsService {
         linkedTelegramIds: user?.telegramIds,
         bossUsername: boss?.username,
         bossEmail: boss?.email,
+        internalBalanceCents: internalMetrics?.endingAccountBalanceCents ?? 0,
+        internalSpendCents: internalMetrics?.totalSpendCents ?? 0,
+        internalDepositCents: internalMetrics?.totalDepositCents ?? 0,
+        internalTransferCents: accountData.transferNetChange ?? 0,
       };
 
       return enriched;

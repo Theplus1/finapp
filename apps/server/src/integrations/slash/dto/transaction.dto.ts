@@ -57,6 +57,46 @@ export interface ListTransactionsQuery {
   'filter:providerAuthorizationId'?: string;
 }
 
+export type TransactionAggregationCategory =
+  | 'card'
+  | 'ach'
+  | 'wire'
+  | 'international_wire'
+  | 'rtp'
+  | 'fee'
+  | 'internal';
+
+export interface TransactionAggregationQuery {
+  accountId?: string;
+  'filter:legalEntityId'?: string;
+  'filter:accountId'?: string;
+  'filter:virtualAccountId'?: string;
+  'filter:from_date'?: string;
+  'filter:to_date'?: string;
+  'filter:from_authorized_at'?: string;
+  'filter:to_authorized_at'?: string;
+  'filter:status'?: 'pending' | 'posted' | 'failed';
+  'filter:detailed_status'?:
+    | 'pending'
+    | 'canceled'
+    | 'failed'
+    | 'settled'
+    | 'declined'
+    | 'refund'
+    | 'reversed'
+    | 'returned'
+    | 'dispute';
+  'filter:cardId'?: string;
+  'filter:category'?: TransactionAggregationCategory;
+}
+
+export interface TransactionAggregationResponse {
+  count: number;
+  totalIn: number;
+  totalOut: number;
+  netChange: number;
+}
+
 export enum TransactionDetailedStatus {
   PENDING = 'pending',
   PENDING_APPROVAL = 'pending_approval',

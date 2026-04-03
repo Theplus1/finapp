@@ -39,7 +39,8 @@ const FormRechargeHistories = ({
       return response.data.data;
     },
     getNextPageParam: (lastPage, allPages) => {
-      if ((lastPage as any).length < limitQuery) return undefined;
+      if ((lastPage as DataRechargeHistory[]).length < limitQuery)
+        return undefined;
       return allPages.length + 1;
     },
     enabled: !!virtualAccount,

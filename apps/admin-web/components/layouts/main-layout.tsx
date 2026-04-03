@@ -17,6 +17,8 @@ import {
 } from "@repo/ui/components/sidebar";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { Toaster } from "@repo/ui/components/sonner";
+import { useExport } from "../export/useExport";
+import { Spinner } from "@repo/ui/components/spinner";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -24,11 +26,12 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const { breadcrumbs } = useBreadcrumbs();
+  const { isExporting, exportElement } = useExport();
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+      <SidebarInset className="min-w-0">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1 cursor-pointer" />
             <Separator
@@ -60,6 +63,11 @@ export function MainLayout({ children }: MainLayoutProps) {
               </Breadcrumb>
             )}
           </div>
+          {isExporting && (
+            <div className="flex items-center gap-2 pe-3">
+              <Spinner /> Exporting {exportElement || "data"}...
+            </div>
+          )}
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           <Toaster position="top-center" />

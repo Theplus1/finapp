@@ -18,6 +18,7 @@ import { CardsController } from './controllers/cards.controller';
 import { CardGroupsController } from './controllers/card-groups.controller';
 import { AccountsController } from './controllers/accounts.controller';
 import { UsersController } from './controllers/users.controller';
+import { PaymentSummaryController } from './controllers/payment-summary.controller';
 
 // Services
 import { AdminAuthService } from './services/admin-auth.service';
@@ -33,6 +34,8 @@ import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { DailySummaryController } from './controllers/daily-summary.controller';
 import { DailyPaymentSummariesModule } from 'src/domain/daily-payment-summaries/daily-payment-summaries.module';
+import { PaymentSummaryModule } from 'src/domain/payment-summary/payment-summary.module';
+import { ExportsModule } from '../domain/exports/exports.module';
 
 @Module({
   imports: [
@@ -56,7 +59,9 @@ import { DailyPaymentSummariesModule } from 'src/domain/daily-payment-summaries/
     AccountsModule, // Domain logic for accounts
     AdminUsersModule, // Domain logic for admin users
     DailyPaymentSummariesModule,
+    PaymentSummaryModule,
     DatabaseModule, // Access to repositories like DepositHistoryRepository
+    ExportsModule,
   ],
   controllers: [
     AuthController,
@@ -65,7 +70,8 @@ import { DailyPaymentSummariesModule } from 'src/domain/daily-payment-summaries/
     CardGroupsController,
     AccountsController,
     UsersController,
-    DailySummaryController
+    DailySummaryController,
+    PaymentSummaryController,
   ],
   providers: [
     // Strategies

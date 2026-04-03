@@ -1,5 +1,9 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { TransactionRepository, TransactionFilters } from '../../database/repositories/transaction.repository';
+import {
+  CardSpendAggregateResult,
+  TransactionFilters,
+  TransactionRepository,
+} from '../../database/repositories/transaction.repository';
 import { CardRepository } from '../../database/repositories/card.repository';
 import { ConfirmCodeRevealRepository } from '../../database/repositories/confirm-code-reveal.repository';
 import { VirtualAccountRepository } from '../../database/repositories/virtual-account.repository';
@@ -119,6 +123,35 @@ export class TransactionsService {
     const data = await this.find(dbFilters);
     const enrichedData = await this.enrichTransactions(data);
     return enrichedData;
+  }
+
+  /**
+   * Latest N rows for Google Sheets full-sync detail tabs (single DB query, capped).
+   */
+  async findRecentForGoogleSheetsDetailPool(
+    virtualAccountId: string,
+    limit: number,
+  ): Promise<TransactionWithRelations[]> {
+    const data =
+      await this.transactionRepository.findRecentForGoogleSheetsDetailPool(
+        virtualAccountId,
+        limit,
+      );
+    return this.enrichTransactions(data);
+  }
+
+  /**
+   * Latest N refund rows for Google Sheets Refund tab.
+   */
+  async findRecentRefundsForGoogleSheets(
+    virtualAccountId: string,
+    limit: number,
+  ): Promise<TransactionWithRelations[]> {
+    const data = await this.transactionRepository.findRecentRefundsForGoogleSheets(
+      virtualAccountId,
+      limit,
+    );
+    return this.enrichTransactions(data);
   }
 
   /**
@@ -313,5 +346,14 @@ export class TransactionsService {
     year: number,
   ): Promise<Array<{ month: number; totalCents: number; count: number }>> {
     return this.transactionRepository.getMonthlySpending(virtualAccountId, year);
+  }
+
+  async aggregateCardSpendByCardAndDay(filters: {
+    virtualAccountId: string;
+    detailedStatuses: string[];
+    startDate: Date;
+    endDate: Date;
+  }): Promise<CardSpendAggregateResult> {
+    return this.transactionRepository.aggregateCardSpendByCardAndDay(filters);
   }
 }

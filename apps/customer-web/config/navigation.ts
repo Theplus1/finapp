@@ -39,4 +39,11 @@ export const navMain: NavSection[] = [
     icon: User,
     roleAccept: [RoleUserEnum.BOSS],
   },
+  {
+    title: "Change password",
+    url: "/change-password",
+    icon: User,
+    roleAccept: [RoleUserEnum.BOSS, RoleUserEnum.ADS, RoleUserEnum.ACCOUNTANT],
+    visible: false,
+  },
 ];

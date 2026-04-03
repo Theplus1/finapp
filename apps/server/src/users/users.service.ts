@@ -41,6 +41,12 @@ export class UsersService {
     });
   }
 
+  async findAllByTelegramIdOrIds(telegramId: number): Promise<UserDocument[]> {
+    return this.userModel.find({
+      $or: [{ telegramId }, { telegramIds: telegramId }],
+    });
+  }
+
   async updateSubscription(
     telegramId: number,
     chatId: string,
@@ -266,27 +272,37 @@ export class UsersService {
   async addNotificationDestination(
     telegramId: number,
     chatId: number,
-  ): Promise<UserDocument | null> {
-    const user = await this.findByTelegramIdOrIds(telegramId);
-    if (!user) return null;
+  ): Promise<UserDocument[]> {
+    const users = await this.findAllByTelegramIdOrIds(telegramId);
+    if (users.length === 0) return [];
 
-    const dests = user.notificationDestinations || [];
-    if (dests.some((d) => d.chatId === chatId)) {
-      this.logger.log(`User (chat ${telegramId}) already has destination ${chatId}`);
-      return user;
+    const updatedUsers: UserDocument[] = [];
+    for (const user of users) {
+      const dests = user.notificationDestinations || [];
+      if (dests.some((d) => d.chatId === chatId)) {
+        this.logger.log(`User (chat ${telegramId}) already has destination ${chatId}`);
+        updatedUsers.push(user);
+        continue;
+      }
+
+      const updated = await this.userModel.findByIdAndUpdate(
+        user._id,
+        {
+          $push: { notificationDestinations: { chatId } },
+          $addToSet: { notificationChatIds: chatId },
+        },
+        { new: true },
+      );
+
+      if (updated) {
+        updatedUsers.push(updated);
+      }
     }
 
-    const updated = await this.userModel.findByIdAndUpdate(
-      user._id,
-      {
-        $push: { notificationDestinations: { chatId } },
-        $addToSet: { notificationChatIds: chatId },
-      },
-      { new: true },
+    this.logger.log(
+      `Users (chat ${telegramId}) added notification destination ${chatId}: ${updatedUsers.length} updated`,
     );
-
-    this.logger.log(`User (chat ${telegramId}) added notification destination: ${chatId}`);
-    return updated;
+    return updatedUsers;
   }
 
   /**
@@ -326,27 +342,42 @@ export class UsersService {
     telegramId: number,
     chatId: number,
     threadId: number,
-  ): Promise<UserDocument | null> {
-    const user = await this.findByTelegramIdOrIds(telegramId);
-    if (!user) return null;
+  ): Promise<UserDocument[]> {
+    const users = await this.findAllByTelegramIdOrIds(telegramId);
+    if (users.length === 0) return [];
 
-    const dests = user.notificationDestinations || [];
-    const hasChat = dests.some((d) => d.chatId === chatId);
-    if (!hasChat) {
-      await this.userModel.findByIdAndUpdate(user._id, {
-        $push: { notificationDestinations: { chatId, warningThreadId: threadId } },
-        $addToSet: { notificationChatIds: chatId },
-      });
-    } else {
-      await this.userModel.findOneAndUpdate(
-        { _id: user._id, 'notificationDestinations.chatId': chatId },
-        { $set: { 'notificationDestinations.$.warningThreadId': threadId } },
-        { new: true },
-      );
+    const updatedUsers: UserDocument[] = [];
+    for (const user of users) {
+      const dests = user.notificationDestinations || [];
+      const hasChat = dests.some((d) => d.chatId === chatId);
+      if (!hasChat) {
+        const updated = await this.userModel.findByIdAndUpdate(
+          user._id,
+          {
+            $push: { notificationDestinations: { chatId, warningThreadId: threadId } },
+            $addToSet: { notificationChatIds: chatId },
+          },
+          { new: true },
+        );
+        if (updated) {
+          updatedUsers.push(updated);
+        }
+      } else {
+        const updated = await this.userModel.findOneAndUpdate(
+          { _id: user._id, 'notificationDestinations.chatId': chatId },
+          { $set: { 'notificationDestinations.$.warningThreadId': threadId } },
+          { new: true },
+        );
+        if (updated) {
+          updatedUsers.push(updated);
+        }
+      }
     }
 
-    this.logger.log(`User (chat ${telegramId}) set warning thread ${threadId} for chat ${chatId}`);
-    return this.findByTelegramIdOrIds(telegramId);
+    this.logger.log(
+      `Users (chat ${telegramId}) set warning thread ${threadId} for chat ${chatId}: ${updatedUsers.length} updated`,
+    );
+    return updatedUsers;
   }
 
   /**

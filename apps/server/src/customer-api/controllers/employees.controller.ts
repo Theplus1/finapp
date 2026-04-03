@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Patch,
-  Delete,
   Body,
   Param,
   UseGuards,
@@ -116,7 +115,7 @@ export class EmployeesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update employee (password, email)' })
+  @ApiOperation({ summary: 'Update employee (username, email, role)' })
   @ApiParam({ name: 'id', description: 'Employee user ID' })
   @ApiBody({ type: UpdateEmployeeDto })
   @ApiResponse({
@@ -137,8 +136,9 @@ export class EmployeesController {
     }
     this.logger.log(`Boss ${req.user?.username} updating employee ${id}`);
     const updated = await this.adminUsersService.updateEmployee(id, bossId, {
-      password: dto.password,
+      username: dto.username,
       email: dto.email,
+      role: dto.role,
     });
     return toEmployeeResponse(updated as AdminUserDocument);
   }

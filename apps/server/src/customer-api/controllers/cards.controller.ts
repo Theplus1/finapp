@@ -29,9 +29,11 @@ import { SetCardLimitDto } from '../dto/set-card-limit.dto';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 import { CardStatus } from '../../integrations/slash/dto/card.dto';
 import type { CardWithRelations } from '../../domain/cards/types/card.types';
-import { CARDS_API_ROLES } from '../../common/constants/auth.constants';
+import { BOSS_AND_ACCOUNTANT_ROLES, CARDS_API_ROLES } from '../../common/constants/auth.constants';
 import { CvvRevealRepository } from '../../database/repositories/cvv-reveal.repository';
 import { SYNC_CONSTANTS } from '../../integrations/slash/constants/sync.constants';
+import { ExportsService } from '../../domain/exports/exports.service';
+import { ExportType } from '../../database/schemas/export-job.schema';
 
 interface RequestUser {
   userId: string;
@@ -53,6 +55,7 @@ export class CustomerCardsController {
     private readonly cardsService: CardsService,
     private readonly slashApiService: SlashApiService,
     private readonly cvvRevealRepository: CvvRevealRepository,
+    private readonly exportsService: ExportsService,
   ) {}
 
   private getVirtualAccountId(req: { user?: RequestUser }): string {
@@ -150,6 +153,7 @@ export class CustomerCardsController {
     page: number;
     limit: number;
     totalPages: number;
+    hasMore: boolean;
   }> {
     const virtualAccountId = this.getVirtualAccountId(req);
     const owned = await this.cardsService.verifyOwnership(
@@ -162,8 +166,13 @@ export class CustomerCardsController {
       );
     }
 
-    const pageNum = Number(page) || 1;
-    const limitNum = Number(limit) || 20;
+    const parsedPage = Number(page);
+    const parsedLimit = Number(limit);
+    const pageNum = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const limitNum =
+      Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, 1000)
+        : 20;
 
     const [items, total] = await this.cvvRevealRepository.findByCardSlashId(
       cardSlashId,
@@ -181,6 +190,7 @@ export class CustomerCardsController {
 
     const totalPages =
       limitNum > 0 ? Math.ceil(total / limitNum) || 1 : 1;
+    const hasMore = pageNum * limitNum < total;
 
     return {
       cardId: cardSlashId,
@@ -189,6 +199,7 @@ export class CustomerCardsController {
       page: pageNum,
       limit: limitNum,
       totalPages,
+      hasMore,
     };
   }
 
@@ -230,6 +241,82 @@ export class CustomerCardsController {
         total,
       },
     };
+  }
+
+  @Get('by-slash-id/:slashId')
+  @ApiOperation({
+    summary: 'Get one card by slashId with same shape as list',
+  })
+  @ApiParam({ name: 'slashId', description: 'Card Slash ID' })
+  @ApiResponse({ status: 200, description: 'Card retrieved successfully' })
+  async getOneBySlashId(
+    @Param('slashId') slashId: string,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{
+    data: CardWithRelations[];
+    pagination: { page: number; limit: number; total: number };
+  }> {
+    const virtualAccountId = this.getVirtualAccountId(req);
+    this.logger.log(
+      `Getting one card by slashId ${slashId} for VA ${virtualAccountId}`,
+    );
+
+    const [data, total] = await this.cardsService.findAllWithFilters(
+      {
+        virtualAccountId,
+        slashId,
+      },
+      {
+        page: 1,
+        limit: 1,
+      },
+    );
+
+    return {
+      data,
+      pagination: {
+        page: 1,
+        limit: 1,
+        total,
+      },
+    };
+  }
+
+  @Post('export')
+  @Roles(...BOSS_AND_ACCOUNTANT_ROLES)
+  @ApiOperation({
+    summary: 'Export cards and return download URL (boss/accountant)',
+  })
+  @ApiResponse({ status: 200, description: 'Export generated successfully' })
+  async exportCards(
+    @Query() query: CustomerCardQueryDto,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{
+    downloadUrl: string;
+    fileName: string;
+    expiresAt: Date;
+  }> {
+    const virtualAccountId = this.getVirtualAccountId(req);
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new BadRequestException('Missing user ID for export');
+    }
+
+    const filters = {
+      virtualAccountId,
+      status: query.status,
+      cardGroupId: query.cardGroupId,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+      search: query.search,
+    };
+
+    return this.exportsService.generateCardsExportDownloadUrlForWeb({
+      userId,
+      virtualAccountId,
+      type: ExportType.CARDS,
+      filters,
+    });
   }
 
   @Post(':id/lock')

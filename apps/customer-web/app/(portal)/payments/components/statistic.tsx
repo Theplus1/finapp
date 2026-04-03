@@ -6,7 +6,7 @@ import {
   Building2,
   ClipboardClock,
 } from "lucide-react";
-import StatisticItem from "./statistic-item";
+import StatisticItem from "@repo/ui/components/statistic-item";
 import { PaymentSummary } from "@/lib/api/endpoints/payment";
 import { Skeleton } from "@repo/ui/components/skeleton";
 

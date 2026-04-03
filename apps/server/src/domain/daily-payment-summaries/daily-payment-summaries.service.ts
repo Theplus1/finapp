@@ -20,6 +20,89 @@ export class DailyPaymentSummariesService {
   ) {}
 
   /**
+   * Aggregated overall summary by virtual account IDs.
+   * Used for batch jobs (e.g. balance alerts) to avoid loading all rows in memory.
+   */
+  async getOverallSummariesByVirtualAccountIds(
+    virtualAccountIds: string[],
+  ): Promise<
+    Map<
+      string,
+      {
+        virtualAccountId: string;
+        totalDepositCents: number;
+        totalSpendUsCents: number;
+        totalSpendNonUsCents: number;
+        totalRefundCents: number;
+        endingAccountBalanceCents: number;
+      }
+    >
+  > {
+    const result = new Map<
+      string,
+      {
+        virtualAccountId: string;
+        totalDepositCents: number;
+        totalSpendUsCents: number;
+        totalSpendNonUsCents: number;
+        totalRefundCents: number;
+        endingAccountBalanceCents: number;
+      }
+    >();
+
+    if (virtualAccountIds.length === 0) {
+      return result;
+    }
+
+    const aggregateRows = await this.dailyPaymentSummaryModel
+      .aggregate<{
+        _id: string;
+        totalDepositCents: number;
+        totalSpendUsCents: number;
+        totalSpendNonUsCents: number;
+        totalRefundCents: number;
+      }>([
+        {
+          $match: {
+            virtualAccountId: { $in: virtualAccountIds },
+          },
+        },
+        {
+          $group: {
+            _id: '$virtualAccountId',
+            totalDepositCents: { $sum: '$totalDepositCents' },
+            totalSpendUsCents: { $sum: '$totalSpendUSCents' },
+            totalSpendNonUsCents: { $sum: '$totalSpendNonUSCents' },
+            totalRefundCents: { $sum: '$totalRefundCents' },
+          },
+        },
+      ])
+      .exec();
+
+    for (const row of aggregateRows) {
+      const totalDepositCents = Number(row.totalDepositCents ?? 0);
+      const totalSpendUsCents = Number(row.totalSpendUsCents ?? 0);
+      const totalSpendNonUsCents = Number(row.totalSpendNonUsCents ?? 0);
+      const totalRefundCents = Number(row.totalRefundCents ?? 0);
+      const endingAccountBalanceCents =
+        totalDepositCents -
+        (totalSpendUsCents + totalSpendNonUsCents) +
+        totalRefundCents;
+
+      result.set(row._id, {
+        virtualAccountId: row._id,
+        totalDepositCents,
+        totalSpendUsCents,
+        totalSpendNonUsCents,
+        totalRefundCents,
+        endingAccountBalanceCents,
+      });
+    }
+
+    return result;
+  }
+
+  /**
    * Calculate and save daily payment summary for a specific date
    */
   async calculateAndSaveDailySummary(
@@ -74,15 +157,24 @@ export class DailyPaymentSummariesService {
       );
     let totalSpendNonUSCents = 0;
     let totalSpendUSCents = 0;
+    let totalSpendNonUSCentsForAdmin = 0;
+    let totalSpendUSCentsForAdmin = 0;
     let totalRefundCents = 0;
 
     // Spend: split by US / Non-US, use abs(amountCents)
     spendTransactions.forEach((transaction) => {
       const spendAmount = Math.abs(transaction.amountCents);
+      const isSettled = transaction.detailedStatus === 'settled';
       if (transaction.merchantData?.location?.country === 'US') {
         totalSpendUSCents += spendAmount;
+        if (isSettled) {
+          totalSpendUSCentsForAdmin += spendAmount;
+        }
       } else {
         totalSpendNonUSCents += spendAmount;
+        if (isSettled) {
+          totalSpendNonUSCentsForAdmin += spendAmount;
+        }
       }
     });
 
@@ -103,6 +195,8 @@ export class DailyPaymentSummariesService {
         totalDepositCents,
         totalSpendNonUSCents,
         totalSpendUSCents,
+        totalSpendNonUSCentsForAdmin,
+        totalSpendUSCentsForAdmin,
         totalRefundCents,
         accountBalanceCents: 0, // Will be calculated separately
         currency,
@@ -121,6 +215,19 @@ export class DailyPaymentSummariesService {
     }
 
     return summary;
+  }
+
+  /**
+   * All daily payment summaries for a virtual account, oldest first.
+   * Used for Google Sheets full sync (date span + Payment / Location / Deposit).
+   */
+  async findAllByVirtualAccountSortedAsc(
+    virtualAccountId: string,
+  ): Promise<DailyPaymentSummaryDocument[]> {
+    return this.dailyPaymentSummaryModel
+      .find({ virtualAccountId })
+      .sort({ date: 1 })
+      .exec();
   }
 
   /**
@@ -178,6 +285,18 @@ export class DailyPaymentSummariesService {
 
     if (!summary) {
       return this.calculateAndSaveDailySummary(virtualAccountId, dayStart, currency);
+    }
+
+    if (
+      summary.totalSpendNonUSCentsForAdmin == null ||
+      summary.totalSpendUSCentsForAdmin == null
+    ) {
+      return this.calculateAndSaveDailySummary(
+        virtualAccountId,
+        dayStart,
+        currency,
+        true,
+      );
     }
 
     return summary;
@@ -242,5 +361,71 @@ export class DailyPaymentSummariesService {
    */
   async deleteSummariesForAccount(virtualAccountId: string): Promise<void> {
     await this.dailyPaymentSummaryModel.deleteMany({ virtualAccountId });
+  }
+
+  /**
+   * Aggregate overall payment metrics for multiple virtual accounts in one query.
+   * endingAccountBalanceCents = totalDepositCents - (totalSpendUSCents + totalSpendNonUSCents) + totalRefundCents
+   */
+  async getOverallMetricsByVirtualAccountIds(
+    virtualAccountIds: string[],
+  ): Promise<Map<string, { endingAccountBalanceCents: number; totalSpendCents: number; totalDepositCents: number }>> {
+    if (virtualAccountIds.length === 0) {
+      return new Map<
+        string,
+        { endingAccountBalanceCents: number; totalSpendCents: number; totalDepositCents: number }
+      >();
+    }
+
+    const rows = await this.dailyPaymentSummaryModel.aggregate<{
+      virtualAccountId: string;
+      endingAccountBalanceCents: number;
+      totalSpendCents: number;
+      totalDepositCents: number;
+    }>([
+      {
+        $match: {
+          virtualAccountId: { $in: virtualAccountIds },
+        },
+      },
+      {
+        $group: {
+          _id: '$virtualAccountId',
+          totalDepositCents: { $sum: '$totalDepositCents' },
+          totalSpendUSCents: { $sum: '$totalSpendUSCents' },
+          totalSpendNonUSCents: { $sum: '$totalSpendNonUSCents' },
+          totalRefundCents: { $sum: '$totalRefundCents' },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          virtualAccountId: '$_id',
+          totalDepositCents: 1,
+          totalSpendCents: { $add: ['$totalSpendUSCents', '$totalSpendNonUSCents'] },
+          endingAccountBalanceCents: {
+            $add: [
+              '$totalDepositCents',
+              { $multiply: [{ $add: ['$totalSpendUSCents', '$totalSpendNonUSCents'] }, -1] },
+              '$totalRefundCents',
+            ],
+          },
+        },
+      },
+    ]);
+
+    return new Map<
+      string,
+      { endingAccountBalanceCents: number; totalSpendCents: number; totalDepositCents: number }
+    >(
+      rows.map((row) => [
+        row.virtualAccountId,
+        {
+          endingAccountBalanceCents: row.endingAccountBalanceCents,
+          totalSpendCents: row.totalSpendCents,
+          totalDepositCents: row.totalDepositCents,
+        },
+      ]),
+    );
   }
 }

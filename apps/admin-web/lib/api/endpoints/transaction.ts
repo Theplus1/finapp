@@ -1,11 +1,6 @@
+import { CardShort } from "@repo/ui/components/card-name-col";
 import { apiClient } from "../client";
 import type { ApiResponse } from "../client";
-
-export interface CardShort {
-  slashId: string;
-  name: string;
-  last4: string;
-}
 
 export interface Transaction {
   _id: string;

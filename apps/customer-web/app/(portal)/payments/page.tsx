@@ -65,7 +65,7 @@ const detectMonthYear = (month: string) => {
   return { year, month: monthNum };
 };
 
-export default function Cards() {
+export default function Payments() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const [currentFilter, setCurrentFilter] = useState(initFilter);
 

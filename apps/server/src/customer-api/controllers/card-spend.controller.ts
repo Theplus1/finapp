@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Controller,
   Get,
+  Post,
   Param,
   Query,
   Request,
@@ -20,8 +21,8 @@ import { RolesGuard } from '../../admin-api/guards/roles.guard';
 import { Roles } from '../../admin-api/decorators/roles.decorator';
 import { TransactionsService } from '../../domain/transactions/transactions.service';
 import { CardSpendResponseDto } from '../dto/card-spend.dto';
-import { format, startOfDay, endOfDay } from 'date-fns';
 import { BOSS_AND_ACCOUNTANT_ROLES } from '../../common/constants/auth.constants';
+import { ExportsService } from '../../domain/exports/exports.service';
 
 interface RequestUser {
   userId: string;
@@ -39,6 +40,7 @@ interface RequestUser {
 export class CustomerCardSpendController {
   constructor(
     private readonly transactionsService: TransactionsService,
+    private readonly exportsService: ExportsService,
   ) {}
 
   @Get(':id/card-spend')
@@ -86,28 +88,30 @@ export class CustomerCardSpendController {
       throw new BadRequestException('from and to query params are required');
     }
 
-    const fromDateRaw = new Date(from);
-    const toDateRaw = new Date(to);
+    const dayPattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dayPattern.test(from) || !dayPattern.test(to)) {
+      throw new BadRequestException('from/to must be in YYYY-MM-DD format');
+    }
+
+    const fromDateRaw = new Date(`${from}T00:00:00.000Z`);
+    const toDateRaw = new Date(`${to}T23:59:59.999Z`);
     if (Number.isNaN(fromDateRaw.getTime()) || Number.isNaN(toDateRaw.getTime())) {
       throw new BadRequestException('Invalid from/to date');
     }
-    const fromDate = startOfDay(fromDateRaw);
-    const toDate = endOfDay(toDateRaw);
+    const fromDate = fromDateRaw;
+    const toDate = toDateRaw;
     if (toDate < fromDate) {
       throw new BadRequestException('to must be greater than or equal to from');
     }
 
-    // Lấy transactions PENDING + SETTLED trong range, có cardId
-    const transactions = await this.transactionsService.findAllWithFilters({
+    const aggregated = await this.transactionsService.aggregateCardSpendByCardAndDay({
       virtualAccountId: slashId,
-      detailedStatus: { $in: ['pending', 'settled'] },
-      startDate: fromDate.toISOString(),
-      endDate: toDate.toISOString(),
+      detailedStatuses: ['pending', 'settled'],
+      startDate: fromDate,
+      endDate: toDate,
     });
 
-    // Collect days that have transactions
     const daySet = new Set<string>();
-    // Map cardId -> { cardName, cardLast4?, daySpendCents: Record<date, cents> }
     const perCard = new Map<
       string,
       {
@@ -117,47 +121,31 @@ export class CustomerCardSpendController {
       }
     >();
 
-    for (const tx of transactions) {
-      const cardId = tx.cardId;
-      if (!cardId) continue;
-
-      const txDate = tx.date ? new Date(tx.date) : null;
-      if (!txDate) continue;
-      const dayKey = format(startOfDay(txDate), 'yyyy-MM-dd');
-      daySet.add(dayKey);
-
-      const amountCents = Math.abs(tx.amountCents || 0);
-
-      // Card name and last4 from enriched card (if available), fallback to cardId
-      const cardName =
-        (tx as any).card?.name ??
-        (tx as any).card?.slashId ??
-        cardId;
-      const cardLast4: string | undefined = (tx as any).card?.last4;
-
+    for (const item of aggregated.rows) {
+      daySet.add(item.day);
       const existing =
-        perCard.get(cardId) ??
+        perCard.get(item.cardId) ??
         {
-          cardName,
-          cardLast4,
+          cardName: item.cardName,
+          cardLast4: item.cardLast4,
           daySpendCents: {} as Record<string, number>,
         };
 
-      if (!existing.cardLast4 && cardLast4) {
-        existing.cardLast4 = cardLast4;
+      if (!existing.cardLast4 && item.cardLast4) {
+        existing.cardLast4 = item.cardLast4;
       }
 
-      existing.daySpendCents[dayKey] =
-        (existing.daySpendCents[dayKey] ?? 0) + amountCents;
+      existing.daySpendCents[item.day] =
+        (existing.daySpendCents[item.day] ?? 0) + item.amountCents;
 
-      perCard.set(cardId, existing);
+      perCard.set(item.cardId, existing);
     }
 
-    // Sort days tăng dần
     const days = Array.from(daySet.values()).sort();
 
-    // Build rows per card
-    const rows = Array.from(perCard.entries()).map(([cardId, data]) => {
+    const rows: CardSpendResponseDto['rows'] = Array.from(
+      perCard.entries(),
+    ).map(([cardId, data]) => {
       const daySpendCents: Record<string, number> = {} as Record<
         string,
         number
@@ -178,7 +166,6 @@ export class CustomerCardSpendController {
       };
     });
 
-    // Thêm row Total
     const totalDaySpend: Record<string, number> = {} as Record<string, number>;
     let totalRowSum = 0;
     for (const day of days) {
@@ -190,7 +177,7 @@ export class CustomerCardSpendController {
       totalRowSum += sumForDay;
     }
     rows.push({
-      cardId: null as any,
+      cardId: null,
       cardName: 'Total',
       cardLast4: undefined,
       isTotal: true,
@@ -198,17 +185,72 @@ export class CustomerCardSpendController {
       totalSpendCents: totalRowSum,
     });
 
-    // currency: lấy tạm từ transaction đầu tiên nếu có, fallback 'USD'
-    const currency = (transactions[0] as any)?.originalCurrency?.code ?? 'USD';
+    const currency = aggregated.currency ?? 'USD';
 
     return {
       virtualAccountId: slashId,
       currency,
-      timezone: 'local',
+      timezone: 'UTC',
       range: { from, to },
       days,
       rows,
     };
+  }
+
+  @Post('card-spend/export')
+  @ApiOperation({
+    summary: 'Export card spend pivot to Excel (boss/accountant)',
+    description:
+      'Exports the same pivot structure as card-spend web table with Total row first.',
+  })
+  @ApiQuery({
+    name: 'from',
+    required: true,
+    description: 'Start date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: true,
+    description: 'End date (YYYY-MM-DD)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Card spend export generated successfully',
+  })
+  async exportCardSpend(
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{
+    downloadUrl: string;
+    fileName: string;
+    expiresAt: Date;
+  }> {
+    const vaIdFromToken = req.user?.virtualAccountId;
+    if (!vaIdFromToken) {
+      throw new BadRequestException('No virtual account linked to this user');
+    }
+
+    if (!from || !to) {
+      throw new BadRequestException('from and to query params are required');
+    }
+
+    const dayPattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dayPattern.test(from) || !dayPattern.test(to)) {
+      throw new BadRequestException('from/to must be in YYYY-MM-DD format');
+    }
+
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new BadRequestException('Missing user ID for export');
+    }
+
+    return this.exportsService.generateCardSpendExportDownloadUrlForWeb({
+      userId,
+      virtualAccountId: vaIdFromToken,
+      from,
+      to,
+    });
   }
 }
 

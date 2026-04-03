@@ -93,10 +93,11 @@ export default function Dashboard() {
         cell: ({ row }: CellContext<Transaction, string>) => {
           return isLoading ? (
             <Skeleton />
-          ) : row.original.card?.name ? (
-            <CardNameCol card={row.original.card} />
           ) : (
-            EMPTY_LABEL
+            <CardNameCol
+              card={row.original.card}
+              cardId={row.original.cardId}
+            />
           );
         },
       },
@@ -135,7 +136,7 @@ export default function Dashboard() {
       {
         header: "Status",
         cell: ({ row }: CellContext<Transaction, string>) => {
-          return isLoading ? <Skeleton /> : row.original.detailedStatus;
+          return isLoading ? <Skeleton /> : <span className="capitalize">{row.original.detailedStatus}</span>
         },
       },
       {
@@ -207,6 +208,10 @@ export default function Dashboard() {
             }
             onDateFromChange={(date) => handleChangeFilter("startDate", date)}
             onDateToChange={(date) => handleChangeFilter("endDate", date)}
+            currentFilter={currentFilter}
+            onStatusChange={(status) =>
+              handleChangeFilter("detailedStatus", status)
+            }
           />
           <DataTable
             columns={columns}

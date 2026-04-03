@@ -36,7 +36,7 @@ export class TransactionNotificationsService {
     const recentTransactions = await this.transactionRepository.find({
       startDate: lookbackDate,
       detailedStatus: { $in: StatusNotifyUserAboutTransactions },
-      amountCents: { $lt: 0 },
+      amountCents: -100,
       limit: 100,
     });
 

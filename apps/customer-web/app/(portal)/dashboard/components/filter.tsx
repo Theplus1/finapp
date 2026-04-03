@@ -1,3 +1,4 @@
+import { ExportTransactions } from "./export-transactions";
 import FilterCard from "./filter-card";
 import { FilterDate } from "./filter-date";
 import FilterStatus from "./filter-status";
@@ -9,17 +10,21 @@ interface Props {
   onDateFromChange: (date: string | undefined) => void;
   onDateToChange: (date: string | undefined) => void;
   onSearch: (search: string) => void;
+  currentFilter?: Record<string, unknown>;
+  showExportTransaction?: boolean;
 }
 
-const FilterTransaction = ({
+const ActionTableTransaction = ({
   onCardChange,
   onDateFromChange,
   onDateToChange,
   onSearch,
   onStatusChange,
+  currentFilter,
+  showExportTransaction = false,
 }: Props) => {
   return (
-    <div className="pb-4 flex gap-4">
+    <div className="pb-4 flex gap-4 items-end">
       <SearchTransaction onSearch={onSearch} />
       <FilterCard onCardChange={onCardChange} />
       <FilterStatus onStatusChange={onStatusChange} />
@@ -27,8 +32,11 @@ const FilterTransaction = ({
         onDateFromChange={onDateFromChange}
         onDateToChange={onDateToChange}
       />
+      {showExportTransaction && (
+        <ExportTransactions currentFilter={currentFilter} />
+      )}
     </div>
   );
 };
 
-export default FilterTransaction;
+export default ActionTableTransaction;

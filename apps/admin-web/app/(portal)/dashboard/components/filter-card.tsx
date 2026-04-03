@@ -13,12 +13,12 @@ import { Spinner } from "@repo/ui/components/spinner";
 import { Card } from "@/lib/api/endpoints/card";
 import { Input } from "@repo/ui/components/input";
 import { useMemo, useState } from "react";
-import { Label } from "@repo/ui/components/label";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 
 type Props = {
   onCardChange: (cardId: string) => void;
 };
-const limitPerRequest = 100;
+const limitPerRequest = 200;
 
 const FilterCard = ({ onCardChange }: Props) => {
   const [value, setValue] = useState("all");
@@ -58,10 +58,9 @@ const FilterCard = ({ onCardChange }: Props) => {
   }, [cardInfos, textSearch]);
 
   return (
-    <>
-      <Label className="px-1">Card</Label>
+    <FormItemWrapper label="Card">
       <Select onValueChange={handleValueChange} value={value}>
-        <SelectTrigger className="w-[280px]">
+        <SelectTrigger className="w-[220px]">
           {isLoadingCardInfos ? (
             <Spinner />
           ) : (
@@ -72,6 +71,7 @@ const FilterCard = ({ onCardChange }: Props) => {
           <SelectGroup>
             <SelectLabel>Select a card</SelectLabel>
             <Input
+              key={"filterCard"}
               value={textSearch}
               placeholder="Search card"
               className="w-full sticky top-0 z-10 bg-background"
@@ -93,7 +93,7 @@ const FilterCard = ({ onCardChange }: Props) => {
           </SelectGroup>
         </SelectContent>
       </Select>
-    </>
+    </FormItemWrapper>
   );
 };
 

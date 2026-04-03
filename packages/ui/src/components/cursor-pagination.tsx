@@ -39,9 +39,8 @@ export function CursorPagination({
     return arr;
   }, [cursorMap, page]);
 
-  const totalLoadedPages = loadedPages.length
-    ? loadedPages[loadedPages.length - 1]
-    : 1;
+  const totalLoadedPages =
+    loadedPages.length > 0 ? (loadedPages[loadedPages.length - 1] ?? 1) : 1;
 
   const handlePrev = () => {
     if (page > 1) {
@@ -75,7 +74,7 @@ export function CursorPagination({
     }
 
     if (range.length > 0) {
-      if (range[0] > 2) {
+      if ((range[0] ?? 0) > 2) {
         pages.push(1, "...");
       } else if (range[0] === 2) {
         pages.push(1);
@@ -130,7 +129,9 @@ export function CursorPagination({
         <PaginationItem>
           <PaginationNext
             className={`cursor-pointer ${
-              (!hasNextPage || disableNext) ? "opacity-50 pointer-events-none" : ""
+              !hasNextPage || disableNext
+                ? "opacity-50 pointer-events-none"
+                : ""
             }`}
             onClick={handleNext}
           />

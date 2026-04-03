@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Spinner } from "@repo/ui/components/spinner";
 import { cn } from "@/lib/utils";
 import { DatePicker } from "@repo/ui/components/date-picker";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 
 type Props = {
   virtualAccount: VirtualAccount | null;
@@ -67,23 +68,22 @@ const FormRecharge = ({
   return (
     <>
       <div className="px-4 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <DatePicker
-            onChange={(date) => {
-              setDate(date);
-            }}
-            label={
-              <span className="text-sm font-medium text-muted-foreground">
-                Date deposit
-              </span>
-            }
-            triggerClassName="w-full"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="block text-sm font-medium text-muted-foreground">
-            Amount ($)
-          </label>
+        <DatePicker
+          onChange={(date) => {
+            setDate(date);
+          }}
+          label={
+            <span className="text-sm font-medium text-muted-foreground">
+              Date deposit
+            </span>
+          }
+          triggerClassName="w-full"
+        />
+
+        <FormItemWrapper
+          label="Amount ($)"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
           <Input
             placeholder="Enter amount"
             value={amount}
@@ -93,7 +93,7 @@ const FormRecharge = ({
               setAmount(Number(value));
             }}
           />
-        </div>
+        </FormItemWrapper>
       </div>
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">

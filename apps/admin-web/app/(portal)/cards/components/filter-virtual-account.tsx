@@ -11,19 +11,28 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Spinner } from "@repo/ui/components/spinner";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
-import { Label } from "@repo/ui/components/label";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
+import { Input } from "@repo/ui/components/input";
+import { usePathname } from "next/navigation";
 
 type Props = {
   onVirtualAccountChange: (virtualAccountId: string) => void;
+  showAll?: boolean;
 };
-const limitPerRequest = 20;
+const limitPerRequest = 100;
 
-const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
+const FilterVirtualAccount = ({
+  onVirtualAccountChange,
+  showAll = true,
+}: Props) => {
   const [value, setValue] = useState("all");
+  const [textSearch, setTextSearch] = useState("");
+  const pathName = usePathname();
+
   const { data: virtualAccountInfos, isLoading: isLoadingVirtualAccountInfos } =
     useQuery({
-      queryKey: ["virtual-account-infos"],
+      queryKey: ["virtual-account-infos", showAll],
       queryFn: async () => {
         let totalVirtualAccounts: VirtualAccount[] = [];
         let hasNext = true;
@@ -49,13 +58,25 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
     onVirtualAccountChange(value === "all" ? "" : value);
   };
 
-  const virtualAccountData = virtualAccountInfos ?? [];
+  const virtualAccountDataFiltered = useMemo(() => {
+    if (!virtualAccountInfos) return [];
+    return virtualAccountInfos.filter((virtualAccount) => {
+      return virtualAccount.name
+        .toLowerCase()
+        .includes(textSearch.trim().toLowerCase());
+    });
+  }, [virtualAccountInfos, textSearch]);
+
+  useEffect(() => {
+    handleValueChange(
+      showAll ? "all" : virtualAccountInfos?.[0]?.slashId || "",
+    );
+  }, [pathName, virtualAccountInfos, showAll]);
 
   return (
-    <>
-      <Label className="px-1">Virtual account</Label>
+    <FormItemWrapper label="Virtual account">
       <Select onValueChange={handleValueChange} value={value}>
-        <SelectTrigger className="w-[280px]">
+        <SelectTrigger className="w-[220px]">
           {isLoadingVirtualAccountInfos ? (
             <Spinner />
           ) : (
@@ -65,21 +86,37 @@ const FilterVirtualAccount = ({ onVirtualAccountChange }: Props) => {
         <SelectContent>
           <SelectGroup>
             <SelectLabel>Select a virtual account</SelectLabel>
-            <SelectItem key="all" value="all">
-              All
-            </SelectItem>
-            {virtualAccountData.map((virtualAccount: VirtualAccount) => (
-              <SelectItem
-                key={virtualAccount.slashId}
-                value={virtualAccount.slashId}
-              >
-                {virtualAccount.name}
+            <Input
+              key={"filterVirtualAccount"}
+              value={textSearch}
+              placeholder="Search virtual account"
+              className="w-full sticky top-0 z-10 bg-background"
+              onKeyDown={(e) => {
+                e.stopPropagation();
+              }}
+              onChange={(e) => {
+                setTextSearch(e.target.value);
+              }}
+            />
+            {showAll && (
+              <SelectItem key="all" value="all">
+                All
               </SelectItem>
-            ))}
+            )}
+            {virtualAccountDataFiltered.map(
+              (virtualAccount: VirtualAccount) => (
+                <SelectItem
+                  key={virtualAccount.slashId}
+                  value={virtualAccount.slashId}
+                >
+                  {virtualAccount.name}
+                </SelectItem>
+              ),
+            )}
           </SelectGroup>
         </SelectContent>
       </Select>
-    </>
+    </FormItemWrapper>
   );
 };
 

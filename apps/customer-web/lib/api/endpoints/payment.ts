@@ -45,15 +45,6 @@ type Params = {
   to: string;
 };
 
-export interface PaymentDetailResponse {
-  success: true;
-  message: string;
-  data: Payment;
-  meta: {
-    timestamp: string;
-  };
-}
-
 export const paymentApi = {
   getPayments: async (
     params?: Params,

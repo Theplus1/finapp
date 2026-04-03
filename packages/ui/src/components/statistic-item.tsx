@@ -1,4 +1,3 @@
-import { formatDollarByCent } from "@/app/utils/func";
 import {
   ItemTitle,
   ItemDescription,
@@ -6,6 +5,7 @@ import {
   Item,
   ItemActions,
 } from "@repo/ui/components/item";
+import { formatDollarByCent } from "../lib/func";
 
 type Props = {
   label: string;

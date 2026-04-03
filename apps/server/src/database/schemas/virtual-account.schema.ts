@@ -33,6 +33,9 @@ export class VirtualAccount {
   @Prop({ default: 0 })
   pendingBalanceCents: number;
 
+  @Prop({ default: 0 })
+  transferNetChange: number;
+
   @Prop({ required: true, index: true })
   status: string;
 

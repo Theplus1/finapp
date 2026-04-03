@@ -1,5 +1,6 @@
 import { Employee } from "@/lib/api/endpoints/employee";
 import ActionResetPassword from "./action-reset-password";
+import ActionEditEmployee from "./action-edit-employee";
 
 export enum DrawerTypeEmployeeEnum {
   SET_ACCOUNT = "set-account",
@@ -7,14 +8,14 @@ export enum DrawerTypeEmployeeEnum {
 
 type Props = {
   employee: Employee;
+  onEditEmployee: () => void;
 };
 
-const ActionsTable = ({ employee }: Props) => {
+const ActionsTable = ({ employee, onEditEmployee }: Props) => {
   return (
-    <div>
-      <div className="grid gap-2">
-        <ActionResetPassword employee={employee} />
-      </div>
+    <div className="grid gap-2">
+      <ActionEditEmployee onClickEditEmployee={onEditEmployee} />
+      <ActionResetPassword employee={employee} />
     </div>
   );
 };

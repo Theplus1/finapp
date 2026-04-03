@@ -165,6 +165,20 @@ export default function Cards() {
           fixed: 0,
         },
       },
+      {
+        id: "summary",
+        header: <p className="text-end">Summary</p>,
+        cell: ({
+          row,
+        }: CellContext<CardSpendRow & { label: string }, number>) => {
+          if (isLoading) return <Skeleton />;
+          return (
+            <p className="text-end">
+              {formatDollarByCent(row.original.totalSpendCents)}
+            </p>
+          );
+        },
+      },
       ...generateDateColumns(
         Number(detectMonthYear(currentFilter.from).month),
         Number(detectMonthYear(currentFilter.from).year),
@@ -194,7 +208,7 @@ export default function Cards() {
         ?.toLowerCase()
         .includes(keywordCardDebounce),
     );
-  }, [dataCardSpendGrouped, keywordCardDebounce]);
+  }, [dataCardSpendGrouped, keywordCardDebounce, isLoading]);
 
   return (
     <PageLayout>
@@ -208,6 +222,7 @@ export default function Cards() {
             keywordCard={keywordCard}
             onFilterMonthChange={handleChangeMonth}
             onFilterCardChange={handleChangeCard}
+            currentFilter={currentFilter}
           />
           <DataTable
             columns={columns}

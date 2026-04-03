@@ -11,4 +11,5 @@ export interface NavSection {
     title: string;
     url: string;
   }[];
+  visible?: boolean;
 }

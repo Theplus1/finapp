@@ -14,6 +14,7 @@ import { DailyPaymentSummariesModule } from '../domain/daily-payment-summaries/d
 import { PaymentSummaryModule } from '../domain/payment-summary/payment-summary.module';
 import { CustomerPaymentsController } from './controllers/payments.controller';
 import { CustomerCardSpendController } from './controllers/card-spend.controller';
+import { ExportsModule } from '../domain/exports/exports.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { CustomerCardSpendController } from './controllers/card-spend.controller
     DatabaseModule,
     DailyPaymentSummariesModule,
     PaymentSummaryModule,
+    ExportsModule,
   ],
   controllers: [
     CustomerAuthController,

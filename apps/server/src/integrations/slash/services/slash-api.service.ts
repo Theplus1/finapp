@@ -11,6 +11,8 @@ import {
 import {
   TransactionDto,
   ListTransactionsQuery,
+  TransactionAggregationQuery,
+  TransactionAggregationResponse,
 } from '../dto/transaction.dto';
 import {
   AccountDto,
@@ -413,6 +415,16 @@ export class SlashApiService {
     return this.request<TransactionDto>({
       method: 'GET',
       url: `/transaction/${transactionId}`,
+    });
+  }
+
+  async getTransactionAggregation(
+    query?: TransactionAggregationQuery,
+  ): Promise<TransactionAggregationResponse> {
+    return this.request<TransactionAggregationResponse>({
+      method: 'GET',
+      url: '/transaction/aggregation',
+      params: query,
     });
   }
 
