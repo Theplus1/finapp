@@ -14,6 +14,7 @@ jobs:
   build-and-deploy:
     name: Build Docker Image and Deploy
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout code
@@ -110,13 +111,16 @@ jobs:
               -e "CARD_SPENDING_ALERT_CRON=${{ vars.CARD_SPENDING_ALERT_CRON }}" \
               -e "GOOGLE_SHEETS_SYNC_CRON=${{ vars.GOOGLE_SHEETS_SYNC_CRON }}" \
               -e "GOOGLE_SHEETS_CHUNK_SIZE=${{ vars.GOOGLE_SHEETS_CHUNK_SIZE }}" \
+              -e "SLASH_ENABLE_SCHEDULED_SYNC=${{ vars.SLASH_ENABLE_SCHEDULED_SYNC }}" \
+              -e "GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC_FULL=${{ vars.GOOGLE_SHEETS_ENABLE_SCHEDULED_SYNC_FULL }}" \
               -e "NODE_ENV=production" \
               ${IMAGE_NAME}
 
             # Clean up old images (keep last 3)
-            docker images ghcr.io/theplus1/finapp-server --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | \
-              tail -n +4 | tail -n +4 | awk '{print $1}' | \
-              xargs -r docker rmi
+            docker images ghcr.io/theplus1/finapp-server-test --format "{{.Repository}}:{{.Tag}}" | \
+              grep -v '<none>' | \
+              tail -n +4 | \
+              xargs -r docker rmi || true
 
             echo "✅ Deployment complete"
             docker ps --filter "name=finapp-server"

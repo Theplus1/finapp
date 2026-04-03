@@ -36,7 +36,7 @@ echo ""
 # --- System Updates ---
 echo "📦 Updating system packages..."
 apt-get update -y
-apt-get upgrade -y
+# apt-get upgrade -y
 
 # --- Install essential packages ---
 echo "📦 Installing essential packages..."
@@ -132,9 +132,9 @@ ufw --force enable
 echo "Firewall configured"
 
 # --- Setup fail2ban ---
-echo "🛡️ Configuring fail2ban..."
-systemctl enable fail2ban
-systemctl start fail2ban
+# echo "🛡️ Configuring fail2ban..."
+# systemctl enable fail2ban
+# systemctl start fail2ban
 
 # --- Print summary ---
 echo ""
