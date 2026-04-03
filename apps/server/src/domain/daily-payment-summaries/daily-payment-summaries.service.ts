@@ -218,6 +218,19 @@ export class DailyPaymentSummariesService {
   }
 
   /**
+   * All daily payment summaries for a virtual account, oldest first.
+   * Used for Google Sheets full sync (date span + Payment / Location / Deposit).
+   */
+  async findAllByVirtualAccountSortedAsc(
+    virtualAccountId: string,
+  ): Promise<DailyPaymentSummaryDocument[]> {
+    return this.dailyPaymentSummaryModel
+      .find({ virtualAccountId })
+      .sort({ date: 1 })
+      .exec();
+  }
+
+  /**
    * Get daily summaries for a date range
    */
   async getDailySummaries(

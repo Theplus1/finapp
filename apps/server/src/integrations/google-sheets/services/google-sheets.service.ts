@@ -203,15 +203,21 @@ export class GoogleSheetsService implements OnModuleInit {
             });
 
             const newValues: any[][] = [sheet.headers];
-            
+
             sheet.rows.forEach((row) => {
               const date = row[0];
-              const existingDeposit = existingDepositMap.get(date) || '';
-              newValues.push([date, existingDeposit]);
+              const explicitB = row.length >= 2 ? row[1] : undefined;
+              const hasExplicitB =
+                explicitB !== undefined &&
+                explicitB !== null &&
+                (typeof explicitB === 'number' ||
+                  (typeof explicitB === 'string' && explicitB !== ''));
+              const cellB = hasExplicitB
+                ? explicitB
+                : (existingDepositMap.get(date) ?? '');
+              newValues.push([date, cellB]);
             });
 
-            const dateValues: any[][] = newValues.map((row, index) => [row[0]]);
-            
             await this.sheetsApi.spreadsheets.values.update({
               spreadsheetId,
               range: `${sheet.name}!A1:B1`,
@@ -219,12 +225,12 @@ export class GoogleSheetsService implements OnModuleInit {
               requestBody: { values: [sheet.headers] },
             });
 
-            if (dateValues.length > 1) {
+            if (newValues.length > 1) {
               await this.sheetsApi.spreadsheets.values.update({
                 spreadsheetId,
-                range: `${sheet.name}!A2:A${dateValues.length}`,
+                range: `${sheet.name}!A2:B${newValues.length}`,
                 valueInputOption: 'RAW',
-                requestBody: { values: dateValues.slice(1) },
+                requestBody: { values: newValues.slice(1) },
               });
             }
 

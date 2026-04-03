@@ -1,9 +1,8 @@
-import { normalizeDateToLocalMidnight } from './sheet.utils';
+import { normalizeDateToUTC } from './sheet.utils';
 
 /**
- * Generate continuous date range from startDate to endDate (inclusive)
- * All dates are normalized to local midnight (preserving timezone from DB)
- * Used for full sync to keep dates as stored in database
+ * Generate continuous date range from startDate to endDate (inclusive).
+ * Mỗi ô là UTC midnight (cùng chuẩn daily_payment_summaries / payments API web).
  */
 export function generateDateRange(startDate: Date, endDate: Date): Date[] {
   const dates: Date[] = [];
@@ -12,15 +11,22 @@ export function generateDateRange(startDate: Date, endDate: Date): Date[] {
     return dates;
   }
 
-  let current = normalizeDateToLocalMidnight(startDate);
-  const last = normalizeDateToLocalMidnight(endDate);
+  let current = normalizeDateToUTC(startDate);
+  const last = normalizeDateToUTC(endDate);
 
   while (current.getTime() <= last.getTime()) {
     dates.push(new Date(current));
-    // Move to next day (local time)
-    current = new Date(current);
-    current.setDate(current.getDate() + 1);
-    current.setHours(0, 0, 0, 0);
+    current = new Date(
+      Date.UTC(
+        current.getUTCFullYear(),
+        current.getUTCMonth(),
+        current.getUTCDate() + 1,
+        0,
+        0,
+        0,
+        0,
+      ),
+    );
   }
 
   return dates;

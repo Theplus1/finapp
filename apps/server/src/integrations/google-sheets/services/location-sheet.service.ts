@@ -3,7 +3,8 @@ import { SheetData } from './google-sheets.service';
 import { SheetName } from '../constants/sheet-names.constant';
 import { formatCurrency, centsToDollars } from '../../../shared/utils/formatCurrency.util';
 import { VirtualAccountDocument } from 'src/database/schemas/virtual-account.schema';
-import { createSummaryMap, formatSheetDate, formatSheetDateISO } from '../utils/sheet.utils';
+import { DailyPaymentSummary } from 'src/database/schemas/daily-payment-summary.schema';
+import { createSummaryMap, formatSheetDate, formatSheetDateISOUtc, normalizeDateToUTC } from '../utils/sheet.utils';
 import { DailySummarySheetBuilder, DailyRowBuilder, SummaryRowBuilder, formatCurrencyOrEmpty } from '../utils/sheet-builder.utils';
 import { calculateLocationDailySummaries, calculateLocationDailySummariesRange, LocationDailySummary } from '../../../domain/exports/utils/daily-summaries.util';
 import { generateDateRange } from '../utils/date-range.utils';
@@ -61,7 +62,7 @@ export class LocationSheetService {
     // Create summary map
     const summaryMapISO = new Map<string, LocationDailySummary>();
     dailySummaries.forEach(summary => {
-      const dateStr = formatSheetDateISO(summary.date);
+      const dateStr = formatSheetDateISOUtc(summary.date);
       summaryMapISO.set(dateStr, summary);
     });
 
@@ -80,11 +81,11 @@ export class LocationSheetService {
     
     // Daily rows
     dates.forEach((date: Date) => {
-      const dateStr = formatSheetDateISO(date);
+      const dateStr = formatSheetDateISOUtc(date);
       const summary = summaryMapISO.get(dateStr);
       
       rows.push([
-        formatSheetDateISO(date),
+        formatSheetDateISOUtc(date),
         summary?.totalSpendNonUSCents ? centsToDollars(summary.totalSpendNonUSCents) : '',
         summary?.totalSpendUSCents ? centsToDollars(summary.totalSpendUSCents) : '',
       ]);
@@ -94,6 +95,67 @@ export class LocationSheetService {
       name: SheetName.LOCATION,
       headers: ['Date', 'Tổng tiêu non US', 'Tổng tiêu trong US'],
       rows,
+    };
+  }
+
+  /**
+   * Location sheet from persisted daily payment summaries (no transaction scan).
+   */
+  generateLocationSheetFullRangeFromSummaries(
+    dateRange: { startDate: Date; endDate: Date; today: Date; days: number },
+    summaries: Pick<
+      DailyPaymentSummary,
+      'date' | 'totalSpendNonUSCents' | 'totalSpendUSCents'
+    >[],
+  ): SheetData {
+    const summaryMapISO = new Map<string, LocationDailySummary>();
+    for (const s of summaries) {
+      const d = normalizeDateToUTC(new Date(s.date));
+      const dateStr = formatSheetDateISOUtc(d);
+      summaryMapISO.set(dateStr, {
+        date: d,
+        totalSpendNonUSCents: s.totalSpendNonUSCents ?? 0,
+        totalSpendUSCents: s.totalSpendUSCents ?? 0,
+      });
+    }
+
+    const dates = generateDateRange(dateRange.startDate, dateRange.endDate);
+    const rows: unknown[][] = [];
+
+    const totals = Array.from(summaryMapISO.values()).reduce(
+      (acc, summary) => ({
+        totalSpendNonUSCents:
+          acc.totalSpendNonUSCents + summary.totalSpendNonUSCents,
+        totalSpendUSCents: acc.totalSpendUSCents + summary.totalSpendUSCents,
+      }),
+      { totalSpendNonUSCents: 0, totalSpendUSCents: 0 },
+    );
+
+    rows.push([
+      '',
+      totals.totalSpendNonUSCents > 0
+        ? centsToDollars(totals.totalSpendNonUSCents)
+        : '',
+      totals.totalSpendUSCents > 0 ? centsToDollars(totals.totalSpendUSCents) : '',
+    ]);
+
+    dates.forEach((date: Date) => {
+      const dateStr = formatSheetDateISOUtc(date);
+      const summary = summaryMapISO.get(dateStr);
+
+      rows.push([
+        formatSheetDateISOUtc(date),
+        summary?.totalSpendNonUSCents
+          ? centsToDollars(summary.totalSpendNonUSCents)
+          : '',
+        summary?.totalSpendUSCents ? centsToDollars(summary.totalSpendUSCents) : '',
+      ]);
+    });
+
+    return {
+      name: SheetName.LOCATION,
+      headers: ['Date', 'Tổng tiêu non US', 'Tổng tiêu trong US'],
+      rows: rows as SheetData['rows'],
     };
   }
 

@@ -50,6 +50,14 @@ export function formatSheetDateISO(date: Date): string {
   return format(date, DATE_FORMAT_ISO);
 }
 
+/** yyyy-MM-dd theo lịch UTC (khớp daily_payment_summaries / API web). */
+export function formatSheetDateISOUtc(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 /**
  * Create summary map from daily summaries
  */
