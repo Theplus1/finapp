@@ -41,7 +41,7 @@ jobs:
       - name: Create .env file for customer-web
         run: |
           cat > apps/customer-web/.env.production << EOF
-          API_URL=${{ vars.SERVER_BASE_URL }}/customer-api
+          API_URL=$(echo "${{ vars.SERVER_BASE_URL }}" | sed 's|/admin-api|/customer-api|')
           EOF
 
       - name: Build customer-web
