@@ -71,7 +71,6 @@ const FormSetEmployee = ({ employeeData, onChangeEmployeeData }: Props) => {
           <Field>
             <InputGroup className="pr-1">
               <Select
-                disabled={isEdit}
                 onValueChange={(
                   value: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT,
                 ) => {

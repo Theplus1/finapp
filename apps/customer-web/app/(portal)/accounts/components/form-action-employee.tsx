@@ -61,7 +61,8 @@ const FormActionEmployee = ({
   const disabledEdit =
     isLoading ||
     !formEmployee.username ||
-    employee?.username === formEmployee.username;
+    (employee?.username === formEmployee.username &&
+      employee?.role === formEmployee.role);
 
   const disabledSubmit =
     drawerType === EmployeeDrawerTypeEnum.CREATE
@@ -96,6 +97,7 @@ const FormActionEmployee = ({
       api.employees
         .updateEmployee(employee!.id, {
           username: formEmployee.username!,
+          role: formEmployee.role,
         })
         .then(() => {
           toast.success("Employee set successfully");
