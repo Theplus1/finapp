@@ -240,7 +240,8 @@ export class CardSpendingAlertsService {
     const byCard = new Map<string, { name: string; totalCents: number }>();
 
     for (const tx of transactions as TransactionWithRelations[]) {
-      const cardId = tx.cardId ?? tx.card?.slashId ?? 'unknown';
+      const cardId = tx.cardId ?? tx.card?.slashId;
+      if (!cardId) continue; // Skip transfers/fees without a card
       const name = tx.card?.name ?? tx.cardId ?? cardId;
       const spendCents = Math.abs(tx.amountCents ?? 0);
       const existing = byCard.get(cardId);
