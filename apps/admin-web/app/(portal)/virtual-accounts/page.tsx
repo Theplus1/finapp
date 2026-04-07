@@ -9,7 +9,7 @@ import {
   formatNumberAsPercentage,
   renderNoTable,
 } from "@/app/utils/func";
-import { Ellipsis } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Ellipsis } from "lucide-react";
 import { PageLayout } from "@/components/layouts/page-layout";
 import { PageHeader, PageTitle } from "@/components/layouts/page-header";
 import { SectionContent } from "@/components/layouts/section";
@@ -56,9 +56,10 @@ export default function VirtualAccount() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const [pagination, setPagination] = useState({
     page: 1,
-    pageSize: 20,
+    pageSize: 50,
     total: 0,
   });
+  const [debtSort, setDebtSort] = useState<"asc" | "desc" | null>("asc");
   const [openDrawer, setOpenDrawer] = useState(false);
   const [drawerType, setDrawerType] = useState<DrawerTypeVirtualAccountEnum>(
     DrawerTypeVirtualAccountEnum.LINK_TELEGRAM,
@@ -92,12 +93,16 @@ export default function VirtualAccount() {
 
   const dataVirtualAccount: VirtualAccount[] = useMemo(() => {
     if (isLoading) return maskDataTable;
-    return [...(data ?? [])].sort(
-      (a, b) =>
-        (a.internalTransferCents - a.internalDepositCents) -
-        (b.internalTransferCents - b.internalDepositCents),
-    );
-  }, [isLoading, data]);
+    const sorted = [...(data ?? [])];
+    if (debtSort) {
+      sorted.sort((a, b) => {
+        const debtA = a.internalTransferCents - a.internalDepositCents;
+        const debtB = b.internalTransferCents - b.internalDepositCents;
+        return debtSort === "asc" ? debtA - debtB : debtB - debtA;
+      });
+    }
+    return sorted;
+  }, [isLoading, data, debtSort]);
 
   const handleActionVirtualAccount = (
     type: DrawerTypeVirtualAccountEnum,
@@ -203,7 +208,25 @@ export default function VirtualAccount() {
       },
     },
     {
-      header: <p className={isLoading ? "" : "text-end"}>Debt</p>,
+      header: () => (
+        <div
+          className="flex items-center justify-end gap-1 cursor-pointer select-none"
+          onClick={() =>
+            setDebtSort((prev) =>
+              prev === "asc" ? "desc" : prev === "desc" ? null : "asc",
+            )
+          }
+        >
+          Debt
+          {debtSort === "asc" ? (
+            <ArrowUp className="w-4 h-4" />
+          ) : debtSort === "desc" ? (
+            <ArrowDown className="w-4 h-4" />
+          ) : (
+            <ArrowUpDown className="w-4 h-4 opacity-40" />
+          )}
+        </div>
+      ),
       id: "debt",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
         if (isLoading) {
