@@ -92,7 +92,11 @@ export default function VirtualAccount() {
 
   const dataVirtualAccount: VirtualAccount[] = useMemo(() => {
     if (isLoading) return maskDataTable;
-    return data ?? [];
+    return [...(data ?? [])].sort(
+      (a, b) =>
+        (a.internalTransferCents - a.internalDepositCents) -
+        (b.internalTransferCents - b.internalDepositCents),
+    );
   }, [isLoading, data]);
 
   const handleActionVirtualAccount = (
