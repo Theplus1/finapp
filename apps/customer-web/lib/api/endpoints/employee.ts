@@ -28,6 +28,7 @@ export interface CreateEmployeeData {
   email: string;
   password: string;
   permissions: string[];
+  virtualAccountId?: string;
   confirmPassword?: string;
 }
 

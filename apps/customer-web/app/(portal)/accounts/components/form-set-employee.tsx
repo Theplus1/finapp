@@ -6,6 +6,8 @@ import { isEmail } from "@repo/ui/lib/utils";
 import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 import { CreateEmployeeData } from "@/lib/api/endpoints/employee";
 import { Label } from "@repo/ui/components/label";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
+import { useLayoutEffect, useState } from "react";
 
 type Props = {
   employeeData: CreateEmployeeData;
@@ -18,6 +20,17 @@ const ALL_PERMISSIONS = Object.values(PermissionEnum);
 
 const FormSetEmployee = ({ employeeData, onChangeEmployeeData }: Props) => {
   const isEdit = !!employeeData.username;
+  const [bossVaIds, setBossVaIds] = useState<string[]>([]);
+
+  useLayoutEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user") ?? "{}");
+    const vaIds: string[] = user.virtualAccountIds ?? [];
+    setBossVaIds(vaIds);
+    // Auto-set VA if only one
+    if (vaIds.length === 1 && !employeeData.virtualAccountId) {
+      onChangeEmployeeData({ ...employeeData, virtualAccountId: vaIds[0] });
+    }
+  }, []);
 
   const handleChangeField = (field: keyof CreateEmployeeData, value: string) => {
     onChangeEmployeeData({ ...employeeData, [field]: value });
@@ -33,6 +46,28 @@ const FormSetEmployee = ({ employeeData, onChangeEmployeeData }: Props) => {
 
   return (
     <div className="px-4 flex flex-col gap-4">
+      {bossVaIds.length > 1 && (
+        <FormItemWrapper
+          label="Virtual Account"
+          labelClassName="text-sm font-medium text-muted-foreground"
+        >
+          <Select
+            value={employeeData.virtualAccountId ?? ""}
+            onValueChange={(v) => onChangeEmployeeData({ ...employeeData, virtualAccountId: v })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select VA" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {bossVaIds.map((vaId) => (
+                  <SelectItem key={vaId} value={vaId}>{vaId}</SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </FormItemWrapper>
+      )}
       <FormItemWrapper
         label="Username"
         labelClassName="text-sm font-medium text-muted-foreground"

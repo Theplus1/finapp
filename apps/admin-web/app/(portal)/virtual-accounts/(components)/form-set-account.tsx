@@ -3,7 +3,6 @@ import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 import { VirtualAccount } from "@/lib/api/endpoints/virtual-account";
 import { useEffect, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Spinner } from "@repo/ui/components/spinner";
@@ -26,134 +25,100 @@ const FormSetAccount = ({
   onCancelSetAccount,
   onSubmitAccountSuccess,
 }: Props) => {
-  const [username, setUsername] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const isEdit = !!virtualAccount?.bossUsername;
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const { mutateAsync: setAccount } = useMutation({
-    mutationFn: async () => {
-      setIsLoading(true);
-      api.virtualAccounts
-        .setAccount(virtualAccount!.slashId, {
-          username: username!,
-          email: email!,
-          password: password!,
-        })
-        .then(() => {
-          toast.success("Account connect successfully");
-          onSubmitAccountSuccess();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    },
-  });
-
   useEffect(() => {
-    if (!virtualAccount || !openDrawer) {
-      return;
-    }
+    if (!virtualAccount || !openDrawer) return;
     setUsername(virtualAccount.bossUsername ?? "");
     setEmail(virtualAccount.bossEmail ?? "");
+    setPassword("");
+    setConfirmPassword("");
   }, [openDrawer, virtualAccount]);
 
-  const handleDrawerClose = () => {
-    setUsername("");
-    onCancelSetAccount();
+  const handleCreate = async () => {
+    setIsLoading(true);
+    try {
+      await api.virtualAccounts.setAccount(virtualAccount!.slashId, { username, email, password });
+      toast.success("Boss account created");
+      onSubmitAccountSuccess();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const disableSubmit =
-    isLoading ||
-    !username ||
-    !email ||
-    !isEmail(email) ||
-    !password ||
-    !confirmPassword ||
-    password !== confirmPassword;
+  const handleUpdate = async () => {
+    if (!virtualAccount?.bossId) return;
+    setIsLoading(true);
+    try {
+      const body: any = {};
+      if (username !== virtualAccount.bossUsername) body.username = username;
+      if (email !== virtualAccount.bossEmail) body.email = email;
+      if (password) body.password = password;
+      if (Object.keys(body).length === 0) { toast.info("Nothing changed"); return; }
+      await api.virtualAccounts.updateBoss(virtualAccount.bossId, body);
+      toast.success("Boss updated");
+      onSubmitAccountSuccess();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const disableCreate = isLoading || !username || !email || !isEmail(email) ||
+    !password || !confirmPassword || password !== confirmPassword;
+
+  const disableEdit = isLoading || !username || !email || !isEmail(email) ||
+    (!!password && password !== confirmPassword);
 
   return (
     <>
       <div className="px-4 flex flex-col gap-4">
-        <FormItemWrapper
-          label="Username"
-          labelClassName="text-sm font-medium text-muted-foreground"
-        >
-          <Input
-            placeholder="Enter username"
-            value={username}
-            onChange={(e) => {
-              const value = e.target.value;
-              setUsername(value);
-            }}
-          />
+        <FormItemWrapper label="Username" labelClassName="text-sm font-medium text-muted-foreground">
+          <Input placeholder="Enter username" value={username}
+            onChange={(e) => setUsername(e.target.value)} />
         </FormItemWrapper>
-        <FormItemWrapper
-          label="Email (Use for login)"
-          labelClassName="text-sm font-medium text-muted-foreground"
-        >
+        <FormItemWrapper label="Email" labelClassName="text-sm font-medium text-muted-foreground">
           <Field data-invalid={!isEmail(email)}>
             <InputGroup className="pr-1">
-              <InputGroupInput
-                type="email"
-                placeholder="Enter email"
-                value={email}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setEmail(value);
-                }}
-              />
+              <InputGroupInput type="email" placeholder="Enter email" value={email}
+                onChange={(e) => setEmail(e.target.value)} />
             </InputGroup>
           </Field>
         </FormItemWrapper>
         <FormItemWrapper
-          label="Password"
+          label={isEdit ? "New Password (để trống = giữ nguyên)" : "Password"}
           labelClassName="text-sm font-medium text-muted-foreground"
         >
-          <Input
-            placeholder="Enter password"
-            value={password}
-            type="password"
-            onChange={(e) => {
-              const value = e.target.value;
-              setPassword(value);
-            }}
-          />
+          <Input placeholder={isEdit ? "Leave blank to keep" : "Enter password"}
+            value={password} type="password" onChange={(e) => setPassword(e.target.value)} />
         </FormItemWrapper>
-        <FormItemWrapper
-          label="Confirm Password"
-          labelClassName="text-sm font-medium text-muted-foreground"
-        >
-          <Field data-invalid={password !== confirmPassword}>
-            <InputGroup className="pr-1">
-              <InputGroupInput
-                type="password"
-                placeholder="Enter confirm password"
-                value={confirmPassword}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setConfirmPassword(value);
-                }}
-              />
-            </InputGroup>
-          </Field>
-        </FormItemWrapper>
+        {(!isEdit || password) && (
+          <FormItemWrapper label="Confirm Password" labelClassName="text-sm font-medium text-muted-foreground">
+            <Field data-invalid={password !== confirmPassword}>
+              <InputGroup className="pr-1">
+                <InputGroupInput type="password" placeholder="Confirm password"
+                  value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+              </InputGroup>
+            </Field>
+          </FormItemWrapper>
+        )}
       </div>
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={handleDrawerClose}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={onCancelSetAccount}>Cancel</Button>
           <Button
-            className={cn(disableSubmit && "cursor-not-allowed opacity-50")}
-            onClick={!disableSubmit ? (setAccount as () => void) : undefined}
+            className={cn((isEdit ? disableEdit : disableCreate) && "cursor-not-allowed opacity-50")}
+            onClick={!(isEdit ? disableEdit : disableCreate) ? (isEdit ? handleUpdate : handleCreate) : undefined}
           >
-            {isLoading ? <Spinner /> : ""}
-            Submit
+            {isLoading ? <Spinner /> : ""}{isEdit ? "Update" : "Create"}
           </Button>
         </div>
       </DrawerFooter>

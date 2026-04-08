@@ -37,17 +37,18 @@ export class AdminUser {
   role: AdminUserRole;
 
   /**
-   * Slash Virtual Account ID.
-   * - Boss: required (1 VA ↔ 1 Boss)
-   * - Ads/Accountant: inherited from Boss (optional on record if bossId present)
+   * Primary VA (backward compat, kept as first VA in virtualAccountIds)
    */
   @Prop({ index: true })
   virtualAccountId?: string;
 
   /**
-   * Boss linkage for employee accounts (ads/accountant).
-   * Store the boss AdminUser _id as string for simpler queries.
+   * Boss: list of all VA IDs assigned.
+   * Employee: single-element array matching virtualAccountId.
    */
+  @Prop({ type: [String], default: [] })
+  virtualAccountIds: string[];
+
   @Prop({ index: true })
   bossId?: string;
 
@@ -72,22 +73,7 @@ export class AdminUser {
 
 export const AdminUserSchema = SchemaFactory.createForClass(AdminUser);
 
-// Add indexes
 AdminUserSchema.index({ username: 1 }, { unique: true });
-AdminUserSchema.index(
-  { email: 1 },
-  {
-    unique: true,
-    sparse: true,
-  },
-);
+AdminUserSchema.index({ email: 1 }, { unique: true, sparse: true });
 AdminUserSchema.index({ isActive: 1 });
-
-// Enforce 1 VA ↔ 1 Boss (only for boss accounts with virtualAccountId set)
-AdminUserSchema.index(
-  { virtualAccountId: 1 },
-  {
-    unique: true,
-    partialFilterExpression: { role: 'boss', virtualAccountId: { $exists: true, $ne: null } },
-  },
-);
+AdminUserSchema.index({ virtualAccountIds: 1 });

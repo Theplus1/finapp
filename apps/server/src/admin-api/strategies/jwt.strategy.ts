@@ -11,6 +11,7 @@ interface JwtPayload {
   role: AdminUserRole;
   type?: AuthAudienceType;
   virtualAccountId?: string;
+  virtualAccountIds?: string[];
   bossId?: string;
   permissions?: string[];
 }
@@ -32,6 +33,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       role: payload.role,
       type: payload.type,
       virtualAccountId: payload.virtualAccountId,
+      virtualAccountIds: payload.virtualAccountIds ?? [],
       bossId: payload.bossId,
       permissions: payload.permissions ?? [],
     };

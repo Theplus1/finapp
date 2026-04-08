@@ -398,6 +398,7 @@ export default function VirtualAccount() {
                   onClickAction={(type) =>
                     handleActionVirtualAccount(type, row.original)
                   }
+                  onRefresh={() => setCountGetList((prev) => prev + 1)}
                 />
               </PopoverContent>
             </Popover>

@@ -45,6 +45,7 @@ export interface VirtualAccount {
   routingNumber: string;
   bossEmail?: string;
   bossUsername?: string;
+  bossId?: string;
 }
 
 export interface ResetPasswordResponse {
@@ -110,6 +111,21 @@ export const virtualAccountsApi = {
       `/virtual-account/${virtualAccountId}/set-account`,
       body,
     );
+  },
+  addVaToBoss: async (bossId: string, vaId: string): Promise<ApiResponse<any>> => {
+    return await apiClient.patch(`/virtual-account/boss/${bossId}/add-va`, { vaId });
+  },
+  removeVaFromBoss: async (bossId: string, vaId: string): Promise<ApiResponse<any>> => {
+    return await apiClient.patch(`/virtual-account/boss/${bossId}/remove-va`, { vaId });
+  },
+  updateBoss: async (
+    bossId: string,
+    body: { username?: string; email?: string; password?: string },
+  ): Promise<ApiResponse<any>> => {
+    return await apiClient.patch(`/virtual-account/boss/${bossId}`, body);
+  },
+  deleteBoss: async (bossId: string): Promise<ApiResponse<any>> => {
+    return await apiClient.delete(`/virtual-account/boss/${bossId}`);
   },
   resetPassword: async (
     username: string,

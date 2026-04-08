@@ -26,6 +26,7 @@ const initEmployee: CreateEmployeeData = {
   password: "",
   email: "",
   permissions: [],
+  virtualAccountId: "",
   confirmPassword: "",
 };
 
@@ -76,6 +77,7 @@ const FormActionEmployee = ({
           email: formEmployee.email!,
           password: formEmployee.password!,
           permissions: formEmployee.permissions ?? [],
+          ...(formEmployee.virtualAccountId ? { virtualAccountId: formEmployee.virtualAccountId } : {}),
         })
         .then(() => {
           toast.success("Employee created successfully");

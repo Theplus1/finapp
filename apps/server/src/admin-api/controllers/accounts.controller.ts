@@ -349,61 +349,84 @@ export class AccountsController {
   }
 
   @Post(':id/set-account')
-  @ApiOperation({
-    summary: 'Create boss account for virtual account',
-    description: 'Admin creates a boss user (customer owner) for a given virtual account',
-  })
+  @ApiOperation({ summary: 'Create boss account and link to virtual account' })
   @ApiParam({ name: 'id', description: 'Virtual Account Slash ID' })
   @ApiBody({ type: SetBossAccountDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Boss account created and linked to virtual account successfully',
-    type: AdminUserResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request - boss already exists for this virtual account or username taken',
-  })
   async setBossAccount(
     @Param('id') slashId: string,
     @Body() dto: SetBossAccountDto,
     @Request() req: { user?: { username?: string } },
   ): Promise<AdminUserResponseDto> {
-    this.logger.log(
-      `Set boss account for virtual account ${slashId} by ${req.user?.username ?? 'unknown'}`,
-    );
+    this.logger.log(`Set boss for VA ${slashId} by ${req.user?.username ?? 'unknown'}`);
 
-    // Here we treat :id as Slash virtual account id
     const virtualAccount = await this.accountsService.findBySlashId(slashId);
-
-    const existingBoss = await this.adminUsersService.findBossByVirtualAccountId(
-      virtualAccount.slashId,
-    );
+    const existingBoss = await this.adminUsersService.findBossByVirtualAccountId(virtualAccount.slashId);
     if (existingBoss) {
-      throw new BadRequestException(
-        `Virtual account ${virtualAccount.slashId} already has a boss user: ${existingBoss.username}`,
-      );
+      throw new BadRequestException(`VA ${virtualAccount.slashId} already has boss: ${existingBoss.username}`);
     }
 
     const bossUser = await this.adminAuthService.createAdmin(
-      dto.username,
-      dto.password,
-      'boss',
-      dto.email,
-      { virtualAccountId: virtualAccount.slashId },
+      dto.username, dto.password, 'boss', dto.email,
+      { virtualAccountId: virtualAccount.slashId, virtualAccountIds: [virtualAccount.slashId] },
     );
 
+    return this.toAdminUserResponse(bossUser);
+  }
+
+  @Patch('boss/:bossId/add-va')
+  @ApiOperation({ summary: 'Add VA to existing boss account' })
+  @ApiParam({ name: 'bossId', description: 'Boss account ID' })
+  async addVaToBoss(
+    @Param('bossId') bossId: string,
+    @Body() body: { vaId: string },
+  ): Promise<AdminUserResponseDto> {
+    const boss = await this.adminUsersService.addVaToBoss(bossId, body.vaId);
+    return this.toAdminUserResponse(boss);
+  }
+
+  @Patch('boss/:bossId/remove-va')
+  @ApiOperation({ summary: 'Remove VA from boss account' })
+  @ApiParam({ name: 'bossId', description: 'Boss account ID' })
+  async removeVaFromBoss(
+    @Param('bossId') bossId: string,
+    @Body() body: { vaId: string },
+  ): Promise<AdminUserResponseDto> {
+    const boss = await this.adminUsersService.removeVaFromBoss(bossId, body.vaId);
+    return this.toAdminUserResponse(boss);
+  }
+
+  @Patch('boss/:bossId')
+  @ApiOperation({ summary: 'Update boss account info' })
+  @ApiParam({ name: 'bossId', description: 'Boss account ID' })
+  async updateBoss(
+    @Param('bossId') bossId: string,
+    @Body() body: { username?: string; email?: string; password?: string },
+  ): Promise<AdminUserResponseDto> {
+    const boss = await this.adminUsersService.updateBossInfo(bossId, body);
+    return this.toAdminUserResponse(boss);
+  }
+
+  @Delete('boss/:bossId')
+  @ApiOperation({ summary: 'Delete boss account permanently' })
+  @ApiParam({ name: 'bossId', description: 'Boss account ID' })
+  async deleteBoss(@Param('bossId') bossId: string): Promise<{ success: boolean }> {
+    await this.adminUsersService.deleteBoss(bossId);
+    return { success: true };
+  }
+
+  private toAdminUserResponse(user: any): AdminUserResponseDto {
     return {
-      id: (bossUser._id as any).toString(),
-      username: bossUser.username,
-      role: bossUser.role,
-      email: bossUser.email,
-      isActive: bossUser.isActive,
-      lastLoginAt: bossUser.lastLoginAt,
-      virtualAccountId: bossUser.virtualAccountId,
-      bossId: bossUser.bossId,
-      createdAt: bossUser.createdAt,
-      updatedAt: bossUser.updatedAt,
+      id: user._id.toString(),
+      username: user.username,
+      role: user.role,
+      email: user.email,
+      isActive: user.isActive,
+      lastLoginAt: user.lastLoginAt,
+      virtualAccountId: user.virtualAccountId,
+      virtualAccountIds: user.virtualAccountIds ?? [],
+      bossId: user.bossId,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 

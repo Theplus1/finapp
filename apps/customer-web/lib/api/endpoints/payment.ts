@@ -45,22 +45,15 @@ type Params = {
   to: string;
 };
 
+import { getActiveVaId } from "../utils/get-active-va";
+
 export const paymentApi = {
-  getPayments: async (
-    params?: Params,
-  ): Promise<ApiResponse<PaymentResponse>> => {
-    const user = localStorage.getItem("user");
-    const virtualAccountId = JSON.parse(user || "{}")?.virtualAccountId;
-    return apiClient.get(
-      `/virtual-account/${virtualAccountId}/payment-summary`,
-      { params },
-    );
+  getPayments: async (params?: Params): Promise<ApiResponse<PaymentResponse>> => {
+    const virtualAccountId = getActiveVaId();
+    return apiClient.get(`/virtual-account/${virtualAccountId}/payment-summary`, { params });
   },
   getOverallPayments: async (): Promise<ApiResponse<PaymentResponse>> => {
-    const user = localStorage.getItem("user");
-    const virtualAccountId = JSON.parse(user || "{}")?.virtualAccountId;
-    return apiClient.get(
-      `/virtual-account/${virtualAccountId}/payment-summary/overall`,
-    );
+    const virtualAccountId = getActiveVaId();
+    return apiClient.get(`/virtual-account/${virtualAccountId}/payment-summary/overall`);
   },
 };

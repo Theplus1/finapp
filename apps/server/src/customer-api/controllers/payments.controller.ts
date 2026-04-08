@@ -22,14 +22,7 @@ import { PaymentSummaryResponseDto } from '../dto/payment-summary.dto';
 import { BOSS_AND_ACCOUNTANT_ROLES } from '../../common/constants/auth.constants';
 import { parseYyyyMmDdAsUtcDate } from '../../common/utils/date.utils';
 import { PaymentSummaryService } from '../../domain/payment-summary/payment-summary.service';
-
-interface RequestUser {
-  userId: string;
-  username: string;
-  role: string;
-  virtualAccountId?: string;
-  bossId?: string;
-}
+import { RequestUser, validateVaAccess } from '../utils/va-access.util';
 
 @ApiTags('Customer API - Payment')
 @ApiBearerAuth()
@@ -72,16 +65,7 @@ export class CustomerPaymentsController {
     @Query('to') to: string,
     @Request() req: { user?: RequestUser },
   ): Promise<PaymentSummaryResponseDto> {
-    const vaIdFromToken = req.user?.virtualAccountId;
-    if (!vaIdFromToken) {
-      throw new BadRequestException('No virtual account linked to this user');
-    }
-
-    if (vaIdFromToken !== slashId) {
-      throw new BadRequestException(
-        'You can only access payment summary for your own virtual account',
-      );
-    }
+    validateVaAccess(req.user, slashId);
 
     if (!from || !to) {
       throw new BadRequestException('from and to query params are required');
@@ -136,16 +120,7 @@ export class CustomerPaymentsController {
       endingAccountBalanceCents: number;
     };
   }> {
-    const vaIdFromToken = req.user?.virtualAccountId;
-    if (!vaIdFromToken) {
-      throw new BadRequestException('No virtual account linked to this user');
-    }
-
-    if (vaIdFromToken !== slashId) {
-      throw new BadRequestException(
-        'You can only access payment summary for your own virtual account',
-      );
-    }
+    validateVaAccess(req.user, slashId);
 
     return this.paymentSummaryService.getOverallSummary(slashId);
   }

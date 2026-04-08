@@ -15,6 +15,7 @@ export interface AdminLoginResponse {
   role: AdminUserRole;
   type: AuthAudienceType;
   virtualAccountId?: string;
+  virtualAccountIds?: string[];
   bossId?: string;
   permissions?: string[];
 }
@@ -26,6 +27,7 @@ export interface AuthenticatedUser {
   email?: string;
   createdAt?: Date;
   virtualAccountId?: string;
+  virtualAccountIds?: string[];
   bossId?: string;
   permissions?: string[];
 }
@@ -94,6 +96,7 @@ export class AdminAuthService implements OnModuleInit {
       email: adminUser.email,
       createdAt: adminUser.createdAt,
       virtualAccountId: adminUser.virtualAccountId,
+      virtualAccountIds: adminUser.virtualAccountIds ?? [],
       bossId: adminUser.bossId,
       permissions: adminUser.permissions ?? [],
     };
@@ -113,6 +116,7 @@ export class AdminAuthService implements OnModuleInit {
       role,
       type,
       virtualAccountId: user.virtualAccountId,
+      virtualAccountIds: user.virtualAccountIds ?? [],
       bossId: user.bossId,
       permissions: user.permissions ?? [],
     };
@@ -132,6 +136,7 @@ export class AdminAuthService implements OnModuleInit {
       role,
       type,
       virtualAccountId: user.virtualAccountId,
+      virtualAccountIds: user.virtualAccountIds ?? [],
       bossId: user.bossId,
       permissions: user.permissions ?? [],
     };
@@ -145,7 +150,7 @@ export class AdminAuthService implements OnModuleInit {
     password: string, 
     role: AdminUserRole = 'admin',
     email?: string,
-    meta?: { virtualAccountId?: string; bossId?: string },
+    meta?: { virtualAccountId?: string; virtualAccountIds?: string[]; bossId?: string },
   ) {
     return this.adminUsersService.createUser(username, password, role, email, meta);
   }

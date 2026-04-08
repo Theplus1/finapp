@@ -40,6 +40,11 @@ export class CreateEmployeeDto {
   @IsArray()
   @IsIn(EMPLOYEE_PERMISSIONS_LIST, { each: true })
   permissions: string[];
+
+  @ApiPropertyOptional({ description: 'VA ID to assign (for boss with multiple VAs)' })
+  @IsString()
+  @IsOptional()
+  virtualAccountId?: string;
 }
 
 export class UpdateEmployeeDto {

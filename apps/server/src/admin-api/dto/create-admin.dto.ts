@@ -60,8 +60,11 @@ export class AdminUserResponseDto {
   @ApiProperty({ description: 'Last login time', required: false })
   lastLoginAt?: Date;
 
-  @ApiProperty({ description: 'Slash virtual account id (for boss/employee)', required: false })
+  @ApiProperty({ description: 'Primary virtual account id', required: false })
   virtualAccountId?: string;
+
+  @ApiProperty({ description: 'All virtual account ids (boss)', required: false, isArray: true })
+  virtualAccountIds?: string[];
 
   @ApiProperty({ description: 'Boss id (for employee accounts)', required: false })
   bossId?: string;

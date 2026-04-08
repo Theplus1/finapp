@@ -23,14 +23,7 @@ import { TransactionsService } from '../../domain/transactions/transactions.serv
 import { CardSpendResponseDto } from '../dto/card-spend.dto';
 import { BOSS_AND_ACCOUNTANT_ROLES } from '../../common/constants/auth.constants';
 import { ExportsService } from '../../domain/exports/exports.service';
-
-interface RequestUser {
-  userId: string;
-  username: string;
-  role: string;
-  virtualAccountId?: string;
-  bossId?: string;
-}
+import { RequestUser, validateVaAccess, getVaIdFromToken } from '../utils/va-access.util';
 
 @ApiTags('Customer API - Card Spend')
 @ApiBearerAuth()
@@ -74,15 +67,7 @@ export class CustomerCardSpendController {
     @Query('to') to: string,
     @Request() req: { user?: RequestUser },
   ): Promise<CardSpendResponseDto> {
-    const vaIdFromToken = req.user?.virtualAccountId;
-    if (!vaIdFromToken) {
-      throw new BadRequestException('No virtual account linked to this user');
-    }
-    if (vaIdFromToken !== slashId) {
-      throw new BadRequestException(
-        'You can only access card spend for your own virtual account',
-      );
-    }
+    validateVaAccess(req.user, slashId);
 
     if (!from || !to) {
       throw new BadRequestException('from and to query params are required');
@@ -226,10 +211,7 @@ export class CustomerCardSpendController {
     fileName: string;
     expiresAt: Date;
   }> {
-    const vaIdFromToken = req.user?.virtualAccountId;
-    if (!vaIdFromToken) {
-      throw new BadRequestException('No virtual account linked to this user');
-    }
+    const vaIdFromToken = getVaIdFromToken(req.user);
 
     if (!from || !to) {
       throw new BadRequestException('from and to query params are required');

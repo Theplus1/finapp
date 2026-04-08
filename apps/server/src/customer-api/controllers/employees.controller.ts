@@ -113,6 +113,7 @@ export class EmployeesController {
       'employee',
       dto.email,
       dto.permissions,
+      dto.virtualAccountId,
     );
     return toEmployeeResponse(employee as AdminUserDocument);
   }

@@ -122,7 +122,7 @@ export class AdminUsersService {
     password: string,
     role: AdminUserRole = 'admin',
     email?: string,
-    meta?: { virtualAccountId?: string; bossId?: string; permissions?: string[] },
+    meta?: { virtualAccountId?: string; virtualAccountIds?: string[]; bossId?: string; permissions?: string[] },
   ): Promise<AdminUserDocument> {
     // Check if username already exists
     const exists = await this.adminUserRepository.exists(username);
@@ -150,6 +150,7 @@ export class AdminUsersService {
       role,
       email,
       virtualAccountId: meta?.virtualAccountId,
+      virtualAccountIds: meta?.virtualAccountIds ?? (meta?.virtualAccountId ? [meta.virtualAccountId] : []),
       bossId: meta?.bossId,
       permissions: meta?.permissions ?? [],
       isActive: true,
@@ -326,17 +327,21 @@ export class AdminUsersService {
     role: 'ads' | 'accountant' | 'employee',
     email?: string,
     permissions?: string[],
+    specificVaId?: string,
   ): Promise<AdminUserDocument> {
     const boss = await this.findBossById(bossId);
-    if (!boss) {
-      throw new ForbiddenException('Boss account not found');
-    }
-    if (!boss.virtualAccountId) {
-      throw new BadRequestException('Boss must be linked to a virtual account');
-    }
+    if (!boss) throw new ForbiddenException('Boss account not found');
+
+    const bossVaIds = boss.virtualAccountIds?.length ? boss.virtualAccountIds : (boss.virtualAccountId ? [boss.virtualAccountId] : []);
+    if (bossVaIds.length === 0) throw new BadRequestException('Boss must be linked to a virtual account');
+
+    // Validate specific VA if provided
+    const vaId = specificVaId ?? bossVaIds[0];
+    if (!bossVaIds.includes(vaId)) throw new BadRequestException('VA not linked to this boss');
+
     return this.createUser(username, password, 'employee', email, {
       bossId,
-      virtualAccountId: boss.virtualAccountId,
+      virtualAccountId: vaId,
       permissions: permissions ?? [],
     });
   }
@@ -465,5 +470,65 @@ export class AdminUsersService {
     }
     await this.adminUserRepository.deleteById(employeeId);
     this.logger.log(`Employee ${employeeId} permanently deleted by boss ${bossId}`);
+  }
+
+  async addVaToBoss(bossId: string, vaId: string): Promise<AdminUserDocument> {
+    const boss = await this.adminUserRepository.findByIdAny(bossId);
+    if (!boss || boss.role !== 'boss') throw new NotFoundException('Boss not found');
+    const ids = new Set(boss.virtualAccountIds ?? []);
+    ids.add(vaId);
+    const updated = await this.adminUserRepository.updateById(bossId, {
+      virtualAccountIds: Array.from(ids),
+      virtualAccountId: boss.virtualAccountId ?? vaId,
+    });
+    if (!updated) throw new NotFoundException('Boss not found');
+    return updated;
+  }
+
+  async removeVaFromBoss(bossId: string, vaId: string): Promise<AdminUserDocument> {
+    const boss = await this.adminUserRepository.findByIdAny(bossId);
+    if (!boss || boss.role !== 'boss') throw new NotFoundException('Boss not found');
+    const ids = (boss.virtualAccountIds ?? []).filter((id) => id !== vaId);
+    const primaryId = boss.virtualAccountId === vaId ? ids[0] ?? undefined : boss.virtualAccountId;
+    const updated = await this.adminUserRepository.updateById(bossId, {
+      virtualAccountIds: ids,
+      virtualAccountId: primaryId,
+    });
+    if (!updated) throw new NotFoundException('Boss not found');
+    return updated;
+  }
+
+  async updateBossInfo(
+    bossId: string,
+    updates: { username?: string; email?: string; password?: string },
+  ): Promise<AdminUserDocument> {
+    const boss = await this.adminUserRepository.findByIdAny(bossId);
+    if (!boss || boss.role !== 'boss') throw new NotFoundException('Boss not found');
+    const updateData: any = {};
+    if (updates.username && updates.username !== boss.username) {
+      const exists = await this.adminUserRepository.findByUsername(updates.username);
+      if (exists && String(exists._id) !== bossId) {
+        throw new BadRequestException('Username already taken');
+      }
+      updateData.username = updates.username;
+    }
+    if (updates.email && updates.email !== boss.email) {
+      updateData.email = updates.email;
+    }
+    if (updates.password) {
+      const bcrypt = await import('bcrypt');
+      updateData.passwordHash = await bcrypt.hash(updates.password, 10);
+    }
+    if (Object.keys(updateData).length === 0) return boss;
+    const updated = await this.adminUserRepository.updateById(bossId, updateData);
+    if (!updated) throw new NotFoundException('Boss not found');
+    return updated;
+  }
+
+  async deleteBoss(bossId: string): Promise<void> {
+    const boss = await this.adminUserRepository.findByIdAny(bossId);
+    if (!boss || boss.role !== 'boss') throw new NotFoundException('Boss not found');
+    await this.adminUserRepository.deleteById(bossId);
+    this.logger.log(`Boss ${bossId} permanently deleted`);
   }
 }

@@ -35,14 +35,7 @@ import { ExportType } from '../../database/schemas/export-job.schema';
 
 const FACEBOOK_VERIFY_AMOUNT_CENTS = -100;
 
-interface RequestUser {
-  userId: string;
-  username: string;
-  role: string;
-  virtualAccountId?: string;
-  bossId?: string;
-  permissions?: string[];
-}
+import { RequestUser, getVaIdFromToken } from '../utils/va-access.util';
 
 @ApiTags('Customer API - Transactions')
 @ApiBearerAuth()
@@ -60,11 +53,7 @@ export class CustomerTransactionsController {
   ) {}
 
   private getVirtualAccountId(req: { user?: RequestUser }): string {
-    const vaId = req.user?.virtualAccountId;
-    if (!vaId) {
-      throw new ForbiddenException('No virtual account linked to this user');
-    }
-    return vaId;
+    return getVaIdFromToken(req.user);
   }
 
   private buildTransactionFilters(
