@@ -10,6 +10,7 @@ import { AdminUserRepository } from '../../database/repositories/admin-user.repo
 import {
   AdminUserDocument,
   AdminUserRole,
+  EmployeePermission,
 } from '../../database/schemas/admin-user.schema';
 
 const EMPLOYEE_ROLES: AdminUserRole[] = ['ads', 'accountant', 'employee'];
@@ -152,7 +153,7 @@ export class AdminUsersService {
       virtualAccountId: meta?.virtualAccountId,
       virtualAccountIds: meta?.virtualAccountIds ?? (meta?.virtualAccountId ? [meta.virtualAccountId] : []),
       bossId: meta?.bossId,
-      permissions: meta?.permissions ?? [],
+      permissions: (meta?.permissions ?? []) as EmployeePermission[],
       isActive: true,
     });
 
@@ -369,7 +370,7 @@ export class AdminUsersService {
       username?: string;
       email?: string;
       role?: string;
-      permissions?: string[];
+      permissions?: EmployeePermission[];
     } = {};
 
     if (updates.username !== undefined && updates.username !== employee.username) {
@@ -396,7 +397,7 @@ export class AdminUsersService {
     }
 
     if (updates.permissions !== undefined) {
-      updateData.permissions = updates.permissions;
+      updateData.permissions = updates.permissions as EmployeePermission[];
     }
 
     if (Object.keys(updateData).length === 0) {
