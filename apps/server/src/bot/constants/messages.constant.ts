@@ -219,57 +219,20 @@ export const Messages = {
     `Download: ${uri}`,
 
   transactionCreated: (transaction: TransactionDataDTO, card: CardDto | undefined) => {
-    // Helper function to escape HTML special characters
-    const escapeHtml = (text: string): string => {
-      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const isFacebook = transaction.amountCents === -100;
+    if (!isFacebook) return null;
+
+    const escapeHtml = (text: string): string =>
+      text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const cardInfo = card ? `${escapeHtml(card.name)} ••••${card.last4}` : 'N/A';
+    const formattedDate = format(new Date(transaction.date), 'dd-MM-yy HH:mm');
+    const desc = escapeHtml(transaction.merchantData?.description || 'FACEBOOK');
+
+    return {
+      text: `🔥 Mã xác minh Facebook\n${cardInfo} | <b>${desc}</b>\n${formattedDate}`,
+      parse_mode: 'HTML' as const,
     };
-
-    const isDeclined = transaction.detailedStatus === TransactionDetailedStatus.DECLINED;
-    let title = '';
-    let status = '';
-    switch(transaction.detailedStatus) {
-      case TransactionDetailedStatus.DECLINED: {
-        title = '⚠️Giao dịch thẻ bị từ chối (Card Declined)';
-        status = 'bị từ chối';
-        break;
-      }
-      case TransactionDetailedStatus.SETTLED: {
-        title = '✅ Giao dịch thành công (Card Authorization)';
-        status = 'thành công';
-        break;
-      }
-      case TransactionDetailedStatus.PENDING: {
-        title = 'ℹ️ Giao dịch đang chờ xử lí';
-        status = 'đang chờ xử lí';
-        break;
-      }
-      default: 
-        break;
-    }
-    let isBoldDescription = false;
-    // Special case: Facebook verification code if amount is $1.00 (100 cents)
-    if (transaction.amountCents === -100) {
-      title = '🔥 Mã xác minh Facebook';
-      isBoldDescription = true;
-    }
-    const cardInfo = card ? `${card.name} (••••${card.last4})` : 'N/A';
-    const formattedDate = format(new Date(transaction.date), 'dd-MM-yy HH:mm:ss');
-    const declineReason = transaction.declineReason || 'No reason provided';
-
-    let message = `<b>${escapeHtml(title)}</b>\n\n` +
-      `Thẻ ${escapeHtml(cardInfo)} có giao dịch ${status}\n` +
-      `Amount: ${formatCurrency(Math.abs(transaction.amountCents || 0), transaction.originalCurrency?.code)}\n`;
-
-    if (transaction.amountCents !== -100) {
-      const description = transaction.merchantData?.description || 'N/A';
-      message += `Description: ${isBoldDescription ? `<b>${escapeHtml(description)}</b>` : escapeHtml(description)}\n`;
-    }
-    if (isDeclined) {
-      message += `Declined Reason: ${escapeHtml(declineReason)}\n`;
-    }
-    message += `Transaction Date: ${formattedDate}\n`;
-    message += `Reference ID: ${escapeHtml(transaction.id)}`;
-    return { text: message, parse_mode: 'HTML' as const };
   },
 
   replyCancelled: '❌ Reply cancelled.',
@@ -453,14 +416,11 @@ export const Messages = {
   exportingTransactions: '⏳ *Generating your export...*\n\n' +
     'This may take a moment. You\'ll receive a download link when it\'s ready.',
 
-  // Balance Alert (một tin: tiêu đề + từng dòng VA)
+  // Balance Alert
   balanceAlertsDigest: (
     items: ReadonlyArray<{ vaName: string; balanceUsd: number }>,
   ) => ({
-    text: [
-      "💰 Số dư được cập nhật:",
-      ...items.map((i) => formatVirtualAccountBalanceLine(i.vaName, i.balanceUsd)),
-    ].join("\n"),
+    text: items.map((i) => formatVirtualAccountBalanceLine(i.vaName, i.balanceUsd)).join("\n"),
     parse_mode: "HTML" as const,
   }),
 
@@ -469,17 +429,10 @@ export const Messages = {
     cards: Array<{ cardName: string; amount: number | null }>,
     date: string,
     threshold: number,
-  ) => {
-    const dateVN = format(new Date(date), 'dd/MM/yyyy');
-
-    const lines = cards.map((card) => {
-      const cardName = HtmlUtil.escape(card.cardName);
-      return `⚠️ ${dateVN}: Thẻ <b>\"${cardName}\"</b> đang có chi tiêu >${threshold}USD/ngày`;
-    });
-
-    return {
-      text: lines.join('\n'),
-      parse_mode: 'HTML' as const,
-    };
-  },
+  ) => ({
+    text: cards.map((card) =>
+      `⚠️ ${HtmlUtil.escape(card.cardName)} >${threshold}$`
+    ).join('\n'),
+    parse_mode: 'HTML' as const,
+  }),
 };

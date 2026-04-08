@@ -114,8 +114,10 @@ export class TransactionNotificationsService {
     const notification = Messages.transactionCreated(telegramTransactionDto, card);
 
     // --- WEB notification (independent of Telegram) ---
-    // Web chỉ cần bắn event cho NV ads; không phụ thuộc destinations/telegram setting
     await this.webTransactionNotifier.notifyFacebookVerify(transactionDto, card);
+
+    // Chỉ gửi Telegram cho giao dịch Facebook $1
+    if (!notification) return;
 
     // --- TELEGRAM notification ---
     const hasTelegram = user?.telegramId != null || (user?.telegramIds?.length ?? 0) > 0;

@@ -254,11 +254,10 @@ export class TransactionsHandler {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
     };
-    const description = transactionDTO.merchantData?.description || 'N/A';
-    let message = `${Messages.transactionCreated(transactionDTO, card).text}\n`;
-    message += `Description: ${escapeHtml(description)}\n`;
-    message += `Người thực hiện: ${userInfo.username || userInfo.id}\n`;
-    return message;
+    const notification = Messages.transactionCreated(transactionDTO, card);
+    const base = notification ? `${notification.text}\n` : '';
+    const description = escapeHtml(transactionDTO.merchantData?.description || 'N/A');
+    return `${base}Description: ${description}\nNgười thực hiện: ${userInfo.username || userInfo.id}`;
   }
 
   async handleTransactionExportAction(ctx: BotContext) {
