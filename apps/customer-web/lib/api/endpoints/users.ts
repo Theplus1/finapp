@@ -50,6 +50,7 @@ export interface UserBoss {
   isActive: boolean;
   bossId: string;
   virtualAccountId: string;
+  permissions?: string[];
   createdAt: string;
   updatedAt: string;
 }

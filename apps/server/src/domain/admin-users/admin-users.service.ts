@@ -12,8 +12,8 @@ import {
   AdminUserRole,
 } from '../../database/schemas/admin-user.schema';
 
-const EMPLOYEE_ROLES: AdminUserRole[] = ['ads', 'accountant'];
-const CUSTOMER_LOGIN_ROLES: AdminUserRole[] = ['boss', 'ads', 'accountant'];
+const EMPLOYEE_ROLES: AdminUserRole[] = ['ads', 'accountant', 'employee'];
+const CUSTOMER_LOGIN_ROLES: AdminUserRole[] = ['boss', 'ads', 'accountant', 'employee'];
 
 /**
  * Admin Users Domain Service
