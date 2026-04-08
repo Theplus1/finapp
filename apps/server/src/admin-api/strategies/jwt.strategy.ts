@@ -12,6 +12,7 @@ interface JwtPayload {
   type?: AuthAudienceType;
   virtualAccountId?: string;
   bossId?: string;
+  permissions?: string[];
 }
 
 @Injectable()
@@ -25,15 +26,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
-    // This payload comes from the JWT token
-    // Return value will be attached to request.user
-    return { 
-      userId: payload.sub, 
+    return {
+      userId: payload.sub,
       username: payload.username,
       role: payload.role,
       type: payload.type,
       virtualAccountId: payload.virtualAccountId,
       bossId: payload.bossId,
+      permissions: payload.permissions ?? [],
     };
   }
 }

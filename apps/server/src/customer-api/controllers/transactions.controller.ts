@@ -41,6 +41,7 @@ interface RequestUser {
   role: string;
   virtualAccountId?: string;
   bossId?: string;
+  permissions?: string[];
 }
 
 @ApiTags('Customer API - Transactions')
@@ -69,6 +70,7 @@ export class CustomerTransactionsController {
   private buildTransactionFilters(
     virtualAccountId: string,
     role: string | undefined,
+    permissions: string[],
     query: CustomerTransactionQueryDto,
   ) {
     const allowedDetailedStatusesSet = new Set<TransactionDetailedStatus>([
@@ -79,39 +81,42 @@ export class CustomerTransactionsController {
       TransactionDetailedStatus.DECLINED,
     ]);
 
-    const defaultDetailedStatus =
-      role === 'boss' || role === 'accountant'
-        ? {
-            $in: Array.from(allowedDetailedStatusesSet),
-          }
-        : undefined;
+    // Full access: boss, accountant, or employee with transactions_full permission
+    const hasFullAccess =
+      role === 'boss' ||
+      role === 'accountant' ||
+      (role === 'employee' && permissions.includes('transactions_full'));
 
-    if ((role === 'boss' || role === 'accountant') && query.detailedStatus) {
+    // Limited access (ads-like): employee with only transactions permission
+    const isLimitedAccess = !hasFullAccess;
+
+    const defaultDetailedStatus = hasFullAccess
+      ? { $in: Array.from(allowedDetailedStatusesSet) }
+      : undefined;
+
+    if (hasFullAccess && query.detailedStatus) {
       if (!allowedDetailedStatusesSet.has(query.detailedStatus)) {
         throw new BadRequestException(
-          `Boss/accountant can only filter detailedStatus in: ${Array.from(allowedDetailedStatusesSet).join(', ')}`,
+          `Can only filter detailedStatus in: ${Array.from(allowedDetailedStatusesSet).join(', ')}`,
         );
       }
     }
 
-    const baseAmountFilter =
-      role === 'ads' ? undefined : { $lt: 0 };
+    const baseAmountFilter = isLimitedAccess ? undefined : { $lt: 0 };
 
     return {
       virtualAccountId,
       slashId: query.transactionId,
       cardId: query.cardId ?? { $ne: null },
       status: query.status,
-      detailedStatus:
-        query.detailedStatus ??
-        defaultDetailedStatus,
+      detailedStatus: query.detailedStatus ?? defaultDetailedStatus,
       startDate: query.startDate,
       endDate: query.endDate,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
       merchantData: { $ne: null },
       ...(baseAmountFilter ? { amountCents: baseAmountFilter } : {}),
-      ...(role === 'ads' ? { amountCents: FACEBOOK_VERIFY_AMOUNT_CENTS } : {}),
+      ...(isLimitedAccess ? { amountCents: FACEBOOK_VERIFY_AMOUNT_CENTS } : {}),
     };
   }
 
@@ -129,9 +134,10 @@ export class CustomerTransactionsController {
   }> {
     const virtualAccountId = this.getVirtualAccountId(req);
     const role = req.user?.role;
+    const permissions = req.user?.permissions ?? [];
     this.logger.log(`Listing transactions for VA ${virtualAccountId}, role=${role}`);
 
-    const filters = this.buildTransactionFilters(virtualAccountId, role, query);
+    const filters = this.buildTransactionFilters(virtualAccountId, role, permissions, query);
 
     const [data, total] = await this.transactionsService.findAllWithFiltersAndPagination(
       filters,
@@ -167,12 +173,13 @@ export class CustomerTransactionsController {
   }> {
     const virtualAccountId = this.getVirtualAccountId(req);
     const role = req.user?.role;
+    const permissions = req.user?.permissions ?? [];
     const userId = req.user?.userId;
     if (!userId) {
       throw new BadRequestException('Missing user ID for export');
     }
 
-    const filters = this.buildTransactionFilters(virtualAccountId, role, query);
+    const filters = this.buildTransactionFilters(virtualAccountId, role, permissions, query);
     const result = await this.exportsService.generateTransactionExportDownloadUrlForWeb({
       userId,
       virtualAccountId,
