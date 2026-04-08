@@ -13,9 +13,10 @@ export enum EmployeeDrawerTypeEnum {
 export interface Employee {
   id: string;
   username: string;
-  role: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT;
+  role: string;
   email: string;
   isActive: boolean;
+  permissions: string[];
   bossId: string;
   virtualAccountId: string;
   createdAt: string;
@@ -26,9 +27,8 @@ export interface CreateEmployeeData {
   username: string;
   email: string;
   password: string;
-  role: RoleUserEnum.ADS | RoleUserEnum.ACCOUNTANT;
+  permissions: string[];
   confirmPassword?: string;
-  // permission: PermissionEnum[];
 }
 
 export interface UpdateUserData {

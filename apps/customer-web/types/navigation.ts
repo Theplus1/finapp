@@ -1,4 +1,4 @@
-import { RoleUserEnum } from "@/lib/api/endpoints/users";
+import { PermissionEnum, RoleUserEnum } from "@/lib/api/endpoints/users";
 import { LucideIcon } from "lucide-react";
 
 export interface NavSection {
@@ -6,6 +6,7 @@ export interface NavSection {
   url: string;
   icon: LucideIcon;
   roleAccept: RoleUserEnum[];
+  permissionsAccept?: PermissionEnum[];
   isActive?: boolean;
   items?: {
     title: string;

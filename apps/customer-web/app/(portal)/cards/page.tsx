@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
-import { RoleUserEnum, UserBoss } from "@/lib/api/endpoints/users";
+import { PermissionEnum, RoleUserEnum, UserBoss } from "@/lib/api/endpoints/users";
 import CardPage from "../(card)/page";
 import CardsPage from "./components/cards-page";
 
@@ -18,8 +18,7 @@ const initEmployee: UserBoss = {
 };
 
 export default function Cards() {
-  const [user, setUser] = useState<UserBoss>(initEmployee);
-  const isAds = user.role === RoleUserEnum.ADS;
+  const [user, setUser] = useState<UserBoss & { permissions?: string[] }>(initEmployee);
 
   useLayoutEffect(() => {
     const userLocalStorage = localStorage.getItem("user");
@@ -28,9 +27,13 @@ export default function Cards() {
     }
   }, []);
 
-  if (isAds) {
-    return <CardPage />;
-  } else {
+  const isBoss = user.role === RoleUserEnum.BOSS;
+  const permissions = user.permissions ?? [];
+  const canSeeAll = isBoss || permissions.includes(PermissionEnum.CARD_LIST_ALL);
+
+  if (canSeeAll) {
     return <CardsPage />;
+  } else {
+    return <CardPage />;
   }
 }

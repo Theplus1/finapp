@@ -9,7 +9,6 @@ import {
   EmployeeDrawerTypeEnum,
 } from "@/lib/api/endpoints/employee";
 import FormSetEmployee from "./form-set-employee";
-import { RoleUserEnum } from "@/lib/api/endpoints/users";
 import { isEmail } from "@repo/ui/lib/utils";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -26,7 +25,7 @@ const initEmployee: CreateEmployeeData = {
   username: "",
   password: "",
   email: "",
-  role: RoleUserEnum.ADS,
+  permissions: [],
   confirmPassword: "",
 };
 
@@ -45,7 +44,7 @@ const FormActionEmployee = ({
         username: employee.username,
         password: "",
         email: employee.email,
-        role: employee.role,
+        permissions: employee.permissions ?? [],
       });
     }
   }, [employee]);
@@ -56,13 +55,12 @@ const FormActionEmployee = ({
     !formEmployee.email ||
     !isEmail(formEmployee.email) ||
     !formEmployee.password ||
-    formEmployee.password !== formEmployee.confirmPassword;
+    formEmployee.password !== formEmployee.confirmPassword ||
+    (formEmployee.permissions ?? []).length === 0;
 
   const disabledEdit =
     isLoading ||
-    !formEmployee.username ||
-    (employee?.username === formEmployee.username &&
-      employee?.role === formEmployee.role);
+    !formEmployee.username;
 
   const disabledSubmit =
     drawerType === EmployeeDrawerTypeEnum.CREATE
@@ -77,10 +75,10 @@ const FormActionEmployee = ({
           username: formEmployee.username!,
           email: formEmployee.email!,
           password: formEmployee.password!,
-          role: formEmployee.role,
+          permissions: formEmployee.permissions ?? [],
         })
         .then(() => {
-          toast.success("Employee set successfully");
+          toast.success("Employee created successfully");
           onSubmitDrawerSuccess();
         })
         .catch((error) => {
@@ -91,16 +89,17 @@ const FormActionEmployee = ({
         });
     },
   });
+
   const { mutateAsync: editAccount } = useMutation({
     mutationFn: async () => {
       setIsLoading(true);
       api.employees
         .updateEmployee(employee!.id, {
           username: formEmployee.username!,
-          role: formEmployee.role,
+          permissions: formEmployee.permissions ?? [],
         })
         .then(() => {
-          toast.success("Employee set successfully");
+          toast.success("Employee updated successfully");
           onSubmitDrawerSuccess();
         })
         .catch((error) => {
@@ -111,14 +110,6 @@ const FormActionEmployee = ({
         });
     },
   });
-
-  const onSubmitCreate = () => {
-    createAccount();
-  };
-
-  const onSubmitEdit = () => {
-    editAccount();
-  };
 
   return (
     <>
@@ -135,12 +126,11 @@ const FormActionEmployee = ({
           </Button>
           <Button
             className={cn(disabledSubmit && "cursor-not-allowed opacity-50")}
-            onClick={
-              !disabledSubmit
-                ? drawerType === EmployeeDrawerTypeEnum.CREATE
-                  ? onSubmitCreate
-                  : onSubmitEdit
-                : undefined
+            onClick={!disabledSubmit
+              ? drawerType === EmployeeDrawerTypeEnum.CREATE
+                ? () => createAccount()
+                : () => editAccount()
+              : undefined
             }
           >
             {isLoading ? <Spinner /> : ""}

@@ -2,18 +2,19 @@ import {
   IsString,
   IsNotEmpty,
   MinLength,
-  IsEnum,
   IsEmail,
   IsOptional,
   IsBoolean,
+  IsArray,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { EMPLOYEE_PERMISSIONS } from '../../database/schemas/admin-user.schema';
 
-const EMPLOYEE_ROLES = ['ads', 'accountant'] as const;
-export type EmployeeRole = (typeof EMPLOYEE_ROLES)[number];
+export const EMPLOYEE_PERMISSIONS_LIST = [...EMPLOYEE_PERMISSIONS];
 
 export class CreateEmployeeDto {
-  @ApiProperty({ description: 'Username', example: 'nv.ads.1' })
+  @ApiProperty({ description: 'Username', example: 'nv.1' })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
@@ -25,22 +26,24 @@ export class CreateEmployeeDto {
   @MinLength(8)
   password: string;
 
-  @ApiProperty({
-    description: 'Role',
-    enum: EMPLOYEE_ROLES,
-    example: 'ads',
-  })
-  @IsEnum(EMPLOYEE_ROLES)
-  role: EmployeeRole;
-
   @ApiPropertyOptional({ description: 'Email', example: 'nv@example.com' })
   @IsEmail()
   @IsOptional()
   email?: string;
+
+  @ApiProperty({
+    description: 'Permissions',
+    enum: EMPLOYEE_PERMISSIONS_LIST,
+    isArray: true,
+    example: ['transactions', 'card_list_own'],
+  })
+  @IsArray()
+  @IsIn(EMPLOYEE_PERMISSIONS_LIST, { each: true })
+  permissions: string[];
 }
 
 export class UpdateEmployeeDto {
-  @ApiPropertyOptional({ description: 'Username', example: 'nv.ads.2' })
+  @ApiPropertyOptional({ description: 'Username', example: 'nv.2' })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
@@ -53,13 +56,14 @@ export class UpdateEmployeeDto {
   email?: string;
 
   @ApiPropertyOptional({
-    description: 'Role',
-    enum: EMPLOYEE_ROLES,
-    example: 'accountant',
+    description: 'Permissions',
+    enum: EMPLOYEE_PERMISSIONS_LIST,
+    isArray: true,
   })
-  @IsEnum(EMPLOYEE_ROLES)
+  @IsArray()
+  @IsIn(EMPLOYEE_PERMISSIONS_LIST, { each: true })
   @IsOptional()
-  role?: EmployeeRole;
+  permissions?: string[];
 }
 
 export class SetEmployeeActiveDto {
@@ -75,7 +79,7 @@ export class EmployeeResponseDto {
   @ApiProperty({ description: 'Username' })
   username: string;
 
-  @ApiProperty({ description: 'Role', enum: EMPLOYEE_ROLES })
+  @ApiProperty({ description: 'Role' })
   role: string;
 
   @ApiPropertyOptional({ description: 'Email' })
@@ -83,6 +87,9 @@ export class EmployeeResponseDto {
 
   @ApiProperty({ description: 'Active status' })
   isActive: boolean;
+
+  @ApiProperty({ description: 'Permissions', isArray: true })
+  permissions: string[];
 
   @ApiPropertyOptional({ description: 'Last login time' })
   lastLoginAt?: Date;

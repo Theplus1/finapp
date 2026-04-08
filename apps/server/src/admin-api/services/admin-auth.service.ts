@@ -16,6 +16,7 @@ export interface AdminLoginResponse {
   type: AuthAudienceType;
   virtualAccountId?: string;
   bossId?: string;
+  permissions?: string[];
 }
 
 export interface AuthenticatedUser {
@@ -26,6 +27,7 @@ export interface AuthenticatedUser {
   createdAt?: Date;
   virtualAccountId?: string;
   bossId?: string;
+  permissions?: string[];
 }
 
 /**
@@ -93,6 +95,7 @@ export class AdminAuthService implements OnModuleInit {
       createdAt: adminUser.createdAt,
       virtualAccountId: adminUser.virtualAccountId,
       bossId: adminUser.bossId,
+      permissions: adminUser.permissions ?? [],
     };
   }
 
@@ -111,6 +114,7 @@ export class AdminAuthService implements OnModuleInit {
       type,
       virtualAccountId: user.virtualAccountId,
       bossId: user.bossId,
+      permissions: user.permissions ?? [],
     };
 
     const accessToken = await this.jwtService.signAsync(payload, {
@@ -129,6 +133,7 @@ export class AdminAuthService implements OnModuleInit {
       type,
       virtualAccountId: user.virtualAccountId,
       bossId: user.bossId,
+      permissions: user.permissions ?? [],
     };
   }
 

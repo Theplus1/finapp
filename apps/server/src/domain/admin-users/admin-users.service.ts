@@ -118,11 +118,11 @@ export class AdminUsersService {
    * Create a new admin user
    */
   async createUser(
-    username: string, 
-    password: string, 
+    username: string,
+    password: string,
     role: AdminUserRole = 'admin',
     email?: string,
-    meta?: { virtualAccountId?: string; bossId?: string },
+    meta?: { virtualAccountId?: string; bossId?: string; permissions?: string[] },
   ): Promise<AdminUserDocument> {
     // Check if username already exists
     const exists = await this.adminUserRepository.exists(username);
@@ -151,6 +151,7 @@ export class AdminUsersService {
       email,
       virtualAccountId: meta?.virtualAccountId,
       bossId: meta?.bossId,
+      permissions: meta?.permissions ?? [],
       isActive: true,
     });
 
@@ -322,8 +323,9 @@ export class AdminUsersService {
     bossId: string,
     username: string,
     password: string,
-    role: 'ads' | 'accountant',
+    role: 'ads' | 'accountant' | 'employee',
     email?: string,
+    permissions?: string[],
   ): Promise<AdminUserDocument> {
     const boss = await this.findBossById(bossId);
     if (!boss) {
@@ -332,12 +334,10 @@ export class AdminUsersService {
     if (!boss.virtualAccountId) {
       throw new BadRequestException('Boss must be linked to a virtual account');
     }
-    if (!EMPLOYEE_ROLES.includes(role)) {
-      throw new BadRequestException('Role must be ads or accountant');
-    }
-    return this.createUser(username, password, role, email, {
+    return this.createUser(username, password, 'employee', email, {
       bossId,
       virtualAccountId: boss.virtualAccountId,
+      permissions: permissions ?? [],
     });
   }
 
@@ -347,7 +347,7 @@ export class AdminUsersService {
   async updateEmployee(
     employeeId: string,
     bossId: string,
-    updates: { username?: string; email?: string; role?: 'ads' | 'accountant' },
+    updates: { username?: string; email?: string; role?: string; permissions?: string[] },
   ): Promise<AdminUserDocument> {
     const employee = await this.adminUserRepository.findById(employeeId);
     if (!employee) {
@@ -360,7 +360,8 @@ export class AdminUsersService {
     const updateData: {
       username?: string;
       email?: string;
-      role?: 'ads' | 'accountant';
+      role?: string;
+      permissions?: string[];
     } = {};
 
     if (updates.username !== undefined && updates.username !== employee.username) {
@@ -386,11 +387,8 @@ export class AdminUsersService {
       updateData.email = updates.email;
     }
 
-    if (updates.role !== undefined) {
-      if (!EMPLOYEE_ROLES.includes(updates.role)) {
-        throw new BadRequestException('Role must be ads or accountant');
-      }
-      updateData.role = updates.role;
+    if (updates.permissions !== undefined) {
+      updateData.permissions = updates.permissions;
     }
 
     if (Object.keys(updateData).length === 0) {

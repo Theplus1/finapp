@@ -29,7 +29,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const navMainItems = React.useMemo(() => {
     if (!mounted) return [];
-    const { role } = JSON.parse(localStorage.getItem("user") ?? "{}");
+    const { role, permissions = [] } = JSON.parse(localStorage.getItem("user") ?? "{}");
+    const isBoss = role === "boss";
 
     return navMainConfig
       .map((section) => ({
@@ -38,9 +39,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           section.items?.some((item) => pathname.startsWith(item.url)) ||
           pathname.startsWith(section.url),
       }))
-      .filter(
-        (item) => item.roleAccept.includes(role) && item.visible !== false,
-      );
+      .filter((item) => {
+        if (item.visible === false) return false;
+        if (isBoss) return true;
+        if (!item.permissionsAccept) return false;
+        return item.permissionsAccept.some((p) => permissions.includes(p));
+      });
   }, [mounted, pathname]);
 
   return (

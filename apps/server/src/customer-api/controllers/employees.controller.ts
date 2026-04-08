@@ -45,6 +45,7 @@ function toEmployeeResponse(doc: AdminUserDocument): EmployeeResponseDto {
     role: doc.role,
     email: doc.email,
     isActive: doc.isActive,
+    permissions: doc.permissions ?? [],
     lastLoginAt: doc.lastLoginAt,
     bossId: doc.bossId,
     virtualAccountId: doc.virtualAccountId,
@@ -108,8 +109,9 @@ export class EmployeesController {
       bossId,
       dto.username,
       dto.password,
-      dto.role,
+      'employee',
       dto.email,
+      dto.permissions,
     );
     return toEmployeeResponse(employee as AdminUserDocument);
   }
@@ -138,7 +140,7 @@ export class EmployeesController {
     const updated = await this.adminUsersService.updateEmployee(id, bossId, {
       username: dto.username,
       email: dto.email,
-      role: dto.role,
+      permissions: dto.permissions,
     });
     return toEmployeeResponse(updated as AdminUserDocument);
   }

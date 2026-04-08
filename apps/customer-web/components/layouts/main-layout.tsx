@@ -59,12 +59,20 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const currentPath = pathname || "";
 
+  const isBoss = user.role === RoleUserEnum.BOSS;
+  const userPermissions: string[] = (user as any).permissions ?? [];
+
   const isNoPermission =
+    mounted &&
     !!user.role &&
     !!currentPath &&
-    !navMain.some(
-      (item) => item.url === currentPath && item.roleAccept.includes(user.role),
-    );
+    !navMain.some((item) => {
+      if (item.url !== currentPath) return false;
+      if (isBoss) return true;
+      if (!item.permissionsAccept) return false;
+      return item.permissionsAccept.some((p) => userPermissions.includes(p));
+    });
+
   const isAds = user.role === RoleUserEnum.ADS;
 
   return (

@@ -9,7 +9,19 @@ export const ADMIN_USER_ROLES = [
   'boss',
   'ads',
   'accountant',
+  'employee',
 ] as const;
+
+export const EMPLOYEE_PERMISSIONS = [
+  'transactions',
+  'transactions_full',
+  'card_list_own',
+  'card_list_all',
+  'payments',
+  'card_spend',
+] as const;
+
+export type EmployeePermission = (typeof EMPLOYEE_PERMISSIONS)[number];
 
 export type AdminUserRole = (typeof ADMIN_USER_ROLES)[number];
 
@@ -44,6 +56,9 @@ export class AdminUser {
 
   @Prop()
   email?: string;
+
+  @Prop({ type: [String], default: [] })
+  permissions: EmployeePermission[];
 
   @Prop()
   lastLoginAt?: Date;

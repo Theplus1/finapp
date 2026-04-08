@@ -23,7 +23,7 @@ import CardNameCol from "@repo/ui/components/card-name-col";
 import { cn } from "@/lib/utils";
 import { Employee } from "@/lib/api/endpoints/employee";
 import GetConfirmCode from "./get-confirm-code";
-import { RoleUserEnum, UserBoss } from "@/lib/api/endpoints/users";
+import { PermissionEnum, RoleUserEnum, UserBoss } from "@/lib/api/endpoints/users";
 import { Spinner } from "@repo/ui/components/spinner";
 import { useSearchParams } from "next/navigation";
 import ConfirmCodeTaken from "./confirm-code-taken";
@@ -112,6 +112,10 @@ export default function DashboardContainer() {
   }, [dataTransaction, isLoading]);
 
   const isBoss = user.role === RoleUserEnum.BOSS;
+  const userPermissions: string[] = (user as any).permissions ?? [];
+  const canSeeMerchant = isBoss
+    || user.role === RoleUserEnum.ACCOUNTANT
+    || userPermissions.includes(PermissionEnum.TRANSACTIONS_FULL);
   const columns = useMemo(
     () => [
       {
@@ -185,11 +189,7 @@ export default function DashboardContainer() {
           if (isLoading) {
             return <Skeleton />;
           }
-          const isNotAds = [
-            RoleUserEnum.BOSS,
-            RoleUserEnum.ACCOUNTANT,
-          ].includes(user.role);
-          return isNotAds || transGettedCode[row.original.slashId] ? (
+          return canSeeMerchant || transGettedCode[row.original.slashId] ? (
             <div className="text-center">
               {row.original.merchantData?.description ?? EMPTY_LABEL}
             </div>
