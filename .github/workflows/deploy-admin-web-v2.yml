@@ -1,0 +1,78 @@
+name: Deploy Admin Web to VPS - nevermissbills.us
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/admin-web/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-admin-web-v2.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-admin-web:
+    name: Deploy Admin Web Application
+    runs-on: ubuntu-latest
+    environment: production-v2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache turbo build setup
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .env file for admin-web
+        run: |
+          cat > apps/admin-web/.env.production << EOF
+          API_URL=${{ vars.SERVER_BASE_URL }}
+          EOF
+
+      - name: Build admin-web
+        run: npm run build:admin
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Prepare standalone output
+        run: |
+          cp -r apps/admin-web/.next/static apps/admin-web/.next/standalone/apps/admin-web/.next/static
+          cp -r apps/admin-web/public apps/admin-web/.next/standalone/apps/admin-web/public 2>/dev/null || true
+
+      - name: Sync standalone output to VPS
+        run: |
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            apps/admin-web/.next/standalone/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.ADMIN_APP_DIR }}/
+
+      - name: Deploy admin-web to VPS
+        run: |
+          ssh ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} << ENDSSH
+            set -e
+            PORT=${{ vars.ADMIN_PORT }} pm2 restart admin-web || PORT=${{ vars.ADMIN_PORT }} pm2 start ${{ vars.ADMIN_APP_DIR }}/apps/admin-web/server.js --name admin-web
+            pm2 save
+            echo "✅ Deployment complete"
+          ENDSSH

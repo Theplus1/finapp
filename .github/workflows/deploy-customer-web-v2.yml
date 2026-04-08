@@ -1,0 +1,78 @@
+name: Deploy Customer Web to VPS - nevermissbills.us
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/customer-web/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-customer-web-v2.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-customer-web:
+    name: Deploy Customer Web Application
+    runs-on: ubuntu-latest
+    environment: production-v2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache turbo build setup
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .env file for customer-web
+        run: |
+          cat > apps/customer-web/.env.production << EOF
+          API_URL=${{ vars.CUSTOMER_API_URL }}
+          EOF
+
+      - name: Build customer-web
+        run: npm run build:customer
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Prepare standalone output
+        run: |
+          cp -r apps/customer-web/.next/static apps/customer-web/.next/standalone/apps/customer-web/.next/static
+          cp -r apps/customer-web/public apps/customer-web/.next/standalone/apps/customer-web/public 2>/dev/null || true
+
+      - name: Sync standalone output to VPS
+        run: |
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            apps/customer-web/.next/standalone/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:${{ vars.CUSTOMER_APP_DIR }}/
+
+      - name: Deploy customer-web to VPS
+        run: |
+          ssh ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} << ENDSSH
+            set -e
+            PORT=${{ vars.CUSTOMER_PORT }} pm2 restart customer-web || PORT=${{ vars.CUSTOMER_PORT }} pm2 start ${{ vars.CUSTOMER_APP_DIR }}/apps/customer-web/server.js --name customer-web
+            pm2 save
+            echo "✅ Deployment complete"
+          ENDSSH
