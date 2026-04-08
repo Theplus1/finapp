@@ -43,8 +43,9 @@ export class AdminUsersService {
   /**
    * Validate user credentials.
    *
-   * - Customer roles (boss/ads/accountant): allow login by username OR email.
-   * - Admin roles (admin/super-admin): login by username only.
+   * - All roles: allow login by username or email.
+   * - If identifier contains '@', search by email first.
+   * - Otherwise, search by username.
    */
   async validateCredentials(
     identifier: string,
@@ -78,14 +79,6 @@ export class AdminUsersService {
       adminUser = await this.adminUserRepository.findByUsername(trimmed);
       if (!adminUser) {
         this.logger.warn(`Login attempt with invalid username: ${trimmed}`);
-        return null;
-      }
-
-      // For customer roles, enforce login by email only
-      if (CUSTOMER_LOGIN_ROLES.includes(adminUser.role)) {
-        this.logger.warn(
-          `Customer user attempted to login by username instead of email: ${trimmed} (role=${adminUser.role})`,
-        );
         return null;
       }
     }
