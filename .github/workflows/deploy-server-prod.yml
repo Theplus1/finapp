@@ -10,6 +10,10 @@ on:
       - '.github/workflows/deploy-server-prod.yml'
   workflow_dispatch: # Allow manual trigger
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-and-deploy:
     name: Build Docker Image and Deploy
@@ -28,13 +32,13 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/theplus1/finapp-server
+          images: ghcr.io/yami131617/finapp-v2-server
           tags: |
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
@@ -62,7 +66,7 @@ jobs:
 
       - name: Deploy to VPS
         env:
-          IMAGE_NAME: ghcr.io/theplus1/finapp-server:latest
+          IMAGE_NAME: ghcr.io/yami131617/finapp-v2-server:latest
         run: |
           ssh ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} << ENDSSH
             set -e
@@ -117,7 +121,7 @@ jobs:
               ${IMAGE_NAME}
 
             # Clean up old images (keep last 3)
-            docker images ghcr.io/theplus1/finapp-server-test --format "{{.Repository}}:{{.Tag}}" | \
+            docker images ghcr.io/yami131617/finapp-v2-server --format "{{.Repository}}:{{.Tag}}" | \
               grep -v '<none>' | \
               tail -n +4 | \
               xargs -r docker rmi || true
