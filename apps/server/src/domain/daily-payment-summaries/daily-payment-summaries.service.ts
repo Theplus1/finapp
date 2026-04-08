@@ -164,17 +164,12 @@ export class DailyPaymentSummariesService {
     // Spend: split by US / Non-US, use abs(amountCents)
     spendTransactions.forEach((transaction) => {
       const spendAmount = Math.abs(transaction.amountCents);
-      const isSettled = transaction.detailedStatus === 'settled';
       if (transaction.merchantData?.location?.country === 'US') {
         totalSpendUSCents += spendAmount;
-        if (isSettled) {
-          totalSpendUSCentsForAdmin += spendAmount;
-        }
+        totalSpendUSCentsForAdmin += spendAmount;
       } else {
         totalSpendNonUSCents += spendAmount;
-        if (isSettled) {
-          totalSpendNonUSCentsForAdmin += spendAmount;
-        }
+        totalSpendNonUSCentsForAdmin += spendAmount;
       }
     });
 

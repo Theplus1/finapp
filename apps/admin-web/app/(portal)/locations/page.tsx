@@ -271,8 +271,8 @@ export default function Locations() {
           </div>
           <Statistic
             containerClassName="mb-6"
-            data={overallDataPayment.summary}
-            loading={isOverallLoading}
+            data={dataPayment.summary}
+            loading={isLoading}
           />
           <FilterTable onChangeMonth={handleMonthChange} />
           <DataTable
