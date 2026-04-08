@@ -2,7 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
-import { RoleUserEnum } from "@/lib/api/endpoints/users";
+import { PermissionEnum, RoleUserEnum } from "@/lib/api/endpoints/users";
 
 export type FacebookVerifyNotificationPayload = {
   transactionId: string;
@@ -91,7 +91,10 @@ export function RealtimeNotificationsProvider({
     // Chỉ bật realtime cho NV ads
     const user = safeParseJson<StoredUser>(localStorage.getItem("user"));
     const token = localStorage.getItem("auth_token");
-    const isAds = user?.role === RoleUserEnum.ADS || user?.role === "ads";
+    const permissions: string[] = (user as any)?.permissions ?? [];
+    const isAds = user?.role === RoleUserEnum.ADS
+      || user?.role === "ads"
+      || (user?.role === RoleUserEnum.EMPLOYEE && permissions.includes(PermissionEnum.TRANSACTIONS) && !permissions.includes(PermissionEnum.TRANSACTIONS_FULL));
 
     if (!isAds || !token) {
       return;

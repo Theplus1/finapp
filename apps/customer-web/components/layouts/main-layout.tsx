@@ -18,7 +18,7 @@ import {
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { Toaster } from "@repo/ui/components/sonner";
 import { AdsTransactionAlert } from "@/components/notifications/ads-transaction-alert";
-import { RoleUserEnum, UserBoss } from "@/lib/api/endpoints/users";
+import { PermissionEnum, RoleUserEnum, UserBoss } from "@/lib/api/endpoints/users";
 import { useEffect, useState } from "react";
 import { ExportProvider } from "../export/ExportContext";
 import { useExport } from "../export/useExport";
@@ -73,7 +73,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       return item.permissionsAccept.some((p) => userPermissions.includes(p));
     });
 
-  const isAds = user.role === RoleUserEnum.ADS;
+  const isAds = user.role === RoleUserEnum.ADS
+    || (user.role === RoleUserEnum.EMPLOYEE && !userPermissions.includes(PermissionEnum.TRANSACTIONS_FULL) && userPermissions.includes(PermissionEnum.TRANSACTIONS));
 
   return (
     <ExportProvider>

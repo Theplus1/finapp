@@ -38,7 +38,7 @@ const maskDataTable = Array.from({ length: 20 }, () => {
   return {};
 }) as Transaction[];
 
-const RoleShowExportTransaction = [RoleUserEnum.BOSS, RoleUserEnum.ACCOUNTANT];
+const RoleShowExportTransaction = [RoleUserEnum.BOSS, RoleUserEnum.ACCOUNTANT, RoleUserEnum.EMPLOYEE];
 
 const initEmployee: Employee | UserBoss = {
   id: "",
@@ -274,7 +274,8 @@ export default function DashboardContainer() {
     );
   };
 
-  const showExportTransaction = RoleShowExportTransaction.includes(user.role);
+  const showExportTransaction = RoleShowExportTransaction.includes(user.role as RoleUserEnum)
+    || (user.role === RoleUserEnum.EMPLOYEE && userPermissions.includes(PermissionEnum.TRANSACTIONS_FULL));
 
   return (
     <PageLayout>
