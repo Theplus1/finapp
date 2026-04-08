@@ -105,7 +105,7 @@ export const virtualAccountsApi = {
   },
   setAccount: async (
     virtualAccountId: string,
-    body: { username: string; email: string; password: string },
+    body: { username: string; password: string },
   ): Promise<ApiResponse<VirtualAccount>> => {
     return await apiClient.post(
       `/virtual-account/${virtualAccountId}/set-account`,

@@ -371,10 +371,7 @@ export default function VirtualAccount() {
         ) : (
           <div className="text-center">
             {isConnectedBoss ? (
-              <>
-                <p>{row.original.bossUsername}</p>
-                <p>{row.original.bossEmail}</p>
-              </>
+              <p>{row.original.bossUsername}</p>
             ) : (
               EMPTY_LABEL
             )}
@@ -395,6 +392,7 @@ export default function VirtualAccount() {
               <PopoverContent>
                 <ActionsTable
                   virtualAccount={row.original}
+                  allVirtualAccounts={data ?? []}
                   onClickAction={(type) =>
                     handleActionVirtualAccount(type, row.original)
                   }
