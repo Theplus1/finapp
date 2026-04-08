@@ -366,12 +366,7 @@ export class AdminUsersService {
       throw new ForbiddenException('Not allowed to update this employee');
     }
 
-    const updateData: {
-      username?: string;
-      email?: string;
-      role?: string;
-      permissions?: EmployeePermission[];
-    } = {};
+    const updateData: Record<string, any> = {};
 
     if (updates.username !== undefined && updates.username !== employee.username) {
       const existingUser = await this.adminUserRepository.findByUsername(
