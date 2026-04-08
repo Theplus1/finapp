@@ -142,7 +142,7 @@ export class AdminUserRepository {
     return this.adminUserModel
       .find({
         bossId,
-        role: { $in: ['ads', 'accountant'] },
+        role: { $in: ['ads', 'accountant', 'employee'] },
       })
       .select('-passwordHash')
       .sort({ createdAt: -1 })

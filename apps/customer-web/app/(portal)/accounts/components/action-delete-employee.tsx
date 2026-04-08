@@ -6,17 +6,6 @@ import { Spinner } from "@repo/ui/components/spinner";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Employee } from "@/lib/api/endpoints/employee";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@repo/ui/components/alert-dialog";
 
 type Props = {
   employee: Employee;
@@ -27,6 +16,11 @@ const ActionDeleteEmployee = ({ employee, onDeleteSuccess }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleDelete = async () => {
+    const confirmed = window.confirm(
+      `Xóa vĩnh viễn tài khoản "${employee.username}"? Không thể khôi phục.`,
+    );
+    if (!confirmed) return;
+
     setIsLoading(true);
     try {
       await api.employees.deleteEmployee(employee.id);
@@ -40,30 +34,15 @@ const ActionDeleteEmployee = ({ employee, onDeleteSuccess }: Props) => {
   };
 
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="destructive" size="sm" className="w-full">
-          {isLoading ? <Spinner /> : "Delete permanently"}
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Xóa nhân viên vĩnh viễn?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Tài khoản <strong>{employee.username}</strong> sẽ bị xóa hoàn toàn khỏi hệ thống. Không thể khôi phục.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Hủy</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleDelete}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            Xóa vĩnh viễn
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Button
+      variant="destructive"
+      size="sm"
+      className="w-full"
+      onClick={handleDelete}
+      disabled={isLoading}
+    >
+      {isLoading ? <Spinner /> : "Delete permanently"}
+    </Button>
   );
 };
 
