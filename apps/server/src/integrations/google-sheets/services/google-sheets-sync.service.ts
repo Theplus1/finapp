@@ -5,16 +5,9 @@ import { GoogleSheetsService, SheetData } from './google-sheets.service';
 import { GoogleSheetReportService } from './google-sheet-report.service';
 import { PaymentSheetService } from './payment-sheet.service';
 import { DepositSheetService } from './deposit-sheet.service';
-import { LocationSheetService } from './location-sheet.service';
-import { HoldSheetService } from './hold-sheet.service';
-import { TransactionsHistorySheetService } from './transactions-history-sheet.service';
-import { ReversedSheetService } from './reversed-sheet.service';
-import { SheetName } from '../constants/sheet-names.constant';
 import { TransactionsService } from '../../../domain/transactions/transactions.service';
 import { AccountsService } from '../../../domain/accounts/accounts.service';
-import { DailyPaymentSummariesService } from '../../../domain/daily-payment-summaries/daily-payment-summaries.service';
 import { TransactionDetailedStatus } from '../../../integrations/slash/types';
-import { RefundedSheetService } from './refunded-sheet.service';
 
 const MONTH_FORMAT = 'yyyy-MM';
 const DATE_FORMAT = 'M/d/yyyy';
@@ -53,13 +46,8 @@ export class GoogleSheetsSyncService {
     private readonly googleSheetReportService: GoogleSheetReportService,
     private readonly paymentSheetService: PaymentSheetService,
     private readonly depositSheetService: DepositSheetService,
-    private readonly locationSheetService: LocationSheetService,
-    private readonly holdSheetService: HoldSheetService,
-    private readonly transactionsHistorySheetService: TransactionsHistorySheetService,
-    private readonly reversedSheetService: ReversedSheetService,
     private readonly transactionsService: TransactionsService,
     private readonly accountsService: AccountsService,
-    private readonly refundedSheetService: RefundedSheetService,
     private readonly configService: ConfigService,
   ) {
     // Parse syncDelayBetweenAccounts from config with safe fallback
@@ -129,10 +117,9 @@ export class GoogleSheetsSyncService {
       report.lastSyncError = undefined;
       await report.save();
 
-      const transactionCount = sheets.find((s) => s.name === SheetName.TRANSACTIONS_HISTORY)?.rows.length || 0;
       const duration = Date.now() - startTime;
       this.logger.log(
-        `Synced ${report.sheetName} (${report.sheetId}) successfully (${transactionCount} transactions, ${duration}ms)`,
+        `Synced ${report.sheetName} (${report.sheetId}) successfully (${duration}ms)`,
       );
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -216,54 +203,20 @@ export class GoogleSheetsSyncService {
 
     const transactions = await this.transactionsService.findAllWithFilters({
       virtualAccountId,
-      detailedStatus: {
-        $in: [
-          TransactionDetailedStatus.SETTLED,
-          TransactionDetailedStatus.PENDING,
-          TransactionDetailedStatus.REVERSED,
-          TransactionDetailedStatus.REFUND,
-        ]
-      },
-      cardId: {$ne: null},
-      merchantData: {$ne: null},
+      detailedStatus: { $in: [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING] },
+      cardId: { $ne: null },
+      merchantData: { $ne: null },
       amountCents: { $lt: 0 },
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
     });
 
-    // Get virtual account info
     const virtualAccount = await this.accountsService.findBySlashId(virtualAccountId);
-
-    // Partition transactions
-    const settledTransactions = transactions.filter(
-      (t) => [TransactionDetailedStatus.SETTLED, TransactionDetailedStatus.PENDING].includes(t.detailedStatus),
-    );
-    const reversedTransactions = transactions.filter(
-      (t) => t.detailedStatus === TransactionDetailedStatus.REVERSED,
-    );
-    const pendingTransactions = transactions.filter(
-      (t) => t.detailedStatus === TransactionDetailedStatus.PENDING,
-    );
-
-    const refundedTransactions = await this.transactionsService.findAllWithFilters({
-      virtualAccountId,
-      detailedStatus: TransactionDetailedStatus.REFUND,
-      cardId: {$ne: null},
-      merchantData: {$ne: null},
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    });
-
     const dateRange = { startDate, endDate, today, daysInMonth };
 
     const sheets: SheetData[] = [
-      this.paymentSheetService.generatePaymentSheet(virtualAccount, dateRange, settledTransactions),
+      this.paymentSheetService.generatePaymentSheet(virtualAccount, dateRange, transactions),
       this.depositSheetService.generateDepositSheet(startDate, daysInMonth),
-      this.locationSheetService.generateLocationSheet(virtualAccount, dateRange, settledTransactions),
-      this.holdSheetService.generateHoldSheet(pendingTransactions),
-      this.transactionsHistorySheetService.generateTransactionsHistorySheet(settledTransactions),
-      this.reversedSheetService.generateReversedSheet(reversedTransactions),
-      this.refundedSheetService.generateRefundedSheet(refundedTransactions),
     ];
 
     return sheets;
