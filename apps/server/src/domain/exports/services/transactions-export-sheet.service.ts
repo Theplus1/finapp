@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SheetData } from '../../../integrations/google-sheets/services/google-sheets.service';
-import { SheetName } from '../../../integrations/google-sheets/constants/sheet-names.constant';
+// Sheet names for export (not dependent on Google Sheets SheetName enum)
 import { getTransactionColumns, getReversedTransactionColumns } from '../helpers/column-definitions.helper';
 import { mapTransactionToRow } from '../../../integrations/google-sheets/utils/transaction-mapper.util';
 
@@ -12,7 +12,7 @@ export class TransactionsExportSheetService {
     const rows = transactions.map((transaction) => mapTransactionToRow(transaction, columns));
 
     return {
-      name: SheetName.TRANSACTIONS_HISTORY,
+      name: 'Transactions History',
       headers,
       rows,
     };
@@ -24,7 +24,7 @@ export class TransactionsExportSheetService {
     const rows = pendingTransactions.map((transaction) => mapTransactionToRow(transaction, columns));
 
     return {
-      name: SheetName.HOLD,
+      name: 'Hold',
       headers,
       rows,
     };
@@ -36,7 +36,7 @@ export class TransactionsExportSheetService {
     const rows = transactions.map((transaction) => mapTransactionToRow(transaction, columns));
 
     return {
-      name: SheetName.REVERSED,
+      name: 'Reversed',
       headers,
       rows,
     };

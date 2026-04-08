@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SheetData } from '../../../integrations/google-sheets/services/google-sheets.service';
-import { SheetName } from '../../../integrations/google-sheets/constants/sheet-names.constant';
+// Location sheet name for export
 import { centsToDollars } from '../../../shared/utils/formatCurrency.util';
 import { VirtualAccountDocument } from '../../../database/schemas/virtual-account.schema';
 import { createSummaryMap, formatSheetDate } from '../../../integrations/google-sheets/utils/sheet.utils';
@@ -31,7 +31,7 @@ export class LocationExportSheetService {
     const summaryRowBuilder = new LocationSummaryRowBuilder(totals);
 
     const builder = new DailySummarySheetBuilder(
-      SheetName.LOCATION,
+      'Location',
       ['Date', 'Tổng tiêu non US', 'Tổng tiêu trong US'],
       dailyRowBuilder,
       summaryRowBuilder,
