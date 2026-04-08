@@ -185,4 +185,8 @@ export class AdminUserRepository {
       )
       .exec();
   }
+
+  async deleteById(id: string): Promise<void> {
+    await this.adminUserModel.deleteOne({ _id: id }).exec();
+  }
 }

@@ -206,6 +206,7 @@ export default function Accounts() {
                       row.original,
                     )
                   }
+                  onDeleteSuccess={() => setCountGetList((prev) => prev + 1)}
                 />
               </PopoverContent>
             </Popover>

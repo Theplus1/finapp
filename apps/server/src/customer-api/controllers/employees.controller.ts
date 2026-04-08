@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -202,5 +203,24 @@ export class EmployeesController {
     const result =
       await this.adminUsersService.resetEmployeePasswordRandom(id, bossId);
     return result;
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Permanently delete an employee' })
+  @ApiParam({ name: 'id', description: 'Employee user ID' })
+  @ApiResponse({ status: 200, description: 'Employee deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - not your employee' })
+  @ApiResponse({ status: 404, description: 'Employee not found' })
+  async delete(
+    @Param('id') id: string,
+    @Request() req: { user?: RequestUser },
+  ): Promise<{ success: boolean }> {
+    const bossId = req.user?.userId;
+    if (!bossId) {
+      throw new Error('User context missing');
+    }
+    this.logger.log(`Boss ${req.user?.username} deleting employee ${id}`);
+    await this.adminUsersService.deleteEmployee(id, bossId);
+    return { success: true };
   }
 }

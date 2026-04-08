@@ -1,5 +1,5 @@
-import { Input } from "@repo/ui/components/input";
 import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
+import { Textarea } from "@repo/ui/components/textarea";
 
 type Props = {
   onCardChange: (card: string) => void;
@@ -7,17 +7,13 @@ type Props = {
 };
 
 const SearchCard = ({ onCardChange, value }: Props) => {
-  const handleValueChange = (value: string) => {
-    onCardChange(value);
-  };
-
   return (
-    <FormItemWrapper label="Card">
-      <Input
-        className="w-auto"
-        placeholder="Card name"
+    <FormItemWrapper label="Card ID (mỗi ID 1 dòng)">
+      <Textarea
+        className="w-[220px] min-h-[60px] text-sm"
+        placeholder={"card_abc123\ncard_xyz456"}
         value={value}
-        onChange={(e) => handleValueChange(e.target.value)}
+        onChange={(e) => onCardChange(e.target.value)}
       />
     </FormItemWrapper>
   );

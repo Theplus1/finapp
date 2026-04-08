@@ -171,10 +171,20 @@ export default function CardsPage() {
 
   const dataCard: Card[] = useMemo(() => cardInfors?.data ?? [], [cardInfors]);
 
-  const dataCardGrouped = useMemo(
-    () => (isLoading ? maskDataTable : dataCard),
-    [dataCard, isLoading],
-  );
+  const searchIds = useMemo(() => {
+    return keywordCardDebounce
+      .split("\n")
+      .map((id) => id.trim().toLowerCase())
+      .filter(Boolean);
+  }, [keywordCardDebounce]);
+
+  const dataCardGrouped = useMemo(() => {
+    if (isLoading) return maskDataTable;
+    if (searchIds.length === 0) return dataCard;
+    return dataCard.filter((card) =>
+      searchIds.some((id) => card.slashId?.toLowerCase().includes(id)),
+    );
+  }, [dataCard, isLoading, searchIds]);
 
   const handleActionVirtualAccount = (type: DrawerCardTypeEnum, card: Card) => {
     setCardEdit(card);

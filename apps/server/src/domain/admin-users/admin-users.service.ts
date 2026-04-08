@@ -454,4 +454,16 @@ export class AdminUsersService {
     );
     return updated;
   }
+
+  async deleteEmployee(employeeId: string, bossId: string): Promise<void> {
+    const employee = await this.adminUserRepository.findByIdAny(employeeId);
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+    if (employee.bossId !== bossId) {
+      throw new ForbiddenException('Not allowed to delete this employee');
+    }
+    await this.adminUserRepository.deleteById(employeeId);
+    this.logger.log(`Employee ${employeeId} permanently deleted by boss ${bossId}`);
+  }
 }
