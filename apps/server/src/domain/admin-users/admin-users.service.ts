@@ -181,9 +181,12 @@ export class AdminUsersService {
   async findBossByVirtualAccountId(virtualAccountId: string): Promise<AdminUserDocument | null> {
     return this.adminUserRepository.findOne({
       role: 'boss',
-      virtualAccountId,
       isActive: true,
-    });
+      $or: [
+        { virtualAccountId },
+        { virtualAccountIds: virtualAccountId },
+      ],
+    } as any);
   }
 
   /**

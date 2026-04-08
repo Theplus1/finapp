@@ -16,14 +16,7 @@ import { RolesGuard } from '../../admin-api/guards/roles.guard';
 import { Roles } from '../../admin-api/decorators/roles.decorator';
 import { CardsService } from '../../domain/cards/cards.service';
 import { CUSTOMER_API_ROLES } from '../../common/constants/auth.constants';
-
-interface RequestUser {
-  userId: string;
-  username: string;
-  role: string;
-  virtualAccountId?: string;
-  bossId?: string;
-}
+import { RequestUser } from '../utils/va-access.util';
 
 @ApiTags('Customer API - Cards Lookup')
 @ApiBearerAuth()

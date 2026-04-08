@@ -34,14 +34,7 @@ import { CvvRevealRepository } from '../../database/repositories/cvv-reveal.repo
 import { SYNC_CONSTANTS } from '../../integrations/slash/constants/sync.constants';
 import { ExportsService } from '../../domain/exports/exports.service';
 import { ExportType } from '../../database/schemas/export-job.schema';
-
-interface RequestUser {
-  userId: string;
-  username: string;
-  role: string;
-  virtualAccountId?: string;
-  bossId?: string;
-}
+import { RequestUser } from '../utils/va-access.util';
 
 @ApiTags('Customer API - Cards')
 @ApiBearerAuth()

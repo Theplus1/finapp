@@ -8,5 +8,5 @@ export function getActiveVaId(): string {
   const selected = localStorage.getItem("selectedVaId");
   if (selected) return selected;
   const user = JSON.parse(localStorage.getItem("user") ?? "{}");
-  return user.virtualAccountId ?? "";
+  return user.virtualAccountId ?? user.virtualAccountIds?.[0] ?? "";
 }

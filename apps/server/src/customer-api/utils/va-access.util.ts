@@ -35,7 +35,7 @@ export function validateVaAccess(user: RequestUser | undefined, slashId: string)
  * Used for endpoints that don't receive explicit vaId.
  */
 export function getVaIdFromToken(user: RequestUser | undefined): string {
-  const vaId = user?.virtualAccountId;
+  const vaId = user?.virtualAccountId || user?.virtualAccountIds?.[0];
   if (!vaId) {
     throw new BadRequestException('No virtual account linked to this user');
   }

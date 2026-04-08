@@ -130,7 +130,10 @@ export class AdminUserRepository {
       .find({
         role: 'boss',
         isActive: true,
-        virtualAccountId: { $in: virtualAccountIds },
+        $or: [
+          { virtualAccountId: { $in: virtualAccountIds } },
+          { virtualAccountIds: { $elemMatch: { $in: virtualAccountIds } } },
+        ],
       })
       .exec();
   }

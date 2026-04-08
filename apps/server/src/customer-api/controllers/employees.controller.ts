@@ -30,14 +30,7 @@ import {
   SetEmployeeActiveDto,
 } from '../dto/employee.dto';
 import type { AdminUserDocument } from '../../database/schemas/admin-user.schema';
-
-interface RequestUser {
-  userId: string;
-  username: string;
-  role: string;
-  bossId?: string;
-  virtualAccountId?: string;
-}
+import { RequestUser } from '../utils/va-access.util';
 
 function toEmployeeResponse(doc: AdminUserDocument): EmployeeResponseDto {
   return {
