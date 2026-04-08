@@ -25,7 +25,6 @@ export interface Employee {
 
 export interface CreateEmployeeData {
   username: string;
-  email: string;
   password: string;
   permissions: string[];
   virtualAccountId?: string;

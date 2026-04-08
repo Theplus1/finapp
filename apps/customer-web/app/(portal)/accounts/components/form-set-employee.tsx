@@ -2,7 +2,6 @@ import { Field } from "@repo/ui/components/field";
 import { InputGroup, InputGroupInput } from "@repo/ui/components/input-group";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { PermissionEnum, PERMISSION_LABELS } from "@/lib/api/endpoints/users";
-import { isEmail } from "@repo/ui/lib/utils";
 import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 import { CreateEmployeeData } from "@/lib/api/endpoints/employee";
 import { Label } from "@repo/ui/components/label";
@@ -101,23 +100,6 @@ const FormSetEmployee = ({ employeeData, onChangeEmployeeData }: Props) => {
             </div>
           ))}
         </div>
-      </FormItemWrapper>
-
-      <FormItemWrapper
-        label="Email"
-        labelClassName="text-sm font-medium text-muted-foreground"
-      >
-        <Field data-invalid={!isEmail(employeeData.email)}>
-          <InputGroup className="pr-1">
-            <InputGroupInput
-              type="email"
-              disabled={isEdit}
-              placeholder="Enter email"
-              value={employeeData.email}
-              onChange={(e) => handleChangeField("email", e.target.value)}
-            />
-          </InputGroup>
-        </Field>
       </FormItemWrapper>
 
       <FormItemWrapper

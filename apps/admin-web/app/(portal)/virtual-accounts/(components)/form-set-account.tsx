@@ -9,7 +9,6 @@ import { Spinner } from "@repo/ui/components/spinner";
 import { cn } from "@/lib/utils";
 import { Field } from "@repo/ui/components/field";
 import { InputGroup, InputGroupInput } from "@repo/ui/components/input-group";
-import { isEmail } from "@repo/ui/lib/utils";
 import { FormItemWrapper } from "@repo/ui/components/form-item-wrapper";
 
 type Props = {
@@ -27,7 +26,6 @@ const FormSetAccount = ({
 }: Props) => {
   const isEdit = !!virtualAccount?.bossUsername;
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +33,6 @@ const FormSetAccount = ({
   useEffect(() => {
     if (!virtualAccount || !openDrawer) return;
     setUsername(virtualAccount.bossUsername ?? "");
-    setEmail(virtualAccount.bossEmail ?? "");
     setPassword("");
     setConfirmPassword("");
   }, [openDrawer, virtualAccount]);
@@ -43,7 +40,7 @@ const FormSetAccount = ({
   const handleCreate = async () => {
     setIsLoading(true);
     try {
-      await api.virtualAccounts.setAccount(virtualAccount!.slashId, { username, email, password });
+      await api.virtualAccounts.setAccount(virtualAccount!.slashId, { username, password });
       toast.success("Boss account created");
       onSubmitAccountSuccess();
     } catch (e: any) {
@@ -59,7 +56,6 @@ const FormSetAccount = ({
     try {
       const body: any = {};
       if (username !== virtualAccount.bossUsername) body.username = username;
-      if (email !== virtualAccount.bossEmail) body.email = email;
       if (password) body.password = password;
       if (Object.keys(body).length === 0) { toast.info("Nothing changed"); return; }
       await api.virtualAccounts.updateBoss(virtualAccount.bossId, body);
@@ -72,10 +68,10 @@ const FormSetAccount = ({
     }
   };
 
-  const disableCreate = isLoading || !username || !email || !isEmail(email) ||
+  const disableCreate = isLoading || !username ||
     !password || !confirmPassword || password !== confirmPassword;
 
-  const disableEdit = isLoading || !username || !email || !isEmail(email) ||
+  const disableEdit = isLoading || !username ||
     (!!password && password !== confirmPassword);
 
   return (
@@ -84,14 +80,6 @@ const FormSetAccount = ({
         <FormItemWrapper label="Username" labelClassName="text-sm font-medium text-muted-foreground">
           <Input placeholder="Enter username" value={username}
             onChange={(e) => setUsername(e.target.value)} />
-        </FormItemWrapper>
-        <FormItemWrapper label="Email" labelClassName="text-sm font-medium text-muted-foreground">
-          <Field data-invalid={!isEmail(email)}>
-            <InputGroup className="pr-1">
-              <InputGroupInput type="email" placeholder="Enter email" value={email}
-                onChange={(e) => setEmail(e.target.value)} />
-            </InputGroup>
-          </Field>
         </FormItemWrapper>
         <FormItemWrapper
           label={isEdit ? "New Password (để trống = giữ nguyên)" : "Password"}

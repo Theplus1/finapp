@@ -9,7 +9,6 @@ import {
   EmployeeDrawerTypeEnum,
 } from "@/lib/api/endpoints/employee";
 import FormSetEmployee from "./form-set-employee";
-import { isEmail } from "@repo/ui/lib/utils";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -24,7 +23,6 @@ type Props = {
 const initEmployee: CreateEmployeeData = {
   username: "",
   password: "",
-  email: "",
   permissions: [],
   virtualAccountId: "",
   confirmPassword: "",
@@ -44,7 +42,6 @@ const FormActionEmployee = ({
       setFormEmployee({
         username: employee.username,
         password: "",
-        email: employee.email,
         permissions: employee.permissions ?? [],
       });
     }
@@ -53,8 +50,6 @@ const FormActionEmployee = ({
   const disabledCreate =
     isLoading ||
     !formEmployee.username ||
-    !formEmployee.email ||
-    !isEmail(formEmployee.email) ||
     !formEmployee.password ||
     formEmployee.password !== formEmployee.confirmPassword ||
     (formEmployee.permissions ?? []).length === 0;
@@ -74,7 +69,6 @@ const FormActionEmployee = ({
       api.employees
         .createEmployee({
           username: formEmployee.username!,
-          email: formEmployee.email!,
           password: formEmployee.password!,
           permissions: formEmployee.permissions ?? [],
           ...(formEmployee.virtualAccountId ? { virtualAccountId: formEmployee.virtualAccountId } : {}),
