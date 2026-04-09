@@ -19,14 +19,22 @@ export class CvvRevealRepository {
     revealedByUsername: string;
   }): Promise<CvvRevealDocument> {
     const now = new Date();
-    // append-only history: each reveal action is a dedicated record
-    const doc = new this.model({
-      ...data,
-      revealedAt: now,
-      lastRevealedAt: now,
-      revealCount: 1,
-    });
-    const updated = await doc.save();
+    const updated = await this.model.findOneAndUpdate(
+      {
+        cardSlashId: data.cardSlashId,
+        revealedByUserId: data.revealedByUserId,
+      },
+      {
+        $set: {
+          lastRevealedAt: now,
+          virtualAccountId: data.virtualAccountId,
+          revealedByUsername: data.revealedByUsername,
+        },
+        $inc: { revealCount: 1 },
+        $setOnInsert: { revealedAt: now },
+      },
+      { upsert: true, new: true },
+    );
     this.logger.log(
       `Recorded CVV reveal for card ${data.cardSlashId} by ${data.revealedByUsername}`,
     );
