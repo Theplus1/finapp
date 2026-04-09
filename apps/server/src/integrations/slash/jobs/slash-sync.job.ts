@@ -76,51 +76,45 @@ export class SlashSyncJob {
   }
 
   /**
-   * Sync recent transactions every day at midnight
-   * Reduced to 2 hours since we already sync every 10 seconds
-   * This is a safety net for any missed transactions
+   * Sync last 48 hours every day at midnight — safety net for missed/updated transactions
    */
-  // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  // async syncRecentTransactionsDaily() {
-  //   if (!this.enableScheduledSync) {
-  //     return;
-  //   }
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async syncRecentTransactionsDaily() {
+    if (!this.enableScheduledSync) {
+      return;
+    }
 
-  //   const startTime = Date.now();
-  //   this.logger.log('Starting scheduled daily transaction sync...');
-  //   try {
-  //     // Only sync last 2 hours as safety net (we already sync every 10s)
-  //     // This reduces API calls from ~50-100 to ~5-10
-  //     await this.slashSyncService.syncRecentTransactions(2);
-  //     const duration = Date.now() - startTime;
-  //     this.logger.log(`Scheduled daily transaction sync completed successfully in ${duration}ms`);
-  //   } catch (error) {
-  //     const duration = Date.now() - startTime;
-  //     this.logger.error(`Scheduled daily transaction sync failed after ${duration}ms:`, error);
-  //   }
-  // }
+    const startTime = Date.now();
+    this.logger.log('Starting scheduled daily transaction sync (48h back)...');
+    try {
+      await this.slashSyncService.syncRecentTransactions(48);
+      const duration = Date.now() - startTime;
+      this.logger.log(`Scheduled daily transaction sync completed in ${duration}ms`);
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.logger.error(`Scheduled daily transaction sync failed after ${duration}ms:`, error);
+    }
+  }
 
   /**
-   * Full transaction sync daily at 2 AM
+   * Full transaction sync every Sunday at 2 AM — catch all status changes and missing data
    */
-  // @Cron('0 2 * * *')
-  // async syncAllTransactions() {
-  //   if (!this.enableScheduledSync) {
-  //     return;
-  //   }
+  @Cron('0 2 * * 0')
+  async syncAllTransactionsWeekly() {
+    if (!this.enableScheduledSync) {
+      return;
+    }
 
-  //   this.logger.log('Starting scheduled full transaction sync...');
-  //   try {
-  //     // Sync all transactions from last 90 days
-  //     const startDate = new Date();
-  //     startDate.setDate(startDate.getDate() - 90);
-      
-  //     await this.slashSyncService.syncAllTransactions(startDate);
-  //     this.logger.log('Scheduled full transaction sync completed successfully');
-  //   } catch (error) {
-  //     this.logger.error('Scheduled full transaction sync failed:', error);
-  //   }
-  // }
+    this.logger.log('Starting scheduled weekly full transaction sync (7 days)...');
+    try {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+      await this.slashSyncService.syncAllTransactions(startDate);
+      this.logger.log('Scheduled weekly full transaction sync completed');
+    } catch (error) {
+      this.logger.error('Scheduled weekly full transaction sync failed:', error);
+    }
+  }
 
   /**
    * Sync virtual accounts every 5 minutes
