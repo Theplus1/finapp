@@ -11,6 +11,7 @@ import { Notification, NotificationSchema } from './schemas/notification.schema'
 import { ConfirmCodeReveal, ConfirmCodeRevealSchema } from './schemas/confirm-code-reveal.schema';
 import { DepositHistory, DepositHistorySchema } from './schemas/deposit-history.schema';
 import { CvvReveal, CvvRevealSchema } from './schemas/cvv-reveal.schema';
+import { CardActivity, CardActivitySchema } from './schemas/card-activity.schema';
 
 // Repositories
 import { CardRepository } from './repositories/card.repository';
@@ -21,6 +22,7 @@ import { NotificationRepository } from './repositories/notification.repository';
 import { ConfirmCodeRevealRepository } from './repositories/confirm-code-reveal.repository';
 import { DepositHistoryRepository } from './repositories/deposit-history.repository';
 import { CvvRevealRepository } from './repositories/cvv-reveal.repository';
+import { CardActivityRepository } from './repositories/card-activity.repository';
 
 @Module({
   imports: [
@@ -34,6 +36,7 @@ import { CvvRevealRepository } from './repositories/cvv-reveal.repository';
       { name: ConfirmCodeReveal.name, schema: ConfirmCodeRevealSchema },
       { name: DepositHistory.name, schema: DepositHistorySchema },
       { name: CvvReveal.name, schema: CvvRevealSchema },
+      { name: CardActivity.name, schema: CardActivitySchema },
     ]),
   ],
   providers: [
@@ -45,6 +48,7 @@ import { CvvRevealRepository } from './repositories/cvv-reveal.repository';
     ConfirmCodeRevealRepository,
     DepositHistoryRepository,
     CvvRevealRepository,
+    CardActivityRepository,
   ],
   exports: [
     CardRepository,
@@ -55,6 +59,7 @@ import { CvvRevealRepository } from './repositories/cvv-reveal.repository';
     ConfirmCodeRevealRepository,
     DepositHistoryRepository,
     CvvRevealRepository,
+    CardActivityRepository,
   ],
 })
 export class DatabaseModule {}

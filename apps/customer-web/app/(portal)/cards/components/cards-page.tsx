@@ -100,9 +100,6 @@ export default function CardsPage() {
   const [drawerType, setDrawerType] = useState<DrawerCardTypeEnum>(
     DrawerCardTypeEnum.SET_SPENDING_LIMIT,
   );
-  const [transGettedCVV, setTransGettedCVV] = useState<Record<string, string>>(
-    {},
-  );
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
@@ -265,24 +262,12 @@ export default function CardsPage() {
     },
     {
       id: "cvv",
-      header: <div className="text-center">CVV</div>,
+      header: <div className="text-center">Card Info</div>,
       cell: ({ row }: CellContext<Card, string>) => {
         if (isLoading) return <Skeleton />;
         return (
           <div className="text-center">
-            {transGettedCVV[row.original._id] ? (
-              transGettedCVV[row.original._id]
-            ) : (
-              <CardCVVCol
-                card={row.original}
-                onGetCodeSuccess={(cvv) => {
-                  setTransGettedCVV((prev) => ({
-                    ...prev,
-                    [row.original._id]: cvv,
-                  }));
-                }}
-              />
-            )}
+            <CardCVVCol card={row.original} />
           </div>
         );
       },
@@ -290,19 +275,13 @@ export default function CardsPage() {
     ...(isBoss
       ? [
           {
-            header: <div className="text-center">CVV History</div>,
-            id: "cvv-history",
+            header: <div className="text-center">Activity</div>,
+            id: "card-activity",
             cell: ({ row }: CellContext<Card, string>) => {
               if (isLoading) return <Skeleton />;
               return (
                 <div className="text-center">
-                  {row.original.cvvHistories.length > 0 ? (
-                    <CVVHistoriesTaken card={row.original} />
-                  ) : (
-                    <Button variant={"link"} disabled>
-                      0
-                    </Button>
-                  )}
+                  <CVVHistoriesTaken card={row.original} />
                 </div>
               );
             },

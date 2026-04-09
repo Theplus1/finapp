@@ -102,7 +102,7 @@ export const cardsApi = {
   unsetLimit: async (id: string): Promise<ApiResponse<Card>> => {
     return await apiClient.post(`/card/${id}/unset-limit`);
   },
-  getCardCVV: async (id: string): Promise<ApiResponse<{ cvv: string }>> => {
+  getCardCVV: async (id: string): Promise<ApiResponse<{ cvv: string; pan: string; last4: string; expiryMonth: string; expiryYear: string }>> => {
     return await apiClient.post(`/card/${id}/cvv`);
   },
   getCardCVVHistory: async (
@@ -126,5 +126,24 @@ export const cardsApi = {
     }>
   > => {
     return await apiClient.get(`/card/${id}/cvv-history`, { params });
+  },
+  getCardActivity: async (
+    id: string,
+    params: Params,
+  ): Promise<
+    ApiResponse<{
+      data: {
+        action: string;
+        performedByUsername: string;
+        performedAt: string;
+        details?: Record<string, any>;
+      }[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>
+  > => {
+    return await apiClient.get(`/card/${id}/activity`, { params });
   },
 };

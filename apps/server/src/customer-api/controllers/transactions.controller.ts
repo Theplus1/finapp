@@ -24,6 +24,7 @@ import { RolesGuard } from '../../admin-api/guards/roles.guard';
 import { TransactionsService } from '../../domain/transactions/transactions.service';
 import { SlashApiService } from '../../integrations/slash/services/slash-api.service';
 import { ConfirmCodeRevealRepository } from '../../database/repositories/confirm-code-reveal.repository';
+import { CardActivityRepository } from '../../database/repositories/card-activity.repository';
 import { CustomerTransactionQueryDto } from '../dto/transaction-query.dto';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 import type { TransactionWithRelations } from '../../domain/transactions/types/transaction.types';
@@ -49,6 +50,7 @@ export class CustomerTransactionsController {
     private readonly transactionsService: TransactionsService,
     private readonly slashApiService: SlashApiService,
     private readonly confirmCodeRevealRepository: ConfirmCodeRevealRepository,
+    private readonly cardActivityRepository: CardActivityRepository,
     private readonly exportsService: ExportsService,
   ) {}
 
@@ -267,6 +269,21 @@ export class CustomerTransactionsController {
       revealedByUserId: userId,
       revealedByUsername: username,
     });
+    // Log to card activity if transaction has a cardId
+    if (transactionDto.cardId) {
+      try {
+        await this.cardActivityRepository.record({
+          cardSlashId: transactionDto.cardId,
+          virtualAccountId,
+          action: 'get_confirm_code',
+          performedByUserId: userId,
+          performedByUsername: username,
+        });
+      } catch (e) {
+        this.logger.warn(`Failed to log confirm code activity: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
     this.logger.log(
       `Confirm code revealed for transaction ${transactionSlashId} by ${username}`,
     );

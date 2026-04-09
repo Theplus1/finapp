@@ -31,6 +31,8 @@ import { CardStatus } from '../../integrations/slash/dto/card.dto';
 import type { CardWithRelations } from '../../domain/cards/types/card.types';
 import { BOSS_AND_ACCOUNTANT_ROLES, CARDS_API_ROLES } from '../../common/constants/auth.constants';
 import { CvvRevealRepository } from '../../database/repositories/cvv-reveal.repository';
+import { CardActivityRepository } from '../../database/repositories/card-activity.repository';
+import { CardActivityAction } from '../../database/schemas/card-activity.schema';
 import { SYNC_CONSTANTS } from '../../integrations/slash/constants/sync.constants';
 import { ExportsService } from '../../domain/exports/exports.service';
 import { ExportType } from '../../database/schemas/export-job.schema';
@@ -48,6 +50,7 @@ export class CustomerCardsController {
     private readonly cardsService: CardsService,
     private readonly slashApiService: SlashApiService,
     private readonly cvvRevealRepository: CvvRevealRepository,
+    private readonly cardActivityRepository: CardActivityRepository,
     private readonly exportsService: ExportsService,
   ) {}
 
@@ -57,6 +60,27 @@ export class CustomerCardsController {
       throw new ForbiddenException('No virtual account linked to this user');
     }
     return vaId;
+  }
+
+  private async logActivity(
+    cardSlashId: string,
+    virtualAccountId: string,
+    action: CardActivityAction,
+    user: RequestUser | undefined,
+    details?: Record<string, any>,
+  ): Promise<void> {
+    try {
+      await this.cardActivityRepository.record({
+        cardSlashId,
+        virtualAccountId,
+        action,
+        performedByUserId: user?.userId ?? 'unknown',
+        performedByUsername: user?.username ?? 'unknown',
+        details,
+      });
+    } catch (e) {
+      this.logger.warn(`Failed to log card activity: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 
   @Post(':id/cvv')
@@ -72,7 +96,7 @@ export class CustomerCardsController {
   async getCvv(
     @Param('id') cardSlashId: string,
     @Request() req: { user?: RequestUser },
-  ): Promise<{ cvv: string; last4: string; cardName: string }> {
+  ): Promise<{ cvv: string; pan: string; last4: string; cardName: string; expiryMonth: string; expiryYear: string }> {
     const virtualAccountId = this.getVirtualAccountId(req);
     const owned = await this.cardsService.verifyOwnership(
       cardSlashId,
@@ -86,7 +110,7 @@ export class CustomerCardsController {
 
     const card = await this.slashApiService.getCardDecrypted(
       cardSlashId,
-      false,
+      true,
       true,
     );
     if (!card || !card.cvv) {
@@ -109,14 +133,19 @@ export class CustomerCardsController {
       revealedByUsername: revealedByUsername || 'unknown',
     });
 
+    await this.logActivity(cardSlashId, virtualAccountId, 'get_cvv', req.user);
+
     this.logger.log(
       `CVV retrieved for card ${cardSlashId} by ${revealedByUsername || 'unknown'}`,
     );
 
     return {
       cvv: card.cvv,
+      pan: card.pan ?? '',
       last4: card.last4 ?? '',
       cardName: card.name ?? '',
+      expiryMonth: card.expiryMonth ?? '',
+      expiryYear: card.expiryYear ?? '',
     };
   }
 
@@ -193,6 +222,57 @@ export class CustomerCardsController {
       limit: limitNum,
       totalPages,
       hasMore,
+    };
+  }
+
+  @Get(':id/activity')
+  @Roles(...BOSS_AND_ACCOUNTANT_ROLES)
+  @ApiOperation({ summary: 'List activity log for a card (boss only)' })
+  @ApiParam({ name: 'id', description: 'Card Slash ID' })
+  @ApiResponse({ status: 200, description: 'Activity log retrieved' })
+  async getActivity(
+    @Param('id') cardSlashId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '15',
+    @Request() req: { user?: RequestUser },
+  ): Promise<{
+    data: Array<{
+      action: string;
+      performedByUsername: string;
+      performedAt: Date;
+      details?: Record<string, any>;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const virtualAccountId = this.getVirtualAccountId(req);
+    const owned = await this.cardsService.verifyOwnership(cardSlashId, virtualAccountId);
+    if (!owned) {
+      throw new ForbiddenException('Card not found or not in your virtual account');
+    }
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, Number(limit) || 15));
+
+    const [items, total] = await this.cardActivityRepository.findByCardSlashId(
+      cardSlashId,
+      pageNum,
+      limitNum,
+    );
+
+    return {
+      data: items.map((doc) => ({
+        action: doc.action,
+        performedByUsername: doc.performedByUsername,
+        performedAt: doc.performedAt,
+        details: doc.details,
+      })),
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum) || 1,
     };
   }
 
@@ -340,6 +420,7 @@ export class CustomerCardsController {
       updated,
       SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
     );
+    await this.logActivity(cardSlashId, virtualAccountId, 'lock_card', req.user);
     this.logger.log(`Card ${cardSlashId} locked by ${req.user?.username}`);
     return { success: true, message: 'Card locked successfully' };
   }
@@ -375,6 +456,7 @@ export class CustomerCardsController {
       updated,
       SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
     );
+    await this.logActivity(cardSlashId, virtualAccountId, 'unlock_card', req.user);
     this.logger.log(`Card ${cardSlashId} unlocked by ${req.user?.username}`);
     return { success: true, message: 'Card unlocked successfully' };
   }
@@ -419,6 +501,7 @@ export class CustomerCardsController {
       SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
       { isRecurringOnly: true },
     );
+    await this.logActivity(cardSlashId, virtualAccountId, 'set_recurring_only', req.user);
     this.logger.log(`Card ${cardSlashId} set recurring-only by ${req.user?.username}`);
     return { success: true, message: 'Recurring-only (nạp trước) set successfully' };
   }
@@ -463,6 +546,7 @@ export class CustomerCardsController {
       SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
       { isRecurringOnly: false },
     );
+    await this.logActivity(cardSlashId, virtualAccountId, 'unset_recurring_only', req.user);
     this.logger.log(`Card ${cardSlashId} unset recurring-only by ${req.user?.username}`);
     return { success: true, message: 'Recurring-only (nạp trước) unset successfully' };
   }
@@ -511,6 +595,7 @@ export class CustomerCardsController {
       updated,
       SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
     );
+    await this.logActivity(cardSlashId, virtualAccountId, 'set_spending_limit', req.user, { amount: dto.amount, preset: dto.preset });
     this.logger.log(
       `Card ${cardSlashId} set limit ${dto.amount} USD (${dto.preset}) by ${req.user?.username}`,
     );
@@ -543,6 +628,7 @@ export class CustomerCardsController {
       updated,
       SYNC_CONSTANTS.SYNC_SOURCE.MANUAL,
     );
+    await this.logActivity(cardSlashId, virtualAccountId, 'unset_spending_limit', req.user);
     this.logger.log(`Card ${cardSlashId} limit unset by ${req.user?.username}`);
     return { success: true, message: 'Spending limit removed successfully' };
   }

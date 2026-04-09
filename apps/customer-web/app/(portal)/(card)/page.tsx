@@ -81,9 +81,6 @@ export default function CardPage() {
   const [drawerType, setDrawerType] = useState<DrawerCardTypeEnum>(
     DrawerCardTypeEnum.SET_SPENDING_LIMIT,
   );
-  const [transGettedCVV, setTransGettedCVV] = useState<Record<string, string>>(
-    {},
-  );
   const [keywordCard, setKeywordCard] = useState("");
   const keywordCardDebounce = useDebounce(keywordCard, 300).toLowerCase();
   const [countGetList, setCountGetList] = useState(0);
@@ -184,24 +181,12 @@ export default function CardPage() {
     },
     {
       id: "cvv",
-      header: <div className="text-center">CVV</div>,
+      header: <div className="text-center">Card Info</div>,
       cell: ({ row }: CellContext<Card, string>) => {
         if (isLoading) return <Skeleton />;
         return (
           <div className="text-center">
-            {transGettedCVV[row.original._id] ? (
-              transGettedCVV[row.original._id]
-            ) : (
-              <CardCVVCol
-                card={row.original}
-                onGetCodeSuccess={(cvv) => {
-                  setTransGettedCVV((prev) => ({
-                    ...prev,
-                    [row.original._id]: cvv,
-                  }));
-                }}
-              />
-            )}
+            <CardCVVCol card={row.original} />
           </div>
         );
       },
