@@ -14,7 +14,7 @@ jobs:
   deploy-admin-web:
     name: Deploy Admin Web Application
     runs-on: ubuntu-latest
-    environment: production-v2
+    environment: production
     
     steps:
       - name: Checkout code
