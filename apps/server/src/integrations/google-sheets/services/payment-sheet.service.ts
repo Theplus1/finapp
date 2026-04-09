@@ -106,7 +106,7 @@ export class PaymentSheetService {
             '',
             `=SUM(B3:B)`,
             formatCurrency(totalSpend, virtualAccount.currency),
-            '',
+            `=SUM(ARRAYFORMULA(VALUE(SUBSTITUTE('${SheetName.REFUNDED}'!E2:E, "$", ""))))`,
             `=B2-C2+D2`,
         ]);
         
@@ -187,7 +187,7 @@ export class PaymentSheetService {
             '',
             `=SUM(B3:B)`,
             formatCurrency(totalSpend, virtualAccount.currency),
-            '',
+            `=SUM(ARRAYFORMULA(VALUE(SUBSTITUTE('${SheetName.REFUNDED}'!E2:E, "$", ""))))`,
             `=B2-C2+D2`,
         ]);
 
