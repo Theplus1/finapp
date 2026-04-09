@@ -241,162 +241,21 @@ export class GoogleSheetsService implements OnModuleInit {
             await this.applyCurrencyFormatForDeposit(spreadsheetId, sheetId, [1], totalRows);
             
             this.logger.debug(`Successfully updated sheet "${sheet.name}" in spreadsheet ${spreadsheetId}`);
-          } 
-          // Transactions History, Reversed, Location, and Hold sheets
-          else if (sheet.name === SheetName.TRANSACTIONS_HISTORY || sheet.name === SheetName.REVERSED || sheet.name === SheetName.LOCATION || sheet.name === SheetName.HOLD) {
+          } else {
+            // Other sheets (generic handler)
             const range = `${sheet.name}!A1`;
-
-            // Get current sheet properties to check row count
-            const spreadsheet = await this.sheetsApi.spreadsheets.get({ spreadsheetId });
-            const currentSheet = spreadsheet.data.sheets?.find((s) => s.properties?.sheetId === sheetId);
-            const currentRowCount = currentSheet?.properties?.gridProperties?.rowCount || 1000;
-
-            // Calculate required rows
-            const requiredRows = 1 + sheet.rows.length;
-            
-            if (requiredRows > currentRowCount) {
-              this.logger.log(
-                `Expanding sheet "${sheet.name}" from ${currentRowCount} to ${requiredRows} rows`,
-              );
-              
-              await this.sheetsApi.spreadsheets.batchUpdate({
-                spreadsheetId,
-                requestBody: {
-                  requests: [
-                    {
-                      updateSheetProperties: {
-                        properties: {
-                          sheetId: sheetId,
-                          gridProperties: {
-                            rowCount: requiredRows,
-                          },
-                        },
-                        fields: 'gridProperties.rowCount',
-                      },
-                    },
-                  ],
-                },
-              });
-              
-              this.logger.debug(
-                `Successfully expanded sheet "${sheet.name}" to ${requiredRows} rows`,
-              );
-            }
-
-            // Clear sheet
-            await this.sheetsApi.spreadsheets.values.clear({
-              spreadsheetId,
-              range: `${sheet.name}!A2:Z`,
-            });
-
-            // Write headers first
-            await this.sheetsApi.spreadsheets.values.update({
-              spreadsheetId,
-              range: `${sheet.name}!A1`,
-              valueInputOption: 'RAW',
-              requestBody: { values: [sheet.headers] },
-            });
-
-            // Format headers
-            await this.formatHeaders(spreadsheetId, sheet.name, sheetId);
-
-            // Write data in batches and chunks
-            const BATCH_SIZE = 5000; 
-            const totalRows = sheet.rows.length;
-            
-            if (totalRows > 0) {
-              let batchNumber = 1;
-              let totalWritten = 0;
-              
-              for (let batchStart = 0; batchStart < totalRows; batchStart += BATCH_SIZE) {
-                const batchEnd = Math.min(batchStart + BATCH_SIZE, totalRows);
-                const batchRows = sheet.rows.slice(batchStart, batchEnd);
-                const batchSize = batchRows.length;
-                
-                this.logger.debug(
-                  `Processing batch ${batchNumber} for sheet "${sheet.name}": ` +
-                  `rows ${batchStart + 1}-${batchEnd} (${batchSize} rows)`,
-                );
-                
-                for (let i = 0; i < batchSize; i += this.chunkSize) {
-                  const chunk = batchRows.slice(i, i + this.chunkSize);
-                  const startRow = batchStart + i + 2;
-                  const endRow = startRow + chunk.length - 1;
-                  
-                  const chunkRange = `${sheet.name}!A${startRow}:Z${endRow}`;
-                  
-                  await this.sheetsApi.spreadsheets.values.update({
-                    spreadsheetId,
-                    range: chunkRange,
-                    valueInputOption: 'RAW',
-                    requestBody: { values: chunk },
-                  });
-                  
-                  totalWritten += chunk.length;
-                  this.logger.debug(
-                    `  Wrote chunk ${Math.floor(i / this.chunkSize) + 1}/${Math.ceil(batchSize / this.chunkSize)} ` +
-                    `(rows ${startRow}-${endRow}, ${chunk.length} rows)`,
-                  );
-                }
-                
-                batchNumber++;
-              }
-
-              // Clear format for all data rows
-              const startRowIndex = 1;
-              const endRowIndex = 1 + totalWritten;
-              await this.clearDataRowFormat(spreadsheetId, sheetId, startRowIndex, endRowIndex);
-              
-              this.logger.log(
-                `Successfully wrote ${totalWritten} rows to sheet "${sheet.name}" ` +
-                `in ${batchNumber - 1} batch(es)`,
-              );
-            }
-            
-            // Apply currency formatting based on sheet type (format every update)
-            if (totalRows > 0) {
-              if (sheet.name === SheetName.TRANSACTIONS_HISTORY || sheet.name === SheetName.HOLD || sheet.name === SheetName.REVERSED) {
-                // Amount column is at index 4 (column E)
-                await this.applyCurrencyFormat(spreadsheetId, sheetId, [4], totalRows);
-              } else if (sheet.name === SheetName.LOCATION) {
-                // Amount columns are at index 1 and 2 (columns B and C)
-                await this.applyCurrencyFormat(spreadsheetId, sheetId, [1, 2], totalRows);
-              }
-            }
-            
-            this.logger.debug(
-              `Updated sheet "${sheet.name}" with ${totalRows} rows ` +
-              `(${Math.ceil(totalRows / BATCH_SIZE)} batches, ${Math.ceil(totalRows / this.chunkSize)} chunks) ` +
-              `in spreadsheet ${spreadsheetId}`,
-            );
-          } 
-          // Other sheets
-          else {
-            const range = `${sheet.name}!A1`;
-
-            // Clear sheet
             await this.sheetsApi.spreadsheets.values.clear({
               spreadsheetId,
               range: `${sheet.name}!A:Z`,
             });
-
             const values = [sheet.headers, ...sheet.rows];
-
             await this.sheetsApi.spreadsheets.values.update({
               spreadsheetId,
               range,
               valueInputOption: 'RAW',
               requestBody: { values },
             });
-
-            // Format headers
             await this.formatHeaders(spreadsheetId, sheet.name, sheetId);
-            
-            // Apply currency formatting for Refunded sheet (Amount column at index 4)
-            if (sheet.name === SheetName.REFUNDED && sheet.rows.length > 0) {
-              await this.applyCurrencyFormat(spreadsheetId, sheetId, [4], sheet.rows.length);
-            }
-            
             this.logger.debug(`Successfully updated sheet "${sheet.name}" in spreadsheet ${spreadsheetId}`);
           }
         } catch (error) {
