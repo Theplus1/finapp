@@ -44,6 +44,7 @@ import { startOfDay, format } from 'date-fns';
 import { ADMIN_API_ROLES } from '../../common/constants/auth.constants';
 import { parseYyyyMmDdAsUtcDate } from '../../common/utils/date.utils';
 import { DepositHistoryRepository } from '../../database/repositories/deposit-history.repository';
+import { AuditLogService } from '../../common/audit/audit-log.service';
 
 @ApiTags('Admin API - Virtual Accounts')
 @ApiBearerAuth()
@@ -61,6 +62,7 @@ export class AccountsController {
     private readonly adminUsersService: AdminUsersService,
     private readonly dailyPaymentSummariesService: DailyPaymentSummariesService,
     private readonly depositHistoryRepository: DepositHistoryRepository,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   @Get()
@@ -452,9 +454,46 @@ export class AccountsController {
   @Delete('boss/:bossId')
   @ApiOperation({ summary: 'Delete boss account permanently' })
   @ApiParam({ name: 'bossId', description: 'Boss account ID' })
-  async deleteBoss(@Param('bossId') bossId: string): Promise<{ success: boolean }> {
-    await this.adminUsersService.deleteBoss(bossId);
-    return { success: true };
+  async deleteBoss(
+    @Param('bossId') bossId: string,
+    @Request() req: { user?: { userId?: string; username?: string; role?: string } },
+  ): Promise<{ success: boolean }> {
+    // Capture actor + target snapshot BEFORE the delete so we still have the data
+    // (best-effort: if the boss does not exist the service throws, audit still runs).
+    let targetSnapshot: { username?: string; virtualAccountId?: string } = {};
+    try {
+      const boss = await this.adminUsersService.findBossById(bossId);
+      if (boss) targetSnapshot = { username: boss.username, virtualAccountId: boss.virtualAccountId };
+    } catch { /* snapshot is best-effort */ }
+
+    try {
+      await this.adminUsersService.deleteBoss(bossId);
+      await this.auditLogService.log({
+        action: 'admin.boss.delete',
+        actorId: req.user?.userId,
+        actorUsername: req.user?.username,
+        actorRole: req.user?.role,
+        targetId: bossId,
+        targetType: 'boss',
+        metadata: targetSnapshot,
+        ...AuditLogService.requestContext(req),
+      });
+      return { success: true };
+    } catch (err) {
+      await this.auditLogService.log({
+        action: 'admin.boss.delete',
+        actorId: req.user?.userId,
+        actorUsername: req.user?.username,
+        actorRole: req.user?.role,
+        targetId: bossId,
+        targetType: 'boss',
+        metadata: targetSnapshot,
+        status: 'failed',
+        errorMessage: err instanceof Error ? err.message : String(err),
+        ...AuditLogService.requestContext(req),
+      });
+      throw err;
+    }
   }
 
   private toAdminUserResponse(user: any): AdminUserResponseDto {

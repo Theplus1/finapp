@@ -31,6 +31,7 @@ import { CreateAdminDto, AdminUserResponseDto, UpdatePasswordDto } from '../dto/
 import type { AuthenticatedUser } from '../services/admin-auth.service';
 import { isAdminApiRole } from '../../common/constants/auth.constants';
 import { AdminUsersService } from '../../domain/admin-users/admin-users.service';
+import { AuditLogService } from '../../common/audit/audit-log.service';
 
 @ApiTags('Admin API - Authentication')
 @Controller('admin-api/auth')
@@ -40,6 +41,7 @@ export class AuthController {
   constructor(
     private readonly adminAuthService: AdminAuthService,
     private readonly adminUsersService: AdminUsersService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   // Brute-force protection: max 5 login attempts per minute per IP.
@@ -233,13 +235,39 @@ export class AuthController {
       throw new ForbiddenException('Only admin users can reset boss passwords');
     }
 
-    const result = await this.adminUsersService.resetBossPasswordRandom(
-      username,
-    );
+    try {
+      const result = await this.adminUsersService.resetBossPasswordRandom(
+        username,
+      );
 
-    this.logger.log(`Random password reset (admin-api) for boss: ${username}`);
+      this.logger.log(`Random password reset (admin-api) for boss: ${username}`);
 
-    return result;
+      // Audit log: never store the new password itself.
+      await this.auditLogService.log({
+        action: 'admin.boss.password_reset',
+        actorId: req.user?.userId,
+        actorUsername: req.user?.username,
+        actorRole: req.user?.role,
+        targetId: username,
+        targetType: 'boss',
+        ...AuditLogService.requestContext(req),
+      });
+
+      return result;
+    } catch (err) {
+      await this.auditLogService.log({
+        action: 'admin.boss.password_reset',
+        actorId: req.user?.userId,
+        actorUsername: req.user?.username,
+        actorRole: req.user?.role,
+        targetId: username,
+        targetType: 'boss',
+        status: 'failed',
+        errorMessage: err instanceof Error ? err.message : String(err),
+        ...AuditLogService.requestContext(req),
+      });
+      throw err;
+    }
   }
 
   @Delete('users/:username')

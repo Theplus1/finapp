@@ -67,6 +67,28 @@ export class HttpExceptionFilter implements ExceptionFilter {
       },
     };
 
+    // Security logging: always include IP + user-agent for 401/403/429 on
+    // auth-sensitive routes so operators can grep for suspicious activity.
+    // Structured log (single line JSON) so log processors can parse it.
+    if (status === 401 || status === 403 || status === 429) {
+      const isAuthRoute =
+        request.url?.includes('/auth/login') ||
+        request.url?.includes('/admin-api/') ||
+        request.url?.includes('/customer-api/');
+      if (isAuthRoute) {
+        const clientIp =
+          (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+          (request.headers['x-real-ip'] as string) ||
+          request.ip ||
+          request.connection?.remoteAddress ||
+          'unknown';
+        const userAgent = (request.headers['user-agent'] as string) || 'unknown';
+        this.logger.warn(
+          `[security] status=${status} path=${request.method} ${request.url} ip=${clientIp} ua="${userAgent.substring(0, 120)}"`,
+        );
+      }
+    }
+
     response.status(status).json(errorResponse);
   }
 

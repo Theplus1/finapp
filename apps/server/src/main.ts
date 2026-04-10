@@ -39,8 +39,30 @@ async function bootstrap() {
     }),
   );
 
-  // Enable CORS if needed
-  app.enableCors();
+  // CORS: restrict to known production + development origins only.
+  // Previously app.enableCors() allowed all origins, so any third-party site
+  // could initiate browser requests against the API. The admin-web and
+  // customer-web Next.js apps proxy API calls server-side (via /api/[...proxy])
+  // so browsers never directly hit api.3wcards.com — strict CORS is safe.
+  const ALLOWED_ORIGINS = [
+    'https://admin.3wcards.com',
+    'https://customer.3wcards.com',
+    'http://localhost:3001',
+    'http://localhost:3002',
+  ];
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (server-to-server, curl, mobile apps)
+      if (!origin) return callback(null, true);
+      if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+      // Silently deny: do not attach Access-Control-Allow-Origin header.
+      // The browser will block the response client-side. Using `callback(null, false)`
+      // instead of throwing so rejected requests do not turn into 500 errors in logs.
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  });
 
   // Apply global response interceptor
   app.useGlobalInterceptors(new ResponseInterceptor());

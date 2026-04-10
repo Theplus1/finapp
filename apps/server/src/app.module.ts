@@ -25,6 +25,7 @@ import { AccountsModule } from './domain/accounts/accounts.module';
 import { ExportsModule } from './domain/exports/exports.module';
 import { BalanceAlertsModule } from './domain/balance-alerts/balance-alerts.module';
 import { CardSpendingAlertsModule } from './domain/card-spending-alerts/card-spending-alerts.module';
+import { AuditLogModule } from './common/audit/audit-log.module';
 
 @Module({
   imports: [
@@ -145,6 +146,7 @@ import { CardSpendingAlertsModule } from './domain/card-spending-alerts/card-spe
     ExportsModule,  // Export functionality
     BalanceAlertsModule,  // Balance alert functionality
     CardSpendingAlertsModule,  // Card spending alert functionality
+    AuditLogModule,  // Security audit trail (global)
     
     // Integration Modules
     SlashIntegrationModule,  // Slash API integration
