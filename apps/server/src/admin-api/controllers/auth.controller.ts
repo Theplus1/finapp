@@ -13,6 +13,7 @@ import {
   Logger,
   ForbiddenException,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import {
   ApiTags,
   ApiOperation,
@@ -41,12 +42,15 @@ export class AuthController {
     private readonly adminUsersService: AdminUsersService,
   ) {}
 
-  @UseGuards(LocalAuthGuard)
+  // Brute-force protection: max 5 login attempts per minute per IP.
+  // ThrottlerGuard keyed on request IP; exceeded requests get 429.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard, LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
-    summary: 'Admin login', 
-    description: 'Authenticate admin user and receive JWT token' 
+  @ApiOperation({
+    summary: 'Admin login',
+    description: 'Authenticate admin user and receive JWT token'
   })
   @ApiBody({ type: AdminLoginDto })
   @ApiResponse({ 

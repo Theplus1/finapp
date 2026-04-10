@@ -12,6 +12,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import {
   ApiBody,
   ApiOperation,
@@ -36,6 +37,9 @@ export class CustomerAuthController {
 
   constructor(private readonly adminAuthService: AdminAuthService) {}
 
+  // Brute-force protection: max 5 login attempts per minute per IP.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

@@ -15,6 +15,11 @@ import {
 
 const EMPLOYEE_ROLES: AdminUserRole[] = ['ads', 'accountant', 'employee'];
 
+// bcrypt cost factor for new password hashes. Raised from 10 to 12 to follow
+// OWASP 2023+ guidance. bcrypt.compare still verifies older 10-round hashes
+// transparently, so no migration is needed for existing users.
+const BCRYPT_ROUNDS = 12;
+
 /**
  * Admin Users Domain Service
  * Contains business logic for admin user management
@@ -135,7 +140,7 @@ export class AdminUsersService {
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
     // Create user in database
     const adminUser = await this.adminUserRepository.create({
@@ -196,7 +201,7 @@ export class AdminUsersService {
    * Update admin user password
    */
   async updatePassword(username: string, newPassword: string): Promise<void> {
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     await this.adminUserRepository.update(username, { passwordHash });
     this.logger.log(`Password updated for user: ${username}`);
   }
@@ -210,7 +215,7 @@ export class AdminUsersService {
       throw new NotFoundException('Boss user not found');
     }
     const newPassword = this.generateRandomPassword();
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     await this.adminUserRepository.update(username, { passwordHash });
     this.logger.log(`Random password reset for boss user: ${username}`);
     return { username, newPassword };
@@ -297,7 +302,7 @@ export class AdminUsersService {
       throw new BadRequestException('Target user is not an employee');
     }
     const newPassword = this.generateRandomPassword();
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     const updated = await this.adminUserRepository.updateById(employeeId, {
       passwordHash,
     });
@@ -509,7 +514,7 @@ export class AdminUsersService {
     }
     if (updates.password) {
       const bcrypt = await import('bcrypt');
-      updateData.passwordHash = await bcrypt.hash(updates.password, 10);
+      updateData.passwordHash = await bcrypt.hash(updates.password, BCRYPT_ROUNDS);
     }
     if (Object.keys(updateData).length === 0) return boss;
     const updated = await this.adminUserRepository.updateById(bossId, updateData);

@@ -9,6 +9,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { setDefaultResultOrder } from 'node:dns';
 import { randomUUID } from 'node:crypto';
 import { apiReference } from '@scalar/nestjs-api-reference';
+import helmet from 'helmet';
 
 // Polyfill for @nestjs/schedule compatibility with Node 18
 if (!globalThis.crypto) {
@@ -27,6 +28,16 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('port') || 3000;
   const mode = configService.get<string>('bot.mode');
+
+  // Security headers (XSS, clickjacking, MIME sniffing, HSTS, etc).
+  // contentSecurityPolicy disabled because it would require careful tuning
+  // per-route and we serve Swagger/Scalar API docs on /api-docs which uses inline scripts.
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   // Enable CORS if needed
   app.enableCors();
