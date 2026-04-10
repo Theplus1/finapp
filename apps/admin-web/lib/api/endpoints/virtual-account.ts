@@ -46,6 +46,7 @@ export interface VirtualAccount {
   bossEmail?: string;
   bossUsername?: string;
   bossId?: string;
+  isHidden?: boolean;
 }
 
 export interface ResetPasswordResponse {
@@ -64,6 +65,7 @@ type Params = {
   page: number;
   limit: number;
   date?: string;
+  includeHidden?: boolean;
 };
 
 export interface DataRechargeHistory {
@@ -156,6 +158,15 @@ export const virtualAccountsApi = {
   ): Promise<ApiResponse<VirtualAccount>> => {
     return await apiClient.delete(
       `/virtual-account/${virtualAccountId}/deposits/${historyId}`,
+    );
+  },
+  setHidden: async (
+    virtualAccountId: string,
+    isHidden: boolean,
+  ): Promise<ApiResponse<{ slashId: string; isHidden: boolean }>> => {
+    return await apiClient.patch(
+      `/virtual-account/${virtualAccountId}/hidden`,
+      { isHidden },
     );
   },
 };

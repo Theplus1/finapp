@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEnum, IsNumber, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsNumber, Min, Max, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PAGINATION_DEFAULTS, SORT_DEFAULTS, SortOrder } from '../../common/constants/pagination.constants';
@@ -55,4 +55,10 @@ export class VirtualAccountQueryDto {
   @IsOptional()
   @IsEnum(SortOrder)
   sortOrder?: SortOrder = SORT_DEFAULTS.ORDER;
+
+  @ApiPropertyOptional({ description: 'Include hidden VAs', default: false })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  includeHidden?: boolean = false;
 }

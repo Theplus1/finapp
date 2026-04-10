@@ -1,5 +1,5 @@
 import { Button } from "@repo/ui/components/button";
-import { History, Plus, Settings, Pencil, Trash2, Link } from "lucide-react";
+import { History, Plus, Settings, Pencil, Trash2, Link, Eye, EyeOff } from "lucide-react";
 import {
   DrawerTypeVirtualAccountEnum,
   VirtualAccount,
@@ -20,6 +20,21 @@ const ActionsTable = ({ onClickAction, virtualAccount, allVirtualAccounts, onRef
   const [deletingBoss, setDeletingBoss] = useState(false);
   const [addingToBoss, setAddingToBoss] = useState(false);
   const [showBossList, setShowBossList] = useState(false);
+  const [togglingHide, setTogglingHide] = useState(false);
+
+  const handleToggleHide = async () => {
+    setTogglingHide(true);
+    try {
+      const next = !virtualAccount.isHidden;
+      await api.virtualAccounts.setHidden(virtualAccount.slashId, next);
+      toast.success(next ? "VA ẩn khỏi danh sách" : "VA đã hiển thị lại");
+      onRefresh();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to toggle hidden");
+    } finally {
+      setTogglingHide(false);
+    }
+  };
 
   // Get unique bosses from all VAs
   const existingBosses = allVirtualAccounts
@@ -140,6 +155,23 @@ const ActionsTable = ({ onClickAction, virtualAccount, allVirtualAccounts, onRef
         </>
       )}
       <ActionResetPassword virtualAccount={virtualAccount} />
+      <Button
+        variant="outline"
+        onClick={handleToggleHide}
+        disabled={togglingHide}
+      >
+        {virtualAccount.isHidden ? (
+          <>
+            <Eye data-icon="inline-start" />
+            Hiện VA
+          </>
+        ) : (
+          <>
+            <EyeOff data-icon="inline-start" />
+            Ẩn VA
+          </>
+        )}
+      </Button>
       <Button
         variant="outline"
         onClick={() => onClickAction(DrawerTypeVirtualAccountEnum.RECHARGE)}

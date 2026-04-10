@@ -43,4 +43,5 @@ export interface AccountFilters {
   search?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  includeHidden?: boolean;
 }

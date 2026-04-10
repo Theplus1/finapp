@@ -76,6 +76,11 @@ export class AccountsService {
       isDeleted: false, // Always filter out deleted accounts
     };
 
+    // Hide hidden VAs by default unless includeHidden is true
+    if (!filters.includeHidden) {
+      mongoFilter.isHidden = { $ne: true };
+    }
+
     // Simple equality filters
     if (filters.accountId) {
       mongoFilter.accountId = filters.accountId;
@@ -157,6 +162,19 @@ export class AccountsService {
     }
 
     return account;
+  }
+
+  /**
+   * Toggle hidden status for a virtual account (admin only)
+   */
+  async setHidden(slashId: string, isHidden: boolean): Promise<VirtualAccountDocument> {
+    const existing = await this.virtualAccountRepository.findBySlashId(slashId);
+    if (!existing) {
+      throw new NotFoundException(`Virtual account ${slashId} not found`);
+    }
+    const updated = await this.virtualAccountRepository.upsert(slashId, { isHidden });
+    this.logger.log(`Virtual account ${slashId} isHidden=${isHidden}`);
+    return updated;
   }
 
   /**

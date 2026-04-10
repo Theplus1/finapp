@@ -82,6 +82,7 @@ export class AccountsController {
         search: query.search,
         sortBy: query.sortBy,
         sortOrder: query.sortOrder,
+        includeHidden: String(query.includeHidden) === 'true',
       },
       {
         page: query.page || PAGINATION_DEFAULTS.PAGE,
@@ -97,6 +98,19 @@ export class AccountsController {
         total,
       },
     };
+  }
+
+  @Patch(':id/hidden')
+  @ApiOperation({ summary: 'Toggle hidden status of a virtual account' })
+  @ApiParam({ name: 'id', description: 'Virtual Account Slash ID' })
+  @ApiBody({ schema: { type: 'object', properties: { isHidden: { type: 'boolean' } } } })
+  @ApiResponse({ status: 200, description: 'Hidden status updated' })
+  async setHidden(
+    @Param('id') slashId: string,
+    @Body() body: { isHidden: boolean },
+  ) {
+    const updated = await this.accountsService.setHidden(slashId, !!body.isHidden);
+    return { slashId: updated.slashId, isHidden: updated.isHidden };
   }
 
   @Get(':id/deposits')

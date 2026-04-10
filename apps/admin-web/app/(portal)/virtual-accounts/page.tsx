@@ -60,6 +60,7 @@ export default function VirtualAccount() {
     total: 0,
   });
   const [debtSort, setDebtSort] = useState<"asc" | "desc" | null>("asc");
+  const [includeHidden, setIncludeHidden] = useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [drawerType, setDrawerType] = useState<DrawerTypeVirtualAccountEnum>(
     DrawerTypeVirtualAccountEnum.LINK_TELEGRAM,
@@ -76,11 +77,12 @@ export default function VirtualAccount() {
   }, [setBreadcrumbs]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["virtual-accounts", countGetList, pagination.page],
+    queryKey: ["virtual-accounts", countGetList, pagination.page, includeHidden],
     queryFn: async () => {
       const res = await api.virtualAccounts.getVirtualAccounts({
         page: pagination.page,
         limit: pagination.pageSize,
+        includeHidden,
       });
       setPagination((prev) => ({
         ...prev,
@@ -133,7 +135,15 @@ export default function VirtualAccount() {
     {
       header: "Name",
       cell: ({ row }: CellContext<VirtualAccount, string>) => {
-        return isLoading ? <Skeleton /> : row.original.name;
+        if (isLoading) return <Skeleton />;
+        return (
+          <span className={row.original.isHidden ? "opacity-50 italic" : ""}>
+            {row.original.name}
+            {row.original.isHidden && (
+              <span className="ml-2 text-xs text-muted-foreground">(ẩn)</span>
+            )}
+          </span>
+        );
       },
     },
     {
@@ -459,6 +469,20 @@ export default function VirtualAccount() {
 
       <Section>
         <SectionContent>
+          <div className="flex items-center gap-2 mb-3">
+            <label className="flex items-center gap-2 cursor-pointer text-sm">
+              <input
+                type="checkbox"
+                checked={includeHidden}
+                onChange={(e) => {
+                  setIncludeHidden(e.target.checked);
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className="cursor-pointer"
+              />
+              Hiển thị VA đã ẩn
+            </label>
+          </div>
           <DataTable
             columns={columns}
             data={dataVirtualAccount}

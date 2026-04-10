@@ -72,6 +72,9 @@ export class VirtualAccount {
 
   @Prop({ default: false })
   isDeleted: boolean;
+
+  @Prop({ default: false, index: true })
+  isHidden: boolean;
 }
 
 export const VirtualAccountSchema = SchemaFactory.createForClass(VirtualAccount);
