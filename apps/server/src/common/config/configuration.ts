@@ -52,4 +52,11 @@ export default () => ({
     thresholdUsd: parseFloat(process.env.CARD_SPENDING_ALERT_THRESHOLD_USD || '1000'), // Default: 1000 USD
     cooldownHours: parseFloat(process.env.CARD_SPENDING_ALERT_COOLDOWN_HOURS || '0'), // Default: 0 hours
   },
+  slashBalanceAlert: {
+    enable: process.env.SLASH_BALANCE_ALERT_ENABLE !== 'false', // Default: true
+    cron: process.env.SLASH_BALANCE_ALERT_CRON || '*/30 * * * *', // Default: every 30 minutes
+    thresholdUsd: parseFloat(process.env.SLASH_BALANCE_ALERT_THRESHOLD_USD || '10000'), // Default: 10000 USD
+    cooldownMinutes: parseFloat(process.env.SLASH_BALANCE_ALERT_COOLDOWN_MINUTES || '30'), // Default: 30 minutes
+    chatId: parseInt(process.env.SLASH_BALANCE_ALERT_CHAT_ID || '0', 10),
+  },
 });

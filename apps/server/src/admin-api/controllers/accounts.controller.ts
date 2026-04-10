@@ -113,6 +113,35 @@ export class AccountsController {
     return { slashId: updated.slashId, isHidden: updated.isHidden };
   }
 
+  @Patch(':id/balance-alert')
+  @ApiOperation({ summary: 'Set balance alert for a virtual account' })
+  @ApiParam({ name: 'id', description: 'Virtual Account Slash ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        enabled: { type: 'boolean' },
+        thresholdUsd: { type: 'number', description: 'Threshold in USD' },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Balance alert updated' })
+  async setBalanceAlert(
+    @Param('id') slashId: string,
+    @Body() body: { enabled: boolean; thresholdUsd?: number },
+  ) {
+    const updated = await this.accountsService.setBalanceAlert(
+      slashId,
+      !!body.enabled,
+      body.thresholdUsd,
+    );
+    return {
+      slashId: updated.slashId,
+      balanceAlertEnabled: updated.balanceAlertEnabled,
+      balanceAlertThresholdUsd: updated.balanceAlertThresholdUsd,
+    };
+  }
+
   @Get(':id/deposits')
   @ApiOperation({
     summary: 'List deposit history for virtual account (paginated)',

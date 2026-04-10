@@ -1,5 +1,5 @@
 import { Button } from "@repo/ui/components/button";
-import { History, Plus, Settings, Pencil, Trash2, Link, Eye, EyeOff } from "lucide-react";
+import { History, Plus, Settings, Pencil, Trash2, Link, Eye, EyeOff, Bell, BellOff } from "lucide-react";
 import {
   DrawerTypeVirtualAccountEnum,
   VirtualAccount,
@@ -21,6 +21,38 @@ const ActionsTable = ({ onClickAction, virtualAccount, allVirtualAccounts, onRef
   const [addingToBoss, setAddingToBoss] = useState(false);
   const [showBossList, setShowBossList] = useState(false);
   const [togglingHide, setTogglingHide] = useState(false);
+  const [showAlertSettings, setShowAlertSettings] = useState(false);
+  const [alertThreshold, setAlertThreshold] = useState<string>(
+    String(virtualAccount.balanceAlertThresholdUsd ?? 10000),
+  );
+  const [savingAlert, setSavingAlert] = useState(false);
+
+  const handleSaveAlert = async (enabled: boolean) => {
+    const threshold = parseFloat(alertThreshold);
+    if (enabled && (isNaN(threshold) || threshold < 0)) {
+      toast.error("Ngưỡng không hợp lệ");
+      return;
+    }
+    setSavingAlert(true);
+    try {
+      await api.virtualAccounts.setBalanceAlert(
+        virtualAccount.slashId,
+        enabled,
+        enabled ? threshold : undefined,
+      );
+      toast.success(
+        enabled
+          ? `Bật cảnh báo < $${threshold.toLocaleString()}`
+          : "Tắt cảnh báo",
+      );
+      setShowAlertSettings(false);
+      onRefresh();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update balance alert");
+    } finally {
+      setSavingAlert(false);
+    }
+  };
 
   const handleToggleHide = async () => {
     setTogglingHide(true);
@@ -155,6 +187,64 @@ const ActionsTable = ({ onClickAction, virtualAccount, allVirtualAccounts, onRef
         </>
       )}
       <ActionResetPassword virtualAccount={virtualAccount} />
+      {!showAlertSettings ? (
+        <Button
+          variant="outline"
+          onClick={() => setShowAlertSettings(true)}
+        >
+          {virtualAccount.balanceAlertEnabled ? (
+            <>
+              <Bell data-icon="inline-start" />
+              Cảnh báo: ${(virtualAccount.balanceAlertThresholdUsd ?? 10000).toLocaleString()}
+            </>
+          ) : (
+            <>
+              <BellOff data-icon="inline-start" />
+              Cảnh báo số dư
+            </>
+          )}
+        </Button>
+      ) : (
+        <div className="flex flex-col gap-2 border rounded-md p-2">
+          <p className="text-xs text-muted-foreground">Ngưỡng cảnh báo (USD):</p>
+          <input
+            type="number"
+            min="0"
+            value={alertThreshold}
+            onChange={(e) => setAlertThreshold(e.target.value)}
+            className="border rounded px-2 py-1 text-sm"
+            placeholder="10000"
+          />
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              onClick={() => handleSaveAlert(true)}
+              disabled={savingAlert}
+            >
+              <Bell data-icon="inline-start" />
+              Bật
+            </Button>
+            {virtualAccount.balanceAlertEnabled && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => handleSaveAlert(false)}
+                disabled={savingAlert}
+              >
+                <BellOff data-icon="inline-start" />
+                Tắt
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowAlertSettings(false)}
+            >
+              Hủy
+            </Button>
+          </div>
+        </div>
+      )}
       <Button
         variant="outline"
         onClick={handleToggleHide}

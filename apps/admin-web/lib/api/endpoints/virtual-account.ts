@@ -47,6 +47,8 @@ export interface VirtualAccount {
   bossUsername?: string;
   bossId?: string;
   isHidden?: boolean;
+  balanceAlertEnabled?: boolean;
+  balanceAlertThresholdUsd?: number;
 }
 
 export interface ResetPasswordResponse {
@@ -167,6 +169,22 @@ export const virtualAccountsApi = {
     return await apiClient.patch(
       `/virtual-account/${virtualAccountId}/hidden`,
       { isHidden },
+    );
+  },
+  setBalanceAlert: async (
+    virtualAccountId: string,
+    enabled: boolean,
+    thresholdUsd?: number,
+  ): Promise<
+    ApiResponse<{
+      slashId: string;
+      balanceAlertEnabled: boolean;
+      balanceAlertThresholdUsd: number;
+    }>
+  > => {
+    return await apiClient.patch(
+      `/virtual-account/${virtualAccountId}/balance-alert`,
+      { enabled, thresholdUsd },
     );
   },
 };

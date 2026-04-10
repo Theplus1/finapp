@@ -75,6 +75,15 @@ export class VirtualAccount {
 
   @Prop({ default: false, index: true })
   isHidden: boolean;
+
+  @Prop({ default: false, index: true })
+  balanceAlertEnabled: boolean;
+
+  @Prop({ default: 10000 })
+  balanceAlertThresholdUsd: number;
+
+  @Prop()
+  lastBalanceAlertAt?: Date;
 }
 
 export const VirtualAccountSchema = SchemaFactory.createForClass(VirtualAccount);

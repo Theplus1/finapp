@@ -178,6 +178,29 @@ export class AccountsService {
   }
 
   /**
+   * Update balance alert settings for a VA (admin only)
+   */
+  async setBalanceAlert(
+    slashId: string,
+    enabled: boolean,
+    thresholdUsd?: number,
+  ): Promise<VirtualAccountDocument> {
+    const existing = await this.virtualAccountRepository.findBySlashId(slashId);
+    if (!existing) {
+      throw new NotFoundException(`Virtual account ${slashId} not found`);
+    }
+    const update: any = { balanceAlertEnabled: enabled };
+    if (thresholdUsd !== undefined && thresholdUsd >= 0) {
+      update.balanceAlertThresholdUsd = thresholdUsd;
+    }
+    const updated = await this.virtualAccountRepository.upsert(slashId, update);
+    this.logger.log(
+      `VA ${slashId} balanceAlert enabled=${enabled} threshold=${thresholdUsd ?? 'unchanged'}`,
+    );
+    return updated;
+  }
+
+  /**
    * Update virtual account
    * Business logic: Validate and update in local database
    */
