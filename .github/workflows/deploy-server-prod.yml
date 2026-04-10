@@ -79,6 +79,7 @@ jobs:
               -e "SLASH_TIMEOUT=${{ vars.SLASH_TIMEOUT }}" \
               -e "SLASH_WEBHOOK_SECRET=${{ secrets.SLASH_WEBHOOK_SECRET }}" \
               -e "SUPER_ADMIN_TOKEN=${{ secrets.SUPER_ADMIN_TOKEN }}" \
+              -e "JWT_SECRET=${{ secrets.JWT_SECRET }}" \
               -e "REDIS_HOST=${{ vars.REDIS_HOST }}" \
               -e "REDIS_PORT=${{ vars.REDIS_PORT }}" \
               -e "EXPORT_SECRET=${{ secrets.EXPORT_SECRET }}" \
