@@ -74,9 +74,64 @@ export class SlashSyncService {
       const entityData = mapTransactionDtoToEntity(transactionData, SYNC_CONSTANTS.SYNC_SOURCE.WEBHOOK);
       await this.transactionRepository.upsert(transactionData.id, entityData);
       this.logger.log(`Synced transaction ${transactionData.id} from webhook`);
+
+      // If the webhook arrives out-of-order for a date outside the fast cron's
+      // LOOKBACK_DAYS window (2 days), the daily summary for that date would never
+      // be refreshed. Force an immediate recalculation so reports stay accurate.
+      await this.recalcSummaryIfOutsideFastCronWindow(transactionData);
     } catch (error) {
       this.logger.error(`Error syncing transaction ${transactionData.id} from webhook:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Fast cron refreshes daily summaries for yesterday + today only. If a webhook
+   * or late sync writes a transaction with a date older than that window, we need
+   * to recalculate the summary for that specific date.
+   */
+  private async recalcSummaryIfOutsideFastCronWindow(
+    transaction: TransactionDto,
+  ): Promise<void> {
+    if (!transaction.virtualAccountId || !transaction.date) return;
+
+    const txDate = new Date(transaction.date);
+    if (isNaN(txDate.getTime())) return;
+
+    const dayStart = new Date(Date.UTC(
+      txDate.getUTCFullYear(),
+      txDate.getUTCMonth(),
+      txDate.getUTCDate(),
+      0, 0, 0, 0,
+    ));
+
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      0, 0, 0, 0,
+    ));
+
+    // Fast cron already recalcs yesterday+today; skip to avoid duplicated work.
+    const msInDay = 86400000;
+    const ageDays = Math.floor((todayStart.getTime() - dayStart.getTime()) / msInDay);
+    if (ageDays <= 1) return;
+
+    try {
+      await this.dailyPaymentSummariesService.calculateAndSaveDailySummary(
+        transaction.virtualAccountId,
+        dayStart,
+        'USD',
+        true,
+      );
+      this.logger.log(
+        `Webhook recalc: refreshed summary for ${transaction.virtualAccountId} on ${dayStart.toISOString().substring(0, 10)} (age=${ageDays}d)`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Webhook recalc failed for ${transaction.virtualAccountId} on ${dayStart.toISOString().substring(0, 10)}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 

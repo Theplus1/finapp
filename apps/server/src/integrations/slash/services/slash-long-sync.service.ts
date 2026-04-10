@@ -192,6 +192,12 @@ export class SlashLongSyncService implements OnModuleDestroy {
           });
 
           if (response.items && response.items.length > 0) {
+            // Track (virtualAccountId, date) pairs affected by this batch so we can
+            // recalculate the corresponding daily_payment_summaries immediately after upsert.
+            // Without this, the cron recalculating only the last 2 days would leave historical
+            // summaries frozen with stale values whenever long-sync backfills older data.
+            const affectedSummaries = new Map<string, Set<string>>();
+
             for (const transaction of response.items) {
               if (this.shutdownRequested || this.cancelledSyncs.has(syncId)) {
                 await this.updateCheckpoint(syncId, {
@@ -209,12 +215,28 @@ export class SlashLongSyncService implements OnModuleDestroy {
               if (itemResult.created) totalCreated++;
               if (itemResult.updated) totalUpdated++;
               if (itemResult.failed) totalFailed++;
+
+              // Record the (VA, day) affected so we can recalc its summary after the batch.
+              if ((itemResult.created || itemResult.updated) && transaction.virtualAccountId && transaction.date) {
+                const dayKey = String(transaction.date).substring(0, 10); // YYYY-MM-DD
+                let set = affectedSummaries.get(transaction.virtualAccountId);
+                if (!set) {
+                  set = new Set<string>();
+                  affectedSummaries.set(transaction.virtualAccountId, set);
+                }
+                set.add(dayKey);
+              }
             }
 
             this.logger.log(
               `Sync ${syncId}: Processed ${response.items.length} transactions. ` +
               `Total: ${totalProcessed} (${totalCreated} created, ${totalUpdated} updated, ${totalFailed} failed)`,
             );
+
+            // Recalculate daily summaries for every affected (VA, date) in this batch.
+            // This keeps reports consistent with the underlying transactions even when
+            // long-sync writes data far older than the DailyPaymentSummariesJob lookback window.
+            await this.recalculateAffectedSummaries(syncId, affectedSummaries);
           }
 
           cursor = response.metadata?.nextCursor;
@@ -259,6 +281,46 @@ export class SlashLongSyncService implements OnModuleDestroy {
       clearInterval(heartbeatTimer);
       this.activeSyncs.delete(syncId);
     }
+  }
+
+  /**
+   * Recalculate daily_payment_summaries for every (virtualAccountId, day) pair touched
+   * by a long-sync batch. Runs one day at a time via calculateAndSaveDailySummary so the
+   * results match exactly what a direct on-demand recalculation would produce.
+   */
+  private async recalculateAffectedSummaries(
+    syncId: string,
+    affectedSummaries: Map<string, Set<string>>,
+  ): Promise<void> {
+    if (affectedSummaries.size === 0) return;
+
+    let recalcTotal = 0;
+    let recalcFailed = 0;
+    for (const [virtualAccountId, days] of affectedSummaries.entries()) {
+      for (const dayKey of days) {
+        const [y, m, d] = dayKey.split('-').map(Number);
+        if (!y || !m || !d) continue;
+        const dayStart = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+        try {
+          await this.dailyPaymentSummariesService.calculateAndSaveDailySummary(
+            virtualAccountId,
+            dayStart,
+            'USD',
+            true,
+          );
+          recalcTotal++;
+        } catch (error) {
+          recalcFailed++;
+          this.logger.warn(
+            `Sync ${syncId}: failed to recalc summary for ${virtualAccountId} on ${dayKey}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }
+    }
+
+    this.logger.log(
+      `Sync ${syncId}: recalculated ${recalcTotal} daily summaries (${recalcFailed} failed) across ${affectedSummaries.size} virtual accounts`,
+    );
   }
 
   private async syncSingleTransaction(
