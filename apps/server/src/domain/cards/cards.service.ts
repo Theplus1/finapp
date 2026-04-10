@@ -199,11 +199,26 @@ export class CardsService {
     }
 
     if (filters.search && filters.search.trim().length > 0) {
-      const regex = new RegExp(filters.search.trim(), 'i');
-      mongoFilter.$or = [
-        { name: regex },
-        { last4: regex },
-      ];
+      // Split on newlines so the textarea "one card ID per line" input works.
+      // Also keeps the single-token path working exactly as before for name/last4 search.
+      const tokens = filters.search
+        .split(/\r?\n/)
+        .map((t) => t.trim())
+        .filter(Boolean);
+      // Escape regex metacharacters so pasted IDs containing _, -, . etc. are matched literally.
+      const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      if (tokens.length === 1) {
+        const regex = new RegExp(escapeRegex(tokens[0]), 'i');
+        mongoFilter.$or = [
+          { name: regex },
+          { last4: regex },
+          { slashId: regex },
+        ];
+      } else if (tokens.length > 1) {
+        // Multi-line paste: treat each line as a Card ID, match exactly via $in.
+        mongoFilter.slashId = { $in: tokens };
+      }
     }
 
     return mongoFilter;
