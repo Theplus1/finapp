@@ -251,14 +251,22 @@ export class AccountsService {
       }
     });
 
-    const bossMap = new Map<string, { username: string; email?: string }>();
+    const bossMap = new Map<
+      string,
+      { id: string; username: string; email?: string }
+    >();
     bosses.forEach((boss) => {
-      if (boss.virtualAccountId) {
-        bossMap.set(boss.virtualAccountId, {
-          username: boss.username,
-          email: boss.email,
-        });
-      }
+      const bossInfo = {
+        id: String(boss._id),
+        username: boss.username,
+        email: boss.email,
+      };
+      const vaIds = new Set<string>();
+      if (boss.virtualAccountId) vaIds.add(boss.virtualAccountId);
+      (boss.virtualAccountIds ?? []).forEach((id) => vaIds.add(id));
+      vaIds.forEach((vaId) => {
+        if (!bossMap.has(vaId)) bossMap.set(vaId, bossInfo);
+      });
     });
 
     let internalMetricsMap = new Map<
@@ -292,6 +300,7 @@ export class AccountsService {
         ...accountData,
         linkedTelegramId: user?.telegramId,
         linkedTelegramIds: user?.telegramIds,
+        bossId: boss?.id,
         bossUsername: boss?.username,
         bossEmail: boss?.email,
         internalBalanceCents: internalMetrics?.endingAccountBalanceCents ?? 0,

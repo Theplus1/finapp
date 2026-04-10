@@ -16,6 +16,7 @@ export interface UserInfo {
 export interface VirtualAccountDetail extends Omit<VirtualAccount, 'toObject'> {
   linkedTelegramId?: number;
   linkedTelegramIds?: number[];
+  bossId?: string;
   bossUsername?: string;
   bossEmail?: string;
   internalBalanceCents?: number;
