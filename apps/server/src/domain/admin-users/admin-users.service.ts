@@ -14,7 +14,6 @@ import {
 } from '../../database/schemas/admin-user.schema';
 
 const EMPLOYEE_ROLES: AdminUserRole[] = ['ads', 'accountant', 'employee'];
-const CUSTOMER_LOGIN_ROLES: AdminUserRole[] = ['boss', 'ads', 'accountant', 'employee'];
 
 /**
  * Admin Users Domain Service
@@ -43,8 +42,10 @@ export class AdminUsersService {
   /**
    * Validate user credentials.
    *
-   * - Customer roles (boss/ads/accountant): allow login by username OR email.
-   * - Admin roles (admin/super-admin): login by username only.
+   * - All roles: allow login by username or email.
+   * - If identifier contains '@', search by email first.
+   * - Otherwise search by username.
+   * - Fallback: if first lookup fails, try the other field.
    */
   async validateCredentials(
     identifier: string,
@@ -53,41 +54,33 @@ export class AdminUsersService {
     const trimmed = identifier.trim();
     const looksLikeEmail = trimmed.includes('@');
 
-    let adminUser: AdminUserDocument | null;
+    let adminUser: AdminUserDocument | null = null;
 
     if (looksLikeEmail) {
-      // Customer login by email
+      // Try email first
       adminUser = await this.adminUserRepository.findOne({
         email: trimmed,
         isActive: true,
       });
-
+      // Fallback: maybe it's a username that contains '@'
       if (!adminUser) {
-        this.logger.warn(`Login attempt with invalid email: ${trimmed}`);
-        return null;
-      }
-
-      if (!CUSTOMER_LOGIN_ROLES.includes(adminUser.role)) {
-        this.logger.warn(
-          `Login attempt by email for non-customer role: ${trimmed} (role=${adminUser.role})`,
-        );
-        return null;
+        adminUser = await this.adminUserRepository.findByUsername(trimmed);
       }
     } else {
-      // Username login for all roles
+      // Try username first
       adminUser = await this.adminUserRepository.findByUsername(trimmed);
+      // Fallback: maybe email without '@' matched (unlikely but safe)
       if (!adminUser) {
-        this.logger.warn(`Login attempt with invalid username: ${trimmed}`);
-        return null;
+        adminUser = await this.adminUserRepository.findOne({
+          email: trimmed,
+          isActive: true,
+        });
       }
+    }
 
-      // For customer roles, enforce login by email only
-      if (CUSTOMER_LOGIN_ROLES.includes(adminUser.role)) {
-        this.logger.warn(
-          `Customer user attempted to login by username instead of email: ${trimmed} (role=${adminUser.role})`,
-        );
-        return null;
-      }
+    if (!adminUser) {
+      this.logger.warn(`Login attempt with invalid identifier: ${trimmed}`);
+      return null;
     }
 
     if (!adminUser.isActive) {
