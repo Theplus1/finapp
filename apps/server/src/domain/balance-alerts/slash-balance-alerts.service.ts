@@ -52,6 +52,30 @@ export class SlashBalanceAlertsService {
 
     this.logger.log(`Checking balance for ${enabledVAs.length} VAs`);
 
+    // Fetch all VA balances from Slash in ONE API call (paginated if needed)
+    const balanceMap = new Map<string, number>();
+    try {
+      let cursor: string | undefined = undefined;
+      do {
+        const res = await this.slashApiService.listVirtualAccounts(
+          cursor ? { cursor } : undefined,
+        );
+        for (const item of res.items ?? []) {
+          const id = item.virtualAccount?.id;
+          const amount = item.balance?.amountCents ?? 0;
+          if (id) balanceMap.set(id, amount);
+        }
+        cursor = res.metadata?.nextCursor;
+      } while (cursor);
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch VA balances from Slash: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return;
+    }
+
     const cooldownMs = cooldownMinutes * 60 * 1000;
     const now = Date.now();
 
@@ -63,39 +87,35 @@ export class SlashBalanceAlertsService {
     const vasToUpdate: string[] = [];
 
     for (const va of enabledVAs) {
-      try {
-        // Get fresh balance from Slash API
-        const res = await this.slashApiService.getVirtualAccount(va.slashId);
-        const balanceCents = res?.balance?.amountCents ?? 0;
-
-        // Use per-VA threshold, fallback to default
-        const thresholdUsd = va.balanceAlertThresholdUsd ?? defaultThresholdUsd;
-        const thresholdCents = thresholdUsd * 100;
-
-        if (balanceCents >= thresholdCents) {
-          continue; // Balance OK, no alert
-        }
-
-        // Check cooldown
-        const lastAlertAt = va.lastBalanceAlertAt
-          ? new Date(va.lastBalanceAlertAt).getTime()
-          : 0;
-        if (lastAlertAt && now - lastAlertAt < cooldownMs) {
-          this.logger.log(
-            `VA ${va.name} alert skipped (cooldown): balance=$${(balanceCents / 100).toFixed(2)}`,
-          );
-          continue;
-        }
-
-        belowThreshold.push({ name: va.name, balanceCents, thresholdUsd });
-        vasToUpdate.push(va.slashId);
-      } catch (error) {
-        this.logger.error(
-          `Failed to get balance for VA ${va.slashId} (${va.name}): ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+      const balanceCents = balanceMap.get(va.slashId);
+      if (balanceCents === undefined) {
+        this.logger.warn(
+          `VA ${va.slashId} (${va.name}) not found in Slash list response`,
         );
+        continue;
       }
+
+      // Use per-VA threshold, fallback to default
+      const thresholdUsd = va.balanceAlertThresholdUsd ?? defaultThresholdUsd;
+      const thresholdCents = thresholdUsd * 100;
+
+      if (balanceCents >= thresholdCents) {
+        continue; // Balance OK, no alert
+      }
+
+      // Check cooldown
+      const lastAlertAt = va.lastBalanceAlertAt
+        ? new Date(va.lastBalanceAlertAt).getTime()
+        : 0;
+      if (lastAlertAt && now - lastAlertAt < cooldownMs) {
+        this.logger.log(
+          `VA ${va.name} alert skipped (cooldown): balance=$${(balanceCents / 100).toFixed(2)}`,
+        );
+        continue;
+      }
+
+      belowThreshold.push({ name: va.name, balanceCents, thresholdUsd });
+      vasToUpdate.push(va.slashId);
     }
 
     if (belowThreshold.length === 0) {
