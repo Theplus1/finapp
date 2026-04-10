@@ -72,16 +72,40 @@ jobs:
         env:
           VPS_HOST: ${{ vars.VPS_HOST }}
           VPS_USER: ${{ vars.VPS_USER }}
-          CUSTOMER_APP_DIR: ${{ vars.CUSTOMER_APP_DIR }}
-          CUSTOMER_PORT: ${{ vars.CUSTOMER_PORT }}
         run: |
           ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
             set -e
-            cd ${{ vars.CUSTOMER_APP_DIR }}
-            
-            echo "🔄 Restarting customer-web..."
-            PORT=${{ vars.CUSTOMER_PORT }} pm2 restart customer-web || PORT=${{ vars.CUSTOMER_PORT }} pm2 start apps/customer-web/server.js --name customer-web
-            pm2 save
-            
-            echo "✅ Deployment complete"
+
+            # Reload customer-web in the `deploy` user's PM2 daemon, which
+            # is the one nginx proxies to (port 3002). Previous workflow
+            # used `pm2 restart` in the SSH user's context, which silently
+            # hit the wrong PM2 daemon and left the process serving stale
+            # code. Always target deploy's PM2 explicitly via ecosystem.
+            CMD="pm2 reload /home/deploy/apps/ecosystem.config.js --only customer-web --update-env && pm2 save"
+
+            echo "Reloading customer-web (ssh user: $(whoami))..."
+            if [ "$(whoami)" = "deploy" ]; then
+              bash -c "$CMD"
+            else
+              su - deploy -c "$CMD"
+            fi
+
+            # Verify: curl the local port nginx proxies to and make sure
+            # /login serves the new HTML. If the reload silently targeted
+            # the wrong pm2 daemon, this smoke test will catch it.
+            sleep 3
+            echo "Smoke test /login on http://127.0.0.1:3002 ..."
+            BODY=$(curl -sS --max-time 10 http://127.0.0.1:3002/login || true)
+            if echo "$BODY" | grep -q 'Username or Email'; then
+              echo "OK: /login serves new HTML"
+            else
+              echo "FAIL: /login not reachable or serving stale HTML" >&2
+              echo "--- first 500 bytes of response ---" >&2
+              echo "$BODY" | head -c 500 >&2
+              echo "--- pm2 logs customer-web (deploy) ---" >&2
+              su - deploy -c "pm2 logs customer-web --lines 20 --nostream" >&2 || true
+              exit 1
+            fi
+
+            echo "Deployment complete"
           ENDSSH
