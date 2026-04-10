@@ -82,7 +82,7 @@ export class AccountsController {
         search: query.search,
         sortBy: query.sortBy,
         sortOrder: query.sortOrder,
-        includeHidden: String(query.includeHidden) === 'true',
+        includeHidden: query.includeHidden === true,
       },
       {
         page: query.page || PAGINATION_DEFAULTS.PAGE,

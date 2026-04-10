@@ -1,5 +1,5 @@
 import { IsOptional, IsString, IsEnum, IsNumber, Min, Max, IsBoolean } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PAGINATION_DEFAULTS, SORT_DEFAULTS, SortOrder } from '../../common/constants/pagination.constants';
 import { CommissionRuleDto } from 'src/integrations/slash/dto/account.dto';
@@ -58,7 +58,7 @@ export class VirtualAccountQueryDto {
 
   @ApiPropertyOptional({ description: 'Include hidden VAs', default: false })
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   includeHidden?: boolean = false;
 }
