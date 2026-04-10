@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { SlashApiService } from './slash-api.service';
@@ -33,12 +33,19 @@ export interface SyncProgress {
 }
 
 @Injectable()
-export class SlashLongSyncService implements OnModuleDestroy {
+export class SlashLongSyncService implements OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = new Logger(SlashLongSyncService.name);
   private activeSyncs = new Map<string, NodeJS.Timeout>();
   private cancelledSyncs = new Set<string>();
   private shutdownRequested = false;
   private signalHandlersRegistered = false;
+
+  // Auto-resume safeguards — keep them conservative so we never hammer Slash
+  // or revive truly dead jobs after a long outage.
+  private static readonly AUTO_RESUME_STARTUP_DELAY_MS = 10_000;
+  private static readonly AUTO_RESUME_STALE_CUTOFF_MS = 24 * 60 * 60 * 1000; // 24 hours
+  private static readonly AUTO_RESUME_STAGGER_MS = 30_000;
+  private static readonly AUTO_RESUME_MAX_JOBS_PER_BOOT = 10;
 
   constructor(
     private readonly slashApiService: SlashApiService,
@@ -53,10 +60,100 @@ export class SlashLongSyncService implements OnModuleDestroy {
   async onModuleDestroy() {
     this.logger.warn('Module destroying - pausing all active syncs');
     this.shutdownRequested = true;
-    
+
     for (const [syncId, heartbeatTimer] of this.activeSyncs.entries()) {
       clearInterval(heartbeatTimer);
       await this.pauseSync(syncId);
+    }
+  }
+
+  /**
+   * Automatically resume long-sync jobs that were paused by a previous shutdown
+   * (e.g. a CI/CD redeploy). Without this hook the job sits paused forever until
+   * someone hits the resume endpoint manually.
+   *
+   * Safeguards (see constants above):
+   *   - Fire-and-forget: bootstrap returns immediately so startup is not blocked.
+   *   - Startup grace period: wait for Mongo/Slash/config to be warmed up.
+   *   - Stale cutoff: never revive a job whose heartbeat is older than 24h
+   *     (cursor may have expired on Slash side; needs manual intervention).
+   *   - Sequential resumes with stagger: avoids thundering-herd into Slash API.
+   *   - Hard cap on jobs per boot: if many are paused, something is wrong and
+   *     auto-resume should not become a retry bomb.
+   *   - Env kill switch: LONG_SYNC_AUTO_RESUME=false disables this entirely.
+   *   - Errors per job are swallowed (log warn) so one bad checkpoint does not
+   *     block the others.
+   */
+  onApplicationBootstrap() {
+    if (process.env.LONG_SYNC_AUTO_RESUME === 'false') {
+      this.logger.log('Long-sync auto-resume on bootstrap is disabled via env');
+      return;
+    }
+    // Fire and forget — we deliberately do not await so Nest bootstrap finishes fast.
+    this.autoResumePausedSyncs().catch((err) => {
+      this.logger.error('Auto-resume bootstrap handler failed:', err);
+    });
+  }
+
+  private async autoResumePausedSyncs(): Promise<void> {
+    await delay(SlashLongSyncService.AUTO_RESUME_STARTUP_DELAY_MS);
+
+    if (this.shutdownRequested) {
+      this.logger.warn('Shutdown requested during bootstrap grace period — skipping auto-resume');
+      return;
+    }
+
+    const cutoff = new Date(Date.now() - SlashLongSyncService.AUTO_RESUME_STALE_CUTOFF_MS);
+
+    const candidates = await this.syncCheckpointModel
+      .find({
+        status: 'paused',
+        lastHeartbeat: { $gte: cutoff },
+      })
+      .sort({ lastHeartbeat: -1 })
+      .limit(SlashLongSyncService.AUTO_RESUME_MAX_JOBS_PER_BOOT)
+      .exec();
+
+    // Also log (but do not resume) any stale paused jobs so operators know.
+    const stale = await this.syncCheckpointModel
+      .countDocuments({
+        status: 'paused',
+        lastHeartbeat: { $lt: cutoff },
+      })
+      .exec();
+    if (stale > 0) {
+      this.logger.warn(
+        `Auto-resume skipped ${stale} stale paused job(s) (heartbeat older than 24h). Investigate manually.`,
+      );
+    }
+
+    if (candidates.length === 0) {
+      this.logger.log('Auto-resume: no eligible paused long-sync jobs found');
+      return;
+    }
+
+    this.logger.log(
+      `Auto-resume: found ${candidates.length} paused long-sync job(s) to resume sequentially`,
+    );
+
+    for (const cp of candidates) {
+      if (this.shutdownRequested) {
+        this.logger.warn('Shutdown requested — aborting auto-resume loop');
+        return;
+      }
+      try {
+        this.logger.log(
+          `Auto-resume: resuming ${cp.syncId} (processed=${cp.totalProcessed}, lastHeartbeat=${cp.lastHeartbeat?.toISOString?.() ?? 'unknown'})`,
+        );
+        await this.resumeSync(cp.syncId);
+        // Stagger subsequent resumes so we do not spike Slash API concurrency.
+        await delay(SlashLongSyncService.AUTO_RESUME_STAGGER_MS);
+      } catch (error) {
+        this.logger.warn(
+          `Auto-resume: failed to resume ${cp.syncId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        // Continue with remaining candidates — do not bail the whole hook.
+      }
     }
   }
 
