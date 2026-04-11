@@ -155,6 +155,16 @@ class HttpClient {
       };
       throw error;
     }
+    const maybeObject =
+      isJson && typeof data === "object" && data !== null
+        ? (data as Record<string, unknown>)
+        : undefined;
+
+    const payload =
+      maybeObject && "data" in maybeObject
+        ? (maybeObject.data as T)
+        : (data as T);
+
     return data as ApiResponse<T>;
   }
 
@@ -182,11 +192,6 @@ class HttpClient {
       const pathLogin = "/login";
       if (response.status === 401 && currentPath !== pathLogin) {
         window.location.href = pathLogin;
-        throw {
-          message: "Session expired",
-          code: "UNAUTHORIZED",
-          status: 401,
-        } as ApiError;
       }
       const result: ApiResponse<T> = await this.handleResponse<T>(response);
       return result;

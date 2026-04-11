@@ -179,11 +179,6 @@ class HttpClient {
       const pathLogin = "/login";
       if (response.status === 401 && currentPath !== pathLogin) {
         window.location.href = pathLogin;
-        throw {
-          message: "Session expired",
-          code: "UNAUTHORIZED",
-          status: 401,
-        } as ApiError;
       }
       const result: ApiResponse<T> = await this.handleResponse<T>(response);
       return result;
