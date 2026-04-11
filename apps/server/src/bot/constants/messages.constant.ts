@@ -225,9 +225,21 @@ export const Messages = {
     const escapeHtml = (text: string): string =>
       text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+    // Mask up to 4 characters after the last `*` so the hint code
+    // (ví dụ: METAPAY*PSSS) bị ẩn cho đến khi user bấm Get Confirm Code.
+    const maskConfirmCode = (text: string): string => {
+      const lastStar = text.lastIndexOf('*');
+      if (lastStar === -1 || lastStar === text.length - 1) return text;
+      const before = text.slice(0, lastStar + 1);
+      const after = text.slice(lastStar + 1);
+      const maskLen = Math.min(4, after.length);
+      return before + '*'.repeat(maskLen) + after.slice(maskLen);
+    };
+
     const cardInfo = card ? `${escapeHtml(card.name)} ••••${card.last4}` : 'N/A';
     const formattedDate = format(new Date(transaction.date), 'dd-MM-yy HH:mm');
-    const desc = escapeHtml(transaction.merchantData?.description || 'FACEBOOK');
+    const rawDesc = transaction.merchantData?.description || 'FACEBOOK';
+    const desc = escapeHtml(maskConfirmCode(rawDesc));
 
     return {
       text: `🔥 Mã xác minh Facebook\n${cardInfo} | <b>${desc}</b>\n${formattedDate}`,
