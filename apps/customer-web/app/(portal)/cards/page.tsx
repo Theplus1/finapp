@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useState } from "react";
 import { PermissionEnum, RoleUserEnum, UserBoss } from "@/lib/api/endpoints/users";
-import CardPage from "../(card)/page";
+import CardPage from "../_card/page";
 import CardsPage from "./components/cards-page";
 
 const initEmployee: UserBoss = {
