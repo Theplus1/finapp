@@ -31,22 +31,18 @@ const FormRecharge = ({
   const { mutateAsync: deposit } = useMutation({
     mutationFn: async () => {
       setIsLoading(true);
-      api.virtualAccounts
-        .dailyDeposit(virtualAccount!.slashId, {
-          // date format YYYY-MM-DD
+      try {
+        await api.virtualAccounts.dailyDeposit(virtualAccount!.slashId, {
           date: new Date(date!).toLocaleDateString("en-CA"),
           depositAmount: amount,
-        })
-        .then(() => {
-          toast.success("Deposit created successfully");
-          onSubmitRechargeSuccess();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
         });
+        toast.success("Deposit created successfully");
+        onSubmitRechargeSuccess();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unknown error");
+      } finally {
+        setIsLoading(false);
+      }
     },
   });
 
@@ -101,8 +97,9 @@ const FormRecharge = ({
             Cancel
           </Button>
           <Button
+            disabled={disableSubmit}
             className={cn(disableSubmit && "cursor-not-allowed opacity-50")}
-            onClick={!disableSubmit ? (deposit as () => void) : undefined}
+            onClick={deposit as () => void}
           >
             {isLoading ? <Spinner /> : ""}
             Submit

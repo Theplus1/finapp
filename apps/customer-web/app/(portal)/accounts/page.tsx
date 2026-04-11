@@ -260,7 +260,7 @@ export default function Accounts() {
             pageSize={pagination.pageSize}
             onChange={(page) => setPagination((prev) => ({ ...prev, page }))}
           />
-          <Drawer direction="right" open={openDrawer}>
+          <Drawer direction="right" open={openDrawer} onOpenChange={setOpenDrawer}>
             <DrawerContent>
               <DrawerHeader>
                 <DrawerTitle>

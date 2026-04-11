@@ -130,7 +130,7 @@ export class SlashBalanceAlertsService {
         (v) =>
           `${this.escapeMarkdown(v.name)} : $${(v.balanceCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} _(ngưỡng: $${v.thresholdUsd.toLocaleString('en-US')})_`,
       );
-    const header = `⚠️ *Số dư Slash thấp*`;
+    const header = `⚠️ *\\[V1\\] Số dư Slash thấp*`;
     const message = `${header}\n\n${lines.join('\n')}`;
 
     try {

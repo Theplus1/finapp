@@ -335,7 +335,7 @@ export default function CardPage() {
             data={dataCardGrouped}
             maxHeight={"70vh"}
           />
-          <Drawer direction="right" open={openDrawer}>
+          <Drawer direction="right" open={openDrawer} onOpenChange={setOpenDrawer}>
             <DrawerContent>
               <DrawerHeader>
                 <DrawerTitle>

@@ -37,38 +37,32 @@ const FormActionCard = ({
   const { mutateAsync: setSpendingLimit } = useMutation({
     mutationFn: async () => {
       setIsLoading(true);
-      api.cards
-        .setLimit(card.slashId, presetLimit, amountLimit)
-        .then(() => {
-          toast.success("Card spending limit set successfully");
-          onSubmitCardSuccess();
-          onCancelDrawer();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
+      try {
+        await api.cards.setLimit(card.slashId, presetLimit, amountLimit);
+        toast.success("Card spending limit set successfully");
+        onSubmitCardSuccess();
+        onCancelDrawer();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unknown error");
+      } finally {
+        setIsLoading(false);
+      }
     },
   });
 
   const { mutateAsync: unsetSpendingLimit } = useMutation({
     mutationFn: async () => {
       setIsLoading(true);
-      api.cards
-        .unsetLimit(card.slashId)
-        .then(() => {
-          toast.success("Card spending limit unset successfully");
-          onSubmitCardSuccess();
-          onCancelDrawer();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
+      try {
+        await api.cards.unsetLimit(card.slashId);
+        toast.success("Card spending limit unset successfully");
+        onSubmitCardSuccess();
+        onCancelDrawer();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unknown error");
+      } finally {
+        setIsLoading(false);
+      }
     },
   });
 
@@ -126,18 +120,15 @@ const FormActionCard = ({
             Cancel
           </Button>
           <Button
+            disabled={isLoading}
             className={cn(isLoading && "cursor-not-allowed opacity-50")}
-            onClick={
-              !isLoading
-                ? () => {
-                    if (!isUnSet) {
-                      setSpendingLimit();
-                    } else {
-                      unsetSpendingLimit();
-                    }
-                  }
-                : undefined
-            }
+            onClick={() => {
+              if (!isUnSet) {
+                setSpendingLimit();
+              } else {
+                unsetSpendingLimit();
+              }
+            }}
           >
             {isLoading ? <Spinner /> : ""}
             Confirm

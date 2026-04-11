@@ -20,7 +20,7 @@ import { WebNotificationsService } from './web-notifications.service';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET', 'default-secret'),
+        secret: configService.getOrThrow<string>('JWT_SECRET'),
       }),
       inject: [ConfigService],
     }),

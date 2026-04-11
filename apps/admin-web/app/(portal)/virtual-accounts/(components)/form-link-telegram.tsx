@@ -63,20 +63,17 @@ const FormLinkTelegram = ({
         return;
       }
       setIsLoading(true);
-      api.virtualAccounts
-        .linkTelegram(virtualAccount!._id, {
+      try {
+        await api.virtualAccounts.linkTelegram(virtualAccount!._id, {
           telegramIds: telegramIds,
-        })
-        .then(() => {
-          toast.success("Telegram linked successfully");
-          onSubmitTelegramSuccess();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
         });
+        toast.success("Telegram linked successfully");
+        onSubmitTelegramSuccess();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unknown error");
+      } finally {
+        setIsLoading(false);
+      }
     },
   });
 
@@ -189,8 +186,9 @@ const FormLinkTelegram = ({
             Cancel
           </Button>
           <Button
+            disabled={isLoading}
             className={cn(isLoading && "cursor-not-allowed opacity-50")}
-            onClick={!isLoading ? onSubmit : undefined}
+            onClick={onSubmit}
           >
             {isLoading ? <Spinner /> : ""}
             Submit

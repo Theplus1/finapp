@@ -66,44 +66,38 @@ const FormActionEmployee = ({
   const { mutateAsync: createAccount } = useMutation({
     mutationFn: async () => {
       setIsLoading(true);
-      api.employees
-        .createEmployee({
+      try {
+        await api.employees.createEmployee({
           username: formEmployee.username!,
           password: formEmployee.password!,
           permissions: formEmployee.permissions ?? [],
           ...(formEmployee.virtualAccountId ? { virtualAccountId: formEmployee.virtualAccountId } : {}),
-        })
-        .then(() => {
-          toast.success("Employee created successfully");
-          onSubmitDrawerSuccess();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
         });
+        toast.success("Employee created successfully");
+        onSubmitDrawerSuccess();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unknown error");
+      } finally {
+        setIsLoading(false);
+      }
     },
   });
 
   const { mutateAsync: editAccount } = useMutation({
     mutationFn: async () => {
       setIsLoading(true);
-      api.employees
-        .updateEmployee(employee!.id, {
+      try {
+        await api.employees.updateEmployee(employee!.id, {
           username: formEmployee.username!,
           permissions: formEmployee.permissions ?? [],
-        })
-        .then(() => {
-          toast.success("Employee updated successfully");
-          onSubmitDrawerSuccess();
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
         });
+        toast.success("Employee updated successfully");
+        onSubmitDrawerSuccess();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unknown error");
+      } finally {
+        setIsLoading(false);
+      }
     },
   });
 
@@ -122,12 +116,12 @@ const FormActionEmployee = ({
             Cancel
           </Button>
           <Button
+            disabled={disabledSubmit}
             className={cn(disabledSubmit && "cursor-not-allowed opacity-50")}
-            onClick={!disabledSubmit
-              ? drawerType === EmployeeDrawerTypeEnum.CREATE
+            onClick={
+              drawerType === EmployeeDrawerTypeEnum.CREATE
                 ? () => createAccount()
                 : () => editAccount()
-              : undefined
             }
           >
             {isLoading ? <Spinner /> : ""}

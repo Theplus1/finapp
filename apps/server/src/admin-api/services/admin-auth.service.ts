@@ -47,7 +47,7 @@ export class AdminAuthService implements OnModuleInit {
     private readonly jwtService: JwtService,
     private readonly adminUsersService: AdminUsersService,
   ) {
-    this.jwtSecret = this.configService.get<string>('JWT_SECRET', 'default-secret');
+    this.jwtSecret = this.configService.getOrThrow<string>('JWT_SECRET');
     this.jwtExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '24h') as StringValue;
   }
 

@@ -499,7 +499,7 @@ export default function VirtualAccount() {
               }));
             }}
           />
-          <Drawer direction="right" open={openDrawer}>
+          <Drawer direction="right" open={openDrawer} onOpenChange={setOpenDrawer}>
             <DrawerContent>
               <DrawerHeader>
                 <DrawerTitle>{renderTitleDrawer(drawerType)}</DrawerTitle>
