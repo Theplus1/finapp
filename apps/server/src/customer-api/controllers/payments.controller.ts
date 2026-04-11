@@ -19,16 +19,17 @@ import { JwtAuthGuard } from '../../admin-api/guards/jwt-auth.guard';
 import { RolesGuard } from '../../admin-api/guards/roles.guard';
 import { Roles } from '../../admin-api/decorators/roles.decorator';
 import { PaymentSummaryResponseDto } from '../dto/payment-summary.dto';
-import { BOSS_AND_ACCOUNTANT_ROLES } from '../../common/constants/auth.constants';
+import { CUSTOMER_API_ROLES } from '../../common/constants/auth.constants';
 import { parseYyyyMmDdAsUtcDate } from '../../common/utils/date.utils';
 import { PaymentSummaryService } from '../../domain/payment-summary/payment-summary.service';
 import { RequestUser, validateVaAccess } from '../utils/va-access.util';
+import { requirePermission } from '../utils/permissions.util';
 
 @ApiTags('Customer API - Payment')
 @ApiBearerAuth()
 @Controller('customer-api/virtual-accounts')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...BOSS_AND_ACCOUNTANT_ROLES)
+@Roles(...CUSTOMER_API_ROLES)
 export class CustomerPaymentsController {
   constructor(
     private readonly paymentSummaryService: PaymentSummaryService,
@@ -65,6 +66,7 @@ export class CustomerPaymentsController {
     @Query('to') to: string,
     @Request() req: { user?: RequestUser },
   ): Promise<PaymentSummaryResponseDto> {
+    requirePermission(req.user, 'payments');
     validateVaAccess(req.user, slashId);
 
     if (!from || !to) {
@@ -120,6 +122,7 @@ export class CustomerPaymentsController {
       endingAccountBalanceCents: number;
     };
   }> {
+    requirePermission(req.user, 'payments');
     validateVaAccess(req.user, slashId);
 
     return this.paymentSummaryService.getOverallSummary(slashId);

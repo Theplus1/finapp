@@ -33,7 +33,6 @@ import {
   PopoverTrigger,
 } from "@repo/ui/components/popover";
 import ActionsTable from "./components/actions-table";
-import { upperCaseFirstCharacter } from "@repo/ui/lib/func";
 import { toast } from "sonner";
 import { Spinner } from "@repo/ui/components/spinner";
 import FormActionEmployee from "./components/form-action-employee";
@@ -152,11 +151,12 @@ export default function Accounts() {
     {
       header: "Role",
       cell: ({ row }: CellContext<Employee, string>) => {
-        return isLoading ? (
-          <Skeleton />
-        ) : (
-          upperCaseFirstCharacter(row.original.role)
-        );
+        if (isLoading) return <Skeleton />;
+        // Unify legacy roles (ads/accountant) under the single "Employee"
+        // label since the only meaningful distinction at the UI level is
+        // boss vs non-boss. Permissions control the actual access now.
+        const role = row.original.role;
+        return role === "boss" ? "Boss" : "Employee";
       },
     },
     {
@@ -263,7 +263,11 @@ export default function Accounts() {
           <Drawer direction="right" open={openDrawer}>
             <DrawerContent>
               <DrawerHeader>
-                <DrawerTitle>Create Employee</DrawerTitle>
+                <DrawerTitle>
+                  {drawerType === EmployeeDrawerTypeEnum.EDIT
+                    ? "Edit Employee"
+                    : "Create Employee"}
+                </DrawerTitle>
               </DrawerHeader>
               <FormActionEmployee
                 drawerType={drawerType}

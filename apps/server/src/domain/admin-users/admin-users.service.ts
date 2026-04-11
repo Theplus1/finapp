@@ -110,6 +110,30 @@ export class AdminUsersService {
     // Update last login time (tracked by username)
     await this.adminUserRepository.updateLastLogin(adminUser.username);
 
+    // Lazy migration: legacy users created with role `ads` or `accountant` and
+    // explicit permissions should be normalised to `employee` so the DB becomes
+    // clean over time. Users without explicit permissions keep their legacy
+    // role and rely on the grandfather fallback in permissions.util.ts.
+    if (
+      adminUser.bossId &&
+      (adminUser.role === 'ads' || adminUser.role === 'accountant') &&
+      (adminUser.permissions?.length ?? 0) > 0
+    ) {
+      try {
+        await this.adminUserRepository.update(adminUser.username, {
+          role: 'employee',
+        });
+        this.logger.log(
+          `Auto-migrated ${adminUser.username} from ${adminUser.role} to employee`,
+        );
+        adminUser.role = 'employee';
+      } catch (err) {
+        this.logger.warn(
+          `Lazy role migration failed for ${adminUser.username}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
     return adminUser;
   }
 

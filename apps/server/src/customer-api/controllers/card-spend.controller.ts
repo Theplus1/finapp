@@ -21,15 +21,16 @@ import { RolesGuard } from '../../admin-api/guards/roles.guard';
 import { Roles } from '../../admin-api/decorators/roles.decorator';
 import { TransactionsService } from '../../domain/transactions/transactions.service';
 import { CardSpendResponseDto } from '../dto/card-spend.dto';
-import { BOSS_AND_ACCOUNTANT_ROLES } from '../../common/constants/auth.constants';
+import { CUSTOMER_API_ROLES } from '../../common/constants/auth.constants';
 import { ExportsService } from '../../domain/exports/exports.service';
 import { RequestUser, validateVaAccess, getVaIdFromToken } from '../utils/va-access.util';
+import { requirePermission } from '../utils/permissions.util';
 
 @ApiTags('Customer API - Card Spend')
 @ApiBearerAuth()
 @Controller('customer-api/virtual-accounts')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...BOSS_AND_ACCOUNTANT_ROLES)
+@Roles(...CUSTOMER_API_ROLES)
 export class CustomerCardSpendController {
   constructor(
     private readonly transactionsService: TransactionsService,
@@ -67,6 +68,7 @@ export class CustomerCardSpendController {
     @Query('to') to: string,
     @Request() req: { user?: RequestUser },
   ): Promise<CardSpendResponseDto> {
+    requirePermission(req.user, 'card_spend');
     validateVaAccess(req.user, slashId);
 
     if (!from || !to) {
@@ -211,6 +213,7 @@ export class CustomerCardSpendController {
     fileName: string;
     expiresAt: Date;
   }> {
+    requirePermission(req.user, 'card_spend');
     const vaIdFromToken = getVaIdFromToken(req.user);
 
     if (!from || !to) {

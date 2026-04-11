@@ -13,12 +13,28 @@ type Props = {
   onChangeEmployeeData: (employeeData: CreateEmployeeData) => void;
   onCancelSetEmployee: () => void;
   onSubmitEmployeeSuccess: () => void;
+  isEdit: boolean;
 };
 
 const ALL_PERMISSIONS = Object.values(PermissionEnum);
+const MIN_PASSWORD_LENGTH = 8;
 
-const FormSetEmployee = ({ employeeData, onChangeEmployeeData }: Props) => {
-  const isEdit = !!employeeData.username;
+// Mutually exclusive permission pairs: picking one auto-clears the other.
+// Prevents boss from assigning both the "limited" and "full" view at once.
+const MUTEX_PAIRS: ReadonlyArray<[string, string]> = [
+  [PermissionEnum.TRANSACTIONS, PermissionEnum.TRANSACTIONS_FULL],
+  [PermissionEnum.CARD_LIST_OWN, PermissionEnum.CARD_LIST_ALL],
+];
+
+function applyMutex(permissions: string[], justAdded: string): string[] {
+  for (const [a, b] of MUTEX_PAIRS) {
+    if (justAdded === a) return permissions.filter((p) => p !== b);
+    if (justAdded === b) return permissions.filter((p) => p !== a);
+  }
+  return permissions;
+}
+
+const FormSetEmployee = ({ employeeData, onChangeEmployeeData, isEdit }: Props) => {
   const [bossVaIds, setBossVaIds] = useState<string[]>([]);
 
   useLayoutEffect(() => {
@@ -37,11 +53,24 @@ const FormSetEmployee = ({ employeeData, onChangeEmployeeData }: Props) => {
 
   const handleTogglePermission = (permission: string) => {
     const current = employeeData.permissions ?? [];
-    const updated = current.includes(permission)
-      ? current.filter((p) => p !== permission)
-      : [...current, permission];
+    let updated: string[];
+    if (current.includes(permission)) {
+      updated = current.filter((p) => p !== permission);
+    } else {
+      updated = applyMutex([...current, permission], permission);
+    }
     onChangeEmployeeData({ ...employeeData, permissions: updated });
   };
+
+  const passwordTooShort =
+    !isEdit &&
+    (employeeData.password ?? "").length > 0 &&
+    (employeeData.password ?? "").length < MIN_PASSWORD_LENGTH;
+
+  const confirmMismatch =
+    !isEdit &&
+    (employeeData.confirmPassword ?? "").length > 0 &&
+    employeeData.password !== employeeData.confirmPassword;
 
   return (
     <div className="px-4 flex flex-col gap-4">
@@ -67,6 +96,7 @@ const FormSetEmployee = ({ employeeData, onChangeEmployeeData }: Props) => {
           </Select>
         </FormItemWrapper>
       )}
+
       <FormItemWrapper
         label="Username"
         labelClassName="text-sm font-medium text-muted-foreground"
@@ -74,12 +104,57 @@ const FormSetEmployee = ({ employeeData, onChangeEmployeeData }: Props) => {
         <Field>
           <InputGroup className="pr-1">
             <InputGroupInput
+              autoFocus={!isEdit}
               placeholder="Enter username"
-              value={employeeData.username}
+              value={employeeData.username ?? ""}
               onChange={(e) => handleChangeField("username", e.target.value)}
             />
           </InputGroup>
         </Field>
+      </FormItemWrapper>
+
+      <FormItemWrapper
+        label="Password"
+        labelClassName="text-sm font-medium text-muted-foreground"
+      >
+        <Field data-invalid={passwordTooShort}>
+          <InputGroup className="pr-1">
+            <InputGroupInput
+              type="password"
+              disabled={isEdit}
+              placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
+              value={employeeData.password ?? ""}
+              onChange={(e) => handleChangeField("password", e.target.value)}
+            />
+          </InputGroup>
+        </Field>
+        {passwordTooShort && (
+          <p className="text-xs text-destructive mt-1">
+            Password must be at least {MIN_PASSWORD_LENGTH} characters
+          </p>
+        )}
+      </FormItemWrapper>
+
+      <FormItemWrapper
+        label="Confirm Password"
+        labelClassName="text-sm font-medium text-muted-foreground"
+      >
+        <Field data-invalid={confirmMismatch}>
+          <InputGroup className="pr-1">
+            <InputGroupInput
+              type="password"
+              disabled={isEdit}
+              placeholder="Re-enter password"
+              value={employeeData.confirmPassword ?? ""}
+              onChange={(e) => handleChangeField("confirmPassword", e.target.value)}
+            />
+          </InputGroup>
+        </Field>
+        {confirmMismatch && (
+          <p className="text-xs text-destructive mt-1">
+            Passwords do not match
+          </p>
+        )}
       </FormItemWrapper>
 
       <FormItemWrapper
@@ -100,40 +175,6 @@ const FormSetEmployee = ({ employeeData, onChangeEmployeeData }: Props) => {
             </div>
           ))}
         </div>
-      </FormItemWrapper>
-
-      <FormItemWrapper
-        label="Password"
-        labelClassName="text-sm font-medium text-muted-foreground"
-      >
-        <Field>
-          <InputGroup className="pr-1">
-            <InputGroupInput
-              type="password"
-              disabled={isEdit}
-              placeholder="Enter password"
-              value={employeeData.password}
-              onChange={(e) => handleChangeField("password", e.target.value)}
-            />
-          </InputGroup>
-        </Field>
-      </FormItemWrapper>
-
-      <FormItemWrapper
-        label="Confirm Password"
-        labelClassName="text-sm font-medium text-muted-foreground"
-      >
-        <Field data-invalid={employeeData.password !== employeeData.confirmPassword}>
-          <InputGroup className="pr-1">
-            <InputGroupInput
-              type="password"
-              disabled={isEdit}
-              placeholder="Enter confirm password"
-              value={employeeData.confirmPassword}
-              onChange={(e) => handleChangeField("confirmPassword", e.target.value)}
-            />
-          </InputGroup>
-        </Field>
       </FormItemWrapper>
     </div>
   );

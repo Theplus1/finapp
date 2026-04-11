@@ -37,6 +37,7 @@ import { ExportType } from '../../database/schemas/export-job.schema';
 const FACEBOOK_VERIFY_AMOUNT_CENTS = -100;
 
 import { RequestUser, getVaIdFromToken } from '../utils/va-access.util';
+import { getEffectivePermissions } from '../utils/permissions.util';
 
 @ApiTags('Customer API - Transactions')
 @ApiBearerAuth()
@@ -60,8 +61,7 @@ export class CustomerTransactionsController {
 
   private buildTransactionFilters(
     virtualAccountId: string,
-    role: string | undefined,
-    permissions: string[],
+    user: RequestUser | undefined,
     query: CustomerTransactionQueryDto,
   ) {
     const allowedDetailedStatusesSet = new Set<TransactionDetailedStatus>([
@@ -72,11 +72,12 @@ export class CustomerTransactionsController {
       TransactionDetailedStatus.DECLINED,
     ]);
 
-    // Full access: boss, accountant, or employee with transactions_full permission
+    // Full access: boss, or any user whose effective permissions include
+    // `transactions_full`. Legacy ads/accountant without explicit permissions
+    // resolve via getEffectivePermissions (grandfather fallback).
+    const effectivePermissions = getEffectivePermissions(user);
     const hasFullAccess =
-      role === 'boss' ||
-      role === 'accountant' ||
-      (role === 'employee' && permissions.includes('transactions_full'));
+      user?.role === 'boss' || effectivePermissions.includes('transactions_full');
 
     // Limited access (ads-like): employee with only transactions permission
     const isLimitedAccess = !hasFullAccess;
@@ -124,11 +125,11 @@ export class CustomerTransactionsController {
     pagination: { page: number; limit: number; total: number };
   }> {
     const virtualAccountId = this.getVirtualAccountId(req);
-    const role = req.user?.role;
-    const permissions = req.user?.permissions ?? [];
-    this.logger.log(`Listing transactions for VA ${virtualAccountId}, role=${role}`);
+    this.logger.log(
+      `Listing transactions for VA ${virtualAccountId}, role=${req.user?.role}`,
+    );
 
-    const filters = this.buildTransactionFilters(virtualAccountId, role, permissions, query);
+    const filters = this.buildTransactionFilters(virtualAccountId, req.user, query);
 
     const [data, total] = await this.transactionsService.findAllWithFiltersAndPagination(
       filters,
@@ -163,14 +164,12 @@ export class CustomerTransactionsController {
     expiresAt: Date;
   }> {
     const virtualAccountId = this.getVirtualAccountId(req);
-    const role = req.user?.role;
-    const permissions = req.user?.permissions ?? [];
     const userId = req.user?.userId;
     if (!userId) {
       throw new BadRequestException('Missing user ID for export');
     }
 
-    const filters = this.buildTransactionFilters(virtualAccountId, role, permissions, query);
+    const filters = this.buildTransactionFilters(virtualAccountId, req.user, query);
     const result = await this.exportsService.generateTransactionExportDownloadUrlForWeb({
       userId,
       virtualAccountId,

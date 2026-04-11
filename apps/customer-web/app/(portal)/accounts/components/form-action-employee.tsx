@@ -47,10 +47,13 @@ const FormActionEmployee = ({
     }
   }, [employee]);
 
+  const isEdit = drawerType === EmployeeDrawerTypeEnum.EDIT;
+
   const disabledCreate =
     isLoading ||
     !formEmployee.username ||
     !formEmployee.password ||
+    (formEmployee.password ?? "").length < 8 ||
     formEmployee.password !== formEmployee.confirmPassword ||
     (formEmployee.permissions ?? []).length === 0;
 
@@ -58,10 +61,7 @@ const FormActionEmployee = ({
     isLoading ||
     !formEmployee.username;
 
-  const disabledSubmit =
-    drawerType === EmployeeDrawerTypeEnum.CREATE
-      ? disabledCreate
-      : disabledEdit;
+  const disabledSubmit = isEdit ? disabledEdit : disabledCreate;
 
   const { mutateAsync: createAccount } = useMutation({
     mutationFn: async () => {
@@ -114,6 +114,7 @@ const FormActionEmployee = ({
         onChangeEmployeeData={setFormEmployee}
         onCancelSetEmployee={onCancelDrawer}
         onSubmitEmployeeSuccess={onSubmitDrawerSuccess}
+        isEdit={isEdit}
       />
       <DrawerFooter className="px-4">
         <div className="flex justify-end gap-3">

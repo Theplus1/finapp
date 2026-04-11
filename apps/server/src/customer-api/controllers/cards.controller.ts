@@ -29,7 +29,7 @@ import { SetCardLimitDto } from '../dto/set-card-limit.dto';
 import { PAGINATION_DEFAULTS } from '../../common/constants/pagination.constants';
 import { CardStatus } from '../../integrations/slash/dto/card.dto';
 import type { CardWithRelations } from '../../domain/cards/types/card.types';
-import { BOSS_AND_ACCOUNTANT_ROLES, CARDS_API_ROLES } from '../../common/constants/auth.constants';
+import { BOSS_AND_ACCOUNTANT_ROLES, CUSTOMER_API_ROLES } from '../../common/constants/auth.constants';
 import { CvvRevealRepository } from '../../database/repositories/cvv-reveal.repository';
 import { CardActivityRepository } from '../../database/repositories/card-activity.repository';
 import { CardActivityAction } from '../../database/schemas/card-activity.schema';
@@ -37,12 +37,15 @@ import { SYNC_CONSTANTS } from '../../integrations/slash/constants/sync.constant
 import { ExportsService } from '../../domain/exports/exports.service';
 import { ExportType } from '../../database/schemas/export-job.schema';
 import { RequestUser } from '../utils/va-access.util';
+import { requireAnyPermission } from '../utils/permissions.util';
+
+const CARD_ACCESS_PERMISSIONS = ['card_list_own', 'card_list_all'] as const;
 
 @ApiTags('Customer API - Cards')
 @ApiBearerAuth()
 @Controller('customer-api/cards')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...CARDS_API_ROLES)
+@Roles(...CUSTOMER_API_ROLES)
 export class CustomerCardsController {
   private readonly logger = new Logger(CustomerCardsController.name);
 
@@ -97,6 +100,7 @@ export class CustomerCardsController {
     @Param('id') cardSlashId: string,
     @Request() req: { user?: RequestUser },
   ): Promise<{ cvv: string; pan: string; last4: string; cardName: string; expiryMonth: string; expiryYear: string }> {
+    requireAnyPermission(req.user, CARD_ACCESS_PERMISSIONS);
     const virtualAccountId = this.getVirtualAccountId(req);
     const owned = await this.cardsService.verifyOwnership(
       cardSlashId,
@@ -177,6 +181,7 @@ export class CustomerCardsController {
     totalPages: number;
     hasMore: boolean;
   }> {
+    requireAnyPermission(req.user, CARD_ACCESS_PERMISSIONS);
     const virtualAccountId = this.getVirtualAccountId(req);
     const owned = await this.cardsService.verifyOwnership(
       cardSlashId,
@@ -288,6 +293,7 @@ export class CustomerCardsController {
     data: CardWithRelations[];
     pagination: { page: number; limit: number; total: number };
   }> {
+    requireAnyPermission(req.user, CARD_ACCESS_PERMISSIONS);
     const virtualAccountId = this.getVirtualAccountId(req);
     this.logger.log(`Listing cards for VA ${virtualAccountId}`);
 
@@ -329,6 +335,7 @@ export class CustomerCardsController {
     data: CardWithRelations[];
     pagination: { page: number; limit: number; total: number };
   }> {
+    requireAnyPermission(req.user, CARD_ACCESS_PERMISSIONS);
     const virtualAccountId = this.getVirtualAccountId(req);
     this.logger.log(
       `Getting one card by slashId ${slashId} for VA ${virtualAccountId}`,
@@ -402,6 +409,7 @@ export class CustomerCardsController {
     @Param('id') cardSlashId: string,
     @Request() req: { user?: RequestUser },
   ): Promise<{ success: true; message: string }> {
+    requireAnyPermission(req.user, CARD_ACCESS_PERMISSIONS);
     const virtualAccountId = this.getVirtualAccountId(req);
     const owned = await this.cardsService.verifyOwnership(cardSlashId, virtualAccountId);
     if (!owned) {
@@ -435,6 +443,7 @@ export class CustomerCardsController {
     @Param('id') cardSlashId: string,
     @Request() req: { user?: RequestUser },
   ): Promise<{ success: true; message: string }> {
+    requireAnyPermission(req.user, CARD_ACCESS_PERMISSIONS);
     const virtualAccountId = this.getVirtualAccountId(req);
     const owned = await this.cardsService.verifyOwnership(cardSlashId, virtualAccountId);
     if (!owned) {
@@ -474,6 +483,7 @@ export class CustomerCardsController {
     @Param('id') cardSlashId: string,
     @Request() req: { user?: RequestUser },
   ): Promise<{ success: true; message: string }> {
+    requireAnyPermission(req.user, CARD_ACCESS_PERMISSIONS);
     const virtualAccountId = this.getVirtualAccountId(req);
     const owned = await this.cardsService.verifyOwnership(cardSlashId, virtualAccountId);
     if (!owned) {
@@ -519,6 +529,7 @@ export class CustomerCardsController {
     @Param('id') cardSlashId: string,
     @Request() req: { user?: RequestUser },
   ): Promise<{ success: true; message: string }> {
+    requireAnyPermission(req.user, CARD_ACCESS_PERMISSIONS);
     const virtualAccountId = this.getVirtualAccountId(req);
     const owned = await this.cardsService.verifyOwnership(cardSlashId, virtualAccountId);
     if (!owned) {
@@ -567,6 +578,7 @@ export class CustomerCardsController {
     @Body() dto: SetCardLimitDto,
     @Request() req: { user?: RequestUser },
   ): Promise<{ success: true; message: string }> {
+    requireAnyPermission(req.user, CARD_ACCESS_PERMISSIONS);
     const virtualAccountId = this.getVirtualAccountId(req);
     const owned = await this.cardsService.verifyOwnership(cardSlashId, virtualAccountId);
     if (!owned) {
@@ -614,6 +626,7 @@ export class CustomerCardsController {
     @Param('id') cardSlashId: string,
     @Request() req: { user?: RequestUser },
   ): Promise<{ success: true; message: string }> {
+    requireAnyPermission(req.user, CARD_ACCESS_PERMISSIONS);
     const virtualAccountId = this.getVirtualAccountId(req);
     const owned = await this.cardsService.verifyOwnership(cardSlashId, virtualAccountId);
     if (!owned) {
