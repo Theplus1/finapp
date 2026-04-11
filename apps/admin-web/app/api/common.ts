@@ -1,8 +1,5 @@
 import { NextRequest } from "next/server";
 
-// john.doe
-// admin@123
-
 export function serialize(obj: Record<string, string>) {
   const str: string[] = [];
 
